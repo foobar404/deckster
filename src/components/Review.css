@@ -1,0 +1,118 @@
+.review-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: var(--space-md);
+  gap: var(--space-lg);
+}
+
+.review-header {
+  text-align: center;
+  margin-top: var(--space-lg);
+}
+
+.deck-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: var(--space-md);
+  color: var(--text-primary);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: var(--space-sm);
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  transition: width 0.3s ease;
+}
+
+.card-counter {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.card-stack {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: var(--space-md) 0;
+}
+
+.empty-state,
+.session-complete {
+  text-align: center;
+  padding: var(--space-2xl);
+  margin: auto;
+  max-width: 400px;
+}
+
+.empty-icon,
+.complete-icon {
+  font-size: 4rem;
+  margin-bottom: var(--space-lg);
+}
+
+.empty-state h2,
+.session-complete h2 {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-md);
+  color: var(--text-primary);
+}
+
+.empty-state p {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.session-stats {
+  display: flex;
+  gap: var(--space-xl);
+  justify-content: center;
+  margin: var(--space-xl) 0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-light);
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Desktop adjustments */
+@media (min-width: 768px) {
+  .review-container {
+    margin-left: 280px; /* Account for side navigation */
+    padding: var(--space-xl);
+  }
+  
+  .deck-title {
+    font-size: 2rem;
+  }
+  
+  .session-stats {
+    gap: var(--space-2xl);
+  }
+}
