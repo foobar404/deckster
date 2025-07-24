@@ -9,7 +9,7 @@
 
 .header {
   text-align: center;
-  margin-bottom: var(--space-lg);
+  margin: 0 !important;
 }
 
 .header h1 {
@@ -102,47 +102,154 @@
   font-size: 1.25rem;
 }
 
-.preview-cards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
+.preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
 }
 
 .preview-card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  padding: var(--space-md);
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-height: 120px;
+  perspective: 1000px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  background: transparent;
+  border: none;
 }
 
-.card-front,
-.card-back {
+.preview-card:hover {
+  transform: translateY(-2px);
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+  min-height: 120px;
+}
+
+.preview-card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-side {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+}
+
+.card-side:last-child {
+  border-bottom: none;
+}
+
+.card-side.front {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.card-side.back {
+  background: rgba(16, 185, 129, 0.05);
+  transform: rotateY(180deg);
+}
+
+.card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-xs);
+}
+
+.card-side.front .card-label {
+  color: var(--primary);
+}
+
+.card-side.back .card-label {
+  color: var(--success);
+}
+
+.card-content {
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.4;
+  word-wrap: break-word;
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.preview-summary {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.pagination-btn {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 90px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.pagination-btn:disabled {
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pagination-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
-.card-front {
-  color: var(--text-primary);
-}
-
-.card-back {
-  color: var(--text-secondary);
-}
-
-.card-divider {
-  color: var(--primary);
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-.preview-more {
-  text-align: center;
+.card-range {
+  font-size: 0.85rem;
   color: var(--text-muted);
-  font-style: italic;
-  padding: var(--space-md);
+  margin-top: var(--space-xs);
 }
 
 /* Mobile optimizations */
@@ -173,13 +280,36 @@
     gap: var(--space-md);
   }
   
+  .preview-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+  
   .preview-card {
+    min-height: 100px;
+  }
+  
+  .card-inner {
+    min-height: 100px;
+  }
+  
+  .card-side {
+    padding: var(--space-sm) var(--space-md);
+  }
+  
+  .pagination {
     flex-direction: column;
     text-align: center;
   }
   
-  .card-divider {
-    transform: rotate(90deg);
+  .pagination-info {
+    order: -1;
+    margin-bottom: var(--space-sm);
+  }
+  
+  .pagination-btn {
+    flex: 1;
+    min-width: 120px;
   }
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './ImportDecks.css'
 
 const ImportDecks = ({ onDecksImported }) => {
@@ -6,6 +6,9 @@ const ImportDecks = ({ onDecksImported }) => {
   const [deckName, setDeckName] = useState('')
   const [separator, setSeparator] = useState('comma')
   const [preview, setPreview] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [flippedCards, setFlippedCards] = useState(new Set())
+  const cardsPerPage = 6
 
   const parseCards = (text, sep) => {
     if (!text.trim()) return []
@@ -28,12 +31,19 @@ const ImportDecks = ({ onDecksImported }) => {
     }).filter(Boolean)
   }
 
-  const handlePreview = () => {
-    if (!importText.trim()) return
-    const cards = parseCards(importText, separator)
-    console.log('Parsed cards:', cards) // Debug log
-    setPreview(cards)
-  }
+  // Auto-generate preview when import text or separator changes
+  useEffect(() => {
+    if (importText.trim()) {
+      const cards = parseCards(importText, separator)
+      setPreview(cards)
+      setCurrentPage(1) // Reset to first page when preview changes
+      setFlippedCards(new Set()) // Reset flipped cards
+    } else {
+      setPreview(null)
+      setCurrentPage(1)
+      setFlippedCards(new Set())
+    }
+  }, [importText, separator])
 
   const handleImport = () => {
     if (!deckName.trim()) {
@@ -42,7 +52,7 @@ const ImportDecks = ({ onDecksImported }) => {
     }
     
     if (!preview || preview.length === 0) {
-      alert('Please preview cards before importing.')
+      alert('Please add some card data to import.')
       return
     }
     
@@ -53,14 +63,35 @@ const ImportDecks = ({ onDecksImported }) => {
     }
     
     console.log('Importing deck:', newDeck) // Debug log
-    onDecksImported([newDeck])
+    console.log('onDecksImported function:', onDecksImported) // Debug log
+    
+    if (onDecksImported) {
+      onDecksImported([newDeck])
+    } else {
+      console.error('onDecksImported function is not provided')
+    }
     
     // Reset form
     setImportText('')
     setDeckName('')
     setPreview(null)
+    setCurrentPage(1)
+    setFlippedCards(new Set())
     
     alert(`Successfully imported ${preview.length} cards to "${newDeck.name}"!`)
+  }
+
+  const toggleCardFlip = (cardIndex) => {
+    const actualIndex = (currentPage - 1) * cardsPerPage + cardIndex
+    setFlippedCards(prev => {
+      const newFlipped = new Set(prev)
+      if (newFlipped.has(actualIndex)) {
+        newFlipped.delete(actualIndex)
+      } else {
+        newFlipped.add(actualIndex)
+      }
+      return newFlipped
+    })
   }
 
   const sampleData = {
@@ -76,10 +107,7 @@ Goodbye\tAdiós`
 
   return (
     <div className="import-decks">
-      <div className="header">
-        <h1>Import Flashcards</h1>
-        <p>Import cards from CSV or TSV text</p>
-      </div>
+      <h1 className="header">Import Flashcards</h1>
 
       <div className="import-form glass rounded-lg">
         <div className="form-section">
@@ -133,39 +161,71 @@ Goodbye\tAdiós`
 
         <div className="form-actions">
           <button 
-            className="btn-secondary"
-            onClick={handlePreview}
-            disabled={!importText.trim()}
-          >
-            Preview Cards
-          </button>
-          <button 
             className="btn-primary"
             onClick={handleImport}
-            disabled={!deckName.trim() || !preview || preview.length === 0}
           >
             Import Deck ({preview ? preview.length : 0} cards)
           </button>
         </div>
       </div>
 
-      {preview && (
+      {preview && preview.length > 0 && (
         <div className="preview-section glass rounded-lg">
           <h3>Preview ({preview.length} cards)</h3>
-          <div className="preview-cards">
-            {preview.slice(0, 5).map((card, index) => (
-              <div key={index} className="preview-card">
-                <div className="card-front">{card.front}</div>
-                <div className="card-divider">→</div>
-                <div className="card-back">{card.back}</div>
-              </div>
-            ))}
-            {preview.length > 5 && (
-              <div className="preview-more">
-                ...and {preview.length - 5} more cards
-              </div>
-            )}
+          <div className="preview-grid">
+            {preview
+              .slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)
+              .map((card, index) => {
+                const actualIndex = (currentPage - 1) * cardsPerPage + index
+                const isFlipped = flippedCards.has(actualIndex)
+                
+                return (
+                  <div 
+                    key={index} 
+                    className={`preview-card glass ${isFlipped ? 'flipped' : ''}`}
+                    onClick={() => toggleCardFlip(index)}
+                  >
+                    <div className="card-inner">
+                      <div className="card-side front">
+                        <div className="card-label">Front</div>
+                        <div className="card-content">{card.front}</div>
+                      </div>
+                      <div className="card-side back">
+                        <div className="card-label">Back</div>
+                        <div className="card-content">{card.back}</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
           </div>
+          
+          {preview.length > cardsPerPage && (
+            <div className="pagination">
+              <button 
+                className="pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                ← Previous
+              </button>
+              
+              <div className="pagination-info">
+                Page {currentPage} of {Math.ceil(preview.length / cardsPerPage)}
+                <span className="card-range">
+                  (Cards {(currentPage - 1) * cardsPerPage + 1}-{Math.min(currentPage * cardsPerPage, preview.length)} of {preview.length})
+                </span>
+              </div>
+              
+              <button 
+                className="pagination-btn"
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(preview.length / cardsPerPage), prev + 1))}
+                disabled={currentPage === Math.ceil(preview.length / cardsPerPage)}
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

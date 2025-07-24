@@ -3,28 +3,29 @@
   flex-direction: column;
   min-height: 100vh;
   padding: var(--space-md);
-  gap: var(--space-lg);
+  gap: var(--space-sm);
 }
 
 .review-header {
   text-align: center;
-  margin-top: var(--space-lg);
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
 
 .deck-title {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 600;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
   color: var(--text-primary);
 }
 
 .progress-bar {
   width: 100%;
-  height: 4px;
+  height: 3px;
   background: var(--surface);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  margin-bottom: var(--space-sm);
+  margin-bottom: var(--space-xs);
 }
 
 .progress-fill {
@@ -34,7 +35,7 @@
 }
 
 .card-counter {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
   font-weight: 500;
 }

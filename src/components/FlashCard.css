@@ -15,13 +15,7 @@
   transform-style: preserve-3d;
   user-select: none;
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-xl);
-  background: rgba(255, 255, 255, 0.7) !important; /* Transparent by default */
   z-index: 10;
-}
-
-.flashcard:hover {
-  box-shadow: var(--shadow-xl), 0 0 20px rgba(99, 102, 241, 0.3);
 }
 
 .flashcard:active {

@@ -150,7 +150,7 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
         <div className="flashcard-container">
             <div
                 ref={cardRef}
-                className={`flashcard glass ${isDragging ? 'dragging' : ''}`}
+                className={`flashcard ${isDragging ? 'dragging' : ''}`}
                 style={{
                     transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x * 0.1}deg)`,
                     opacity: isDragging ? 0.8 : 1,

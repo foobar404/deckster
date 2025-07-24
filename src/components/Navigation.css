@@ -9,6 +9,29 @@
   padding: var(--space-sm) var(--space-md);
   margin: 0 var(--space-sm);
   margin-bottom: var(--space-sm);
+  transition: all 0.3s ease;
+}
+
+.nav-toggle {
+  display: block;
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  box-shadow: var(--shadow-md);
+}
+
+.drag-handle {
+  display: none;
 }
 
 .nav-container {
@@ -69,6 +92,47 @@
     border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
     margin: 0;
     padding: var(--space-xl) var(--space-lg);
+    transition: width 0.3s ease, padding 0.3s ease;
+  }
+  
+  .navigation.collapsed {
+    width: 80px;
+    padding: var(--space-xl) var(--space-sm);
+  }
+  
+  .drag-handle {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 10;
+    background: transparent;
+    transition: background 0.2s ease;
+  }
+  
+  .drag-handle:hover {
+    background: rgba(99, 102, 241, 0.3);
+  }
+  
+  .drag-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 1px;
+    transition: all 0.2s ease;
+  }
+  
+  .drag-handle:hover .drag-indicator {
+    background: var(--primary);
+    width: 3px;
+    height: 40px;
   }
   
   .nav-container {
@@ -76,6 +140,7 @@
     justify-content: flex-start;
     gap: var(--space-md);
     max-width: none;
+    margin-top: var(--space-xl);
   }
   
   .nav-item {
@@ -85,9 +150,31 @@
     padding: var(--space-md);
     font-size: 1rem;
     min-width: auto;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  
+  .navigation.collapsed .nav-item {
+    justify-content: center;
+    padding: var(--space-md) var(--space-sm);
+  }
+  
+  .navigation.collapsed .nav-label {
+    opacity: 0;
+    width: 0;
+    margin: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
   }
   
   .nav-label {
     font-size: 0.9rem;
+    margin-left: var(--space-sm);
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+  
+  .nav-icon {
+    flex-shrink: 0;
   }
 }
