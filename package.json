@@ -1,8 +1,9 @@
 {
-  "name": "flashcards",
+  "name": "deckster",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://foobar404.github.io/deckster/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
