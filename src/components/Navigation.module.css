@@ -10,9 +10,15 @@
   margin: 0 var(--space-sm);
   margin-bottom: var(--space-sm);
   transition: all 0.3s ease;
+  /* Mobile enhancements */
+  padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.nav-toggle {
+.navToggle {
   display: block;
   position: absolute;
   top: var(--space-sm);
@@ -28,13 +34,16 @@
   transition: all 0.2s ease;
   z-index: 10;
   box-shadow: var(--shadow-md);
+  /* Mobile touch optimization */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.drag-handle {
+.dragHandle {
   display: none;
 }
 
-.nav-container {
+.navContainer {
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -42,7 +51,7 @@
   margin: 0 auto;
 }
 
-.nav-item {
+.navItem {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -56,25 +65,60 @@
   font-weight: 500;
   transition: all 0.2s ease;
   min-width: 60px;
+  min-height: 44px; /* iOS minimum touch target */
+  /* Mobile touch optimizations */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+  overflow: hidden;
 }
 
-.nav-item:hover {
+.navItem::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s ease, height 0.3s ease;
+}
+
+.navItem:active::before {
+  width: 40px;
+  height: 40px;
+}
+
+.navItem:hover {
   color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.05);
 }
 
-.nav-item.active {
+.navItem.active {
   color: var(--primary-light);
   background: rgba(99, 102, 241, 0.1);
+  transform: translateY(-2px);
 }
 
-.nav-icon {
+.navItem.active .navIcon {
+  animation: activeIcon 0.3s ease;
+}
+
+@keyframes activeIcon {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.navIcon {
   font-size: 1.5rem;
   line-height: 1;
 }
 
-.nav-label {
-  font-size: 0.7rem;
+.navLabel {
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -100,7 +144,7 @@
     padding: var(--space-xl) var(--space-sm);
   }
   
-  .drag-handle {
+  .dragHandle {
     display: block;
     position: absolute;
     top: 0;
@@ -113,11 +157,11 @@
     transition: background 0.2s ease;
   }
   
-  .drag-handle:hover {
+  .dragHandle:hover {
     background: rgba(99, 102, 241, 0.3);
   }
   
-  .drag-indicator {
+  .dragIndicator {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -129,13 +173,13 @@
     transition: all 0.2s ease;
   }
   
-  .drag-handle:hover .drag-indicator {
+  .dragHandle:hover .dragIndicator {
     background: var(--primary);
     width: 3px;
     height: 40px;
   }
   
-  .nav-container {
+  .navContainer {
     flex-direction: column;
     justify-content: flex-start;
     gap: var(--space-md);
@@ -143,7 +187,7 @@
     margin-top: var(--space-xl);
   }
   
-  .nav-item {
+  .navItem {
     flex-direction: row;
     justify-content: flex-start;
     width: 100%;
@@ -154,12 +198,12 @@
     transition: all 0.3s ease;
   }
   
-  .navigation.collapsed .nav-item {
+  .navigation.collapsed .navItem {
     justify-content: center;
     padding: var(--space-md) var(--space-sm);
   }
   
-  .navigation.collapsed .nav-label {
+  .navigation.collapsed .navLabel {
     opacity: 0;
     width: 0;
     margin: 0;
@@ -167,14 +211,14 @@
     transition: all 0.3s ease;
   }
   
-  .nav-label {
+  .navLabel {
     font-size: 0.9rem;
     margin-left: var(--space-sm);
     white-space: nowrap;
     transition: all 0.3s ease;
   }
   
-  .nav-icon {
+  .navIcon {
     flex-shrink: 0;
   }
 }

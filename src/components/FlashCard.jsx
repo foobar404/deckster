@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import './FlashCard.css'
+import styles from './FlashCard.module.css'
 
 const FlashCard = ({ card, onReview, onDragStateChange }) => {
     const [isFlipped, setIsFlipped] = useState(false)
@@ -147,10 +147,10 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
     const swipeIndicator = getSwipeIndicator()
 
     return (
-        <div className="flashcard-container">
+        <div className={styles.flashcardContainer}>
             <div
                 ref={cardRef}
-                className={`flashcard ${isDragging ? 'dragging' : ''}`}
+                className={`${styles.flashcard} ${isDragging ? styles.dragging : ''}`}
                 style={{
                     transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x * 0.1}deg)`,
                     opacity: isDragging ? 0.8 : 1,
@@ -163,21 +163,21 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
                 onMouseDown={handleMouseStart}
             >
                 <div
-                    className="card-inner"
+                    className={styles.cardInner}
                     style={{
                         transform: isFlipped ? 'rotateY(180deg)' : ''
                     }}
                 >
-                    <div className="card-front">
-                        <div className="card-content">
-                            <div className="card-text">{card.front}</div>
-                            <div className="flip-hint">Tap to reveal</div>
+                    <div className={styles.cardFront}>
+                        <div className={styles.cardContent}>
+                            <div className={styles.cardText}>{card.front}</div>
+                            <div className={styles.flipHint}>Tap to reveal</div>
                         </div>
                     </div>
-                    <div className="card-back">
-                        <div className="card-content">
-                            <div className="card-text">{card.back}</div>
-                            <div className="swipe-hint">
+                    <div className={styles.cardBack}>
+                        <div className={styles.cardContent}>
+                            <div className={styles.cardText}>{card.back}</div>
+                            <div className={styles.swipeHint}>
                                 Drag to corners to rate difficulty
                             </div>
                         </div>
@@ -186,11 +186,11 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
 
                 {swipeIndicator && (
                     <div
-                        className="swipe-indicator"
+                        className={styles.swipeIndicator}
                         style={{ color: swipeIndicator.color }}
                     >
-                        <span className="indicator-emoji">{swipeIndicator.emoji}</span>
-                        <span className="indicator-label">{swipeIndicator.label}</span>
+                        <span className={styles.indicatorEmoji}>{swipeIndicator.emoji}</span>
+                        <span className={styles.indicatorLabel}>{swipeIndicator.label}</span>
                     </div>
                 )}
             </div>

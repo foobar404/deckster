@@ -1,4 +1,4 @@
-import './Stats.css'
+import styles from './Stats.module.css'
 
 const Stats = ({ stats, decks }) => {
   const getTotalCards = () => {
@@ -46,93 +46,93 @@ const Stats = ({ stats, decks }) => {
   const deckProgress = getDeckProgress()
 
   return (
-    <div className="stats">
-      <div className="header">
+    <div className={styles.stats}>
+      <div className={styles.header}>
         <h1>Statistics</h1>
         <p>Track your learning progress</p>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card glass rounded-lg">
-          <div className="stat-icon">📊</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.totalReviews}</div>
-            <div className="stat-label">Total Reviews</div>
+      <div className={styles.statsGrid}>
+        <div className={`${styles.statCard} glass rounded-lg`}>
+          <div className={styles.statIcon}>📊</div>
+          <div className={styles.statContent}>
+            <div className={styles.statValue}>{stats.totalReviews}</div>
+            <div className={styles.statLabel}>Total Reviews</div>
           </div>
         </div>
 
-        <div className="stat-card glass rounded-lg">
-          <div className="stat-icon">🎯</div>
-          <div className="stat-content">
-            <div className="stat-value">{accuracy}%</div>
-            <div className="stat-label">Accuracy</div>
+        <div className={`${styles.statCard} glass rounded-lg`}>
+          <div className={styles.statIcon}>🎯</div>
+          <div className={styles.statContent}>
+            <div className={styles.statValue}>{accuracy}%</div>
+            <div className={styles.statLabel}>Accuracy</div>
           </div>
         </div>
 
-        <div className="stat-card glass rounded-lg">
-          <div className="stat-icon">🔥</div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.streakCount}</div>
-            <div className="stat-label">Current Streak</div>
+        <div className={`${styles.statCard} glass rounded-lg`}>
+          <div className={styles.statIcon}>🔥</div>
+          <div className={styles.statContent}>
+            <div className={styles.statValue}>{stats.streakCount}</div>
+            <div className={styles.statLabel}>Current Streak</div>
           </div>
         </div>
 
-        <div className="stat-card glass rounded-lg">
-          <div className="stat-icon">📚</div>
-          <div className="stat-content">
-            <div className="stat-value">{totalCards}</div>
-            <div className="stat-label">Total Cards</div>
+        <div className={`${styles.statCard} glass rounded-lg`}>
+          <div className={styles.statIcon}>📚</div>
+          <div className={styles.statContent}>
+            <div className={styles.statValue}>{totalCards}</div>
+            <div className={styles.statLabel}>Total Cards</div>
           </div>
         </div>
 
-        <div className="stat-card glass rounded-lg">
-          <div className="stat-icon">✅</div>
-          <div className="stat-content">
-            <div className="stat-value">{reviewedCards}</div>
-            <div className="stat-label">Cards Reviewed</div>
+        <div className={`${styles.statCard} glass rounded-lg`}>
+          <div className={styles.statIcon}>✅</div>
+          <div className={styles.statContent}>
+            <div className={styles.statValue}>{reviewedCards}</div>
+            <div className={styles.statLabel}>Cards Reviewed</div>
           </div>
         </div>
 
-        <div className="stat-card glass rounded-lg">
-          <div className="stat-icon">🏆</div>
-          <div className="stat-content">
-            <div className="stat-value">{masteredCards}</div>
-            <div className="stat-label">Cards Mastered</div>
+        <div className={`${styles.statCard} glass rounded-lg`}>
+          <div className={styles.statIcon}>🏆</div>
+          <div className={styles.statContent}>
+            <div className={styles.statValue}>{masteredCards}</div>
+            <div className={styles.statLabel}>Cards Mastered</div>
           </div>
         </div>
       </div>
 
       {deckProgress.length > 0 && (
-        <div className="deck-progress-section">
+        <div className={styles.deckProgressSection}>
           <h2>Deck Progress</h2>
-          <div className="deck-progress-list">
+          <div className={styles.deckProgressList}>
             {deckProgress.map((deck, index) => (
-              <div key={index} className="deck-progress-item glass rounded-lg">
-                <div className="deck-info">
-                  <h3 className="deck-name">{deck.name}</h3>
-                  <div className="deck-stats">
+              <div key={index} className={`${styles.deckProgressItem} glass rounded-lg`}>
+                <div className={styles.deckInfo}>
+                  <h3 className={styles.deckName}>{deck.name}</h3>
+                  <div className={styles.deckStats}>
                     <span>{deck.reviewed}/{deck.total} reviewed</span>
                     <span>{deck.mastered} mastered</span>
                   </div>
                 </div>
-                <div className="progress-visual">
-                  <div className="progress-circle">
-                    <svg viewBox="0 0 36 36" className="circular-chart">
+                <div className={styles.progressVisual}>
+                  <div className={styles.progressCircle}>
+                    <svg viewBox="0 0 36 36" className={styles.circularChart}>
                       <path
-                        className="circle-bg"
+                        className={styles.circleBg}
                         d="M18 2.0845
                           a 15.9155 15.9155 0 0 1 0 31.831
                           a 15.9155 15.9155 0 0 1 0 -31.831"
                       />
                       <path
-                        className="circle-progress"
+                        className={styles.circleProgress}
                         strokeDasharray={`${deck.progress}, 100`}
                         d="M18 2.0845
                           a 15.9155 15.9155 0 0 1 0 31.831
                           a 15.9155 15.9155 0 0 1 0 -31.831"
                       />
                     </svg>
-                    <div className="progress-text">{deck.progress}%</div>
+                    <div className={styles.progressText}>{deck.progress}%</div>
                   </div>
                 </div>
               </div>
@@ -142,36 +142,36 @@ const Stats = ({ stats, decks }) => {
       )}
 
       {stats.totalReviews > 0 && (
-        <div className="performance-section glass rounded-lg">
+        <div className={`${styles.performanceSection} glass rounded-lg`}>
           <h2>Performance Breakdown</h2>
-          <div className="performance-chart">
-            <div className="chart-bar">
-              <div className="bar-label">Correct</div>
-              <div className="bar-container">
+          <div className={styles.performanceChart}>
+            <div className={styles.chartBar}>
+              <div className={styles.barLabel}>Correct</div>
+              <div className={styles.barContainer}>
                 <div 
-                  className="bar-fill correct"
+                  className={`${styles.barFill} ${styles.correct}`}
                   style={{ width: `${(stats.correct / stats.totalReviews) * 100}%` }}
                 ></div>
               </div>
-              <div className="bar-value">{stats.correct}</div>
+              <div className={styles.barValue}>{stats.correct}</div>
             </div>
-            <div className="chart-bar">
-              <div className="bar-label">Incorrect</div>
-              <div className="bar-container">
+            <div className={styles.chartBar}>
+              <div className={styles.barLabel}>Incorrect</div>
+              <div className={styles.barContainer}>
                 <div 
-                  className="bar-fill incorrect"
+                  className={`${styles.barFill} ${styles.incorrect}`}
                   style={{ width: `${(stats.incorrect / stats.totalReviews) * 100}%` }}
                 ></div>
               </div>
-              <div className="bar-value">{stats.incorrect}</div>
+              <div className={styles.barValue}>{stats.incorrect}</div>
             </div>
           </div>
         </div>
       )}
 
       {stats.totalReviews === 0 && (
-        <div className="empty-state">
-          <div className="empty-icon">📈</div>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>📈</div>
           <h2>No Data Yet</h2>
           <p>Start reviewing cards to see your statistics!</p>
         </div>

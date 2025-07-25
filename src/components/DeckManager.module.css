@@ -1,4 +1,4 @@
-.deck-manager {
+.deckManager {
   padding: var(--space-lg);
   max-width: 1200px;
   margin: 0 auto;
@@ -20,18 +20,18 @@
   margin: 0;
 }
 
-.create-form {
+.createForm {
   padding: var(--space-xl);
   margin-bottom: var(--space-xl);
   max-width: 400px;
 }
 
-.create-form h3 {
+.createForm h3 {
   margin: 0 0 var(--space-lg) 0;
   color: var(--text-primary);
 }
 
-.create-form input {
+.createForm input {
   width: 100%;
   padding: var(--space-md);
   border: 1px solid var(--border);
@@ -42,42 +42,42 @@
   margin-bottom: var(--space-lg);
 }
 
-.create-form input:focus {
+.createForm input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.form-actions {
+.formActions {
   display: flex;
   gap: var(--space-md);
   justify-content: flex-end;
 }
 
-.decks-grid {
+.decksGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--space-lg);
   margin-bottom: var(--space-xl);
 }
 
-.deck-card {
+.deckCard {
   padding: var(--space-xl);
   transition: transform 0.2s ease;
 }
 
-.deck-card:hover {
+.deckCard:hover {
   transform: translateY(-4px);
 }
 
-.deck-header {
+.deckHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: var(--space-lg);
 }
 
-.deck-name {
+.deckName {
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -86,43 +86,43 @@
   word-break: break-word;
 }
 
-.delete-btn {
+.deleteBtn {
   font-size: 1.2rem;
   padding: var(--space-xs);
   margin-left: var(--space-sm);
   border-radius: var(--radius-sm);
 }
 
-.delete-btn:hover {
+.deleteBtn:hover {
   background: rgba(239, 68, 68, 0.1);
   color: var(--error);
 }
 
-.deck-stats {
+.deckStats {
   margin-bottom: var(--space-lg);
 }
 
-.stat-row {
+.statRow {
   display: flex;
   justify-content: space-between;
   margin-bottom: var(--space-sm);
   font-size: 0.9rem;
 }
 
-.stat-row span:first-child {
+.statRow span:first-child {
   color: var(--text-secondary);
 }
 
-.stat-row span:last-child {
+.statRow span:last-child {
   color: var(--text-primary);
   font-weight: 500;
 }
 
-.progress-container {
+.progressContainer {
   margin-bottom: var(--space-lg);
 }
 
-.progress-bar {
+.progressBar {
   width: 100%;
   height: 6px;
   background: var(--surface-light);
@@ -131,57 +131,57 @@
   margin-bottom: var(--space-sm);
 }
 
-.progress-fill {
+.progressFill {
   height: 100%;
   background: var(--gradient-primary);
   transition: width 0.3s ease;
 }
 
-.progress-text {
+.progressText {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
 
-.deck-actions {
+.deckActions {
   display: flex;
   gap: var(--space-sm);
 }
 
-.deck-actions button {
+.deckActions button {
   flex: 1;
   font-size: 0.9rem;
   padding: var(--space-sm) var(--space-md);
 }
 
-.deck-actions button:disabled {
+.deckActions button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.empty-state {
+.emptyState {
   text-align: center;
   padding: var(--space-2xl);
   margin-top: var(--space-2xl);
 }
 
-.empty-icon {
+.emptyIcon {
   font-size: 4rem;
   margin-bottom: var(--space-lg);
 }
 
-.empty-state h2 {
+.emptyState h2 {
   font-size: 1.5rem;
   margin-bottom: var(--space-md);
   color: var(--text-primary);
 }
 
-.empty-state p {
+.emptyState p {
   color: var(--text-secondary);
 }
 
 /* Mobile optimizations */
 @media (max-width: 640px) {
-  .deck-manager {
+  .deckManager {
     padding: var(--space-md);
   }
   
@@ -189,19 +189,19 @@
     font-size: 1.5rem;
   }
   
-  .decks-grid {
+  .decksGrid {
     grid-template-columns: 1fr;
     gap: var(--space-md);
   }
   
-  .deck-card {
+  .deckCard {
     padding: var(--space-lg);
   }
 }
 
 /* Desktop adjustments */
 @media (min-width: 768px) {
-  .deck-manager {
+  .deckManager {
     margin-left: 280px; /* Account for side navigation */
     padding: var(--space-xl);
   }

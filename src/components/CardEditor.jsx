@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import './CardEditor.css'
+import styles from './CardEditor.module.css'
 
 const CardEditor = ({ deck, onSave, onCancel }) => {
   const [cards, setCards] = useState([...deck.cards])
@@ -43,13 +43,13 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
   }
 
   return (
-    <div className="card-editor">
-      <div className="header">
-        <div className="header-content">
+    <div className={styles.cardEditor}>
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
           <h1>Edit Cards - {deck.name}</h1>
           <p>{cards.length} cards</p>
         </div>
-        <div className="header-actions">
+        <div className={styles.headerActions}>
           <button className="btn-secondary" onClick={onCancel}>
             Cancel
           </button>
@@ -59,19 +59,19 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
         </div>
       </div>
 
-      <div className="add-card-section">
+      <div className={styles.addCardSection}>
         {!showAddForm ? (
           <button 
-            className="btn-primary add-card-btn"
+            className={`${styles.addCardBtn} btn-primary`}
             onClick={() => setShowAddForm(true)}
           >
             ➕ Add New Card
           </button>
         ) : (
-          <div className="add-card-form glass rounded-lg">
+          <div className={`styles.addCardForm glass rounded-lg`}>
             <h3>Add New Card</h3>
-            <div className="form-row">
-              <div className="form-group">
+            <div className={styles.formRow}>
+              <div className={styles.formGroup}>
                 <label>Front (Question)</label>
                 <textarea
                   value={newCard.front}
@@ -80,7 +80,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
                   rows={2}
                 />
               </div>
-              <div className="form-group">
+              <div className={styles.formGroup}>
                 <label>Back (Answer)</label>
                 <textarea
                   value={newCard.back}
@@ -90,7 +90,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
                 />
               </div>
             </div>
-            <div className="form-actions">
+            <div className={styles.formActions}>
               <button className="btn-secondary" onClick={() => {
                 setShowAddForm(false)
                 setNewCard({ front: '', back: '' })
@@ -109,12 +109,12 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
         )}
       </div>
 
-      <div className="cards-list">
+      <div className={styles.cardsList}>
         {cards.map((card, index) => (
-          <div key={card.id} className="card-item glass rounded-lg">
-            <div className="card-number">#{index + 1}</div>
-            <div className="card-content">
-              <div className="card-side">
+          <div key={card.id} className={`styles.cardItem glass rounded-lg`}>
+            <div className={styles.cardNumber}>#{index + 1}</div>
+            <div className={styles.cardContent}>
+              <div className={styles.cardSide}>
                 <label>Front</label>
                 <textarea
                   value={card.front}
@@ -122,7 +122,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
                   rows={2}
                 />
               </div>
-              <div className="card-side">
+              <div className={styles.cardSide}>
                 <label>Back</label>
                 <textarea
                   value={card.back}
@@ -132,7 +132,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
               </div>
             </div>
             <button 
-              className="delete-card-btn btn-ghost"
+              className={`${styles.deleteCardBtn} btn-ghost`}
               onClick={() => deleteCard(card.id)}
             >
               🗑️
@@ -142,8 +142,8 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
       </div>
 
       {cards.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-icon">📝</div>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>📝</div>
           <h2>No Cards Yet</h2>
           <p>Add your first card to get started!</p>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import './Navigation.css'
+import styles from './Navigation.module.css'
 
 const Navigation = ({ currentView, onViewChange }) => {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -78,25 +78,25 @@ const Navigation = ({ currentView, onViewChange }) => {
   ]
 
   return (
-    <nav className={`navigation glass ${isCollapsed ? 'collapsed' : ''}`}>
+    <nav className={`${styles.navigation} glass ${isCollapsed ? styles.collapsed : ''}`}>
       <div 
-        className="drag-handle"
+        className={styles.dragHandle}
         onMouseDown={handleDragStart}
         style={{ cursor: isDragging ? 'ew-resize' : 'ew-resize' }}
       >
-        <div className="drag-indicator"></div>
+        <div className={styles.dragIndicator}></div>
       </div>
       
-      <div className="nav-container">
+      <div className={styles.navContainer}>
         {navItems.map(item => (
           <button
             key={item.id}
-            className={`nav-item ${currentView === item.id ? 'active' : ''}`}
+            className={`${styles.navItem} ${currentView === item.id ? styles.active : ''}`}
             onClick={() => onViewChange(item.id)}
             title={isCollapsed ? item.label : ''}
           >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
+            <span className={styles.navIcon}>{item.icon}</span>
+            <span className={styles.navLabel}>{item.label}</span>
           </button>
         ))}
       </div>

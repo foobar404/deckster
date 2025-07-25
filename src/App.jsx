@@ -5,7 +5,7 @@ import DeckManager from './components/DeckManager'
 import ImportDecks from './components/ImportDecks'
 import Stats from './components/Stats'
 import { STORAGE_KEYS, saveToStorage, loadFromStorage } from './utils/storage'
-import './App.css'
+import styles from './App.module.css'
 
 function App() {
   const [currentView, setCurrentView] = useState('review')
@@ -128,8 +128,8 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <main className="main-content">
+    <div className={styles.app}>
+      <main className={styles.mainContent}>
         {renderView()}
       </main>
       <Navigation currentView={currentView} onViewChange={setCurrentView} />

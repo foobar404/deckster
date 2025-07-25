@@ -1,4 +1,4 @@
-.review-container {
+.reviewContainer {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -6,20 +6,20 @@
   gap: var(--space-sm);
 }
 
-.review-header {
+.reviewHeader {
   text-align: center;
   margin-top: var(--space-sm);
   margin-bottom: var(--space-md);
 }
 
-.deck-title {
+.deckTitle {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: var(--space-sm);
   color: var(--text-primary);
 }
 
-.progress-bar {
+.progressBar {
   width: 100%;
   height: 3px;
   background: var(--surface);
@@ -28,19 +28,19 @@
   margin-bottom: var(--space-xs);
 }
 
-.progress-fill {
+.progressFill {
   height: 100%;
   background: var(--gradient-primary);
   transition: width 0.3s ease;
 }
 
-.card-counter {
+.cardCounter {
   font-size: 0.8rem;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
-.card-stack {
+.cardStack {
   flex: 1;
   display: flex;
   align-items: center;
@@ -49,71 +49,128 @@
   padding: var(--space-md) 0;
 }
 
-.empty-state,
-.session-complete {
+.emptyState,
+.sessionComplete {
   text-align: center;
   padding: var(--space-2xl);
   margin: auto;
   max-width: 400px;
 }
 
-.empty-icon,
-.complete-icon {
+.emptyIcon,
+.completeIcon {
   font-size: 4rem;
   margin-bottom: var(--space-lg);
 }
 
-.empty-state h2,
-.session-complete h2 {
+.emptyState h2,
+.sessionComplete h2 {
   font-size: 1.5rem;
   margin-bottom: var(--space-md);
   color: var(--text-primary);
 }
 
-.empty-state p {
+.emptyState p {
   color: var(--text-secondary);
   margin-bottom: var(--space-lg);
 }
 
-.session-stats {
+.sessionStats {
   display: flex;
   gap: var(--space-xl);
   justify-content: center;
   margin: var(--space-xl) 0;
 }
 
-.stat-item {
+.statItem {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-xs);
 }
 
-.stat-value {
+.statValue {
   font-size: 2rem;
   font-weight: 700;
   color: var(--primary-light);
 }
 
-.stat-label {
+.statLabel {
   font-size: 0.8rem;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+/* Quadrant styles for drag indicators */
+.quadrants {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.quadrant {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0.3;
+  backdrop-filter: blur(5px);
+}
+
+.quadrant.active {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.quadrant.tl {
+  top: 0;
+  left: 0;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.4));
+  border: 2px solid rgba(239, 68, 68, 0.5);
+}
+
+.quadrant.tr {
+  top: 0;
+  right: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.4));
+  border: 2px solid rgba(99, 102, 241, 0.5);
+}
+
+.quadrant.bl {
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.4));
+  border: 2px solid rgba(245, 158, 11, 0.5);
+}
+
+.quadrant.br {
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.4));
+  border: 2px solid rgba(16, 185, 129, 0.5);
+}
+
 /* Desktop adjustments */
 @media (min-width: 768px) {
-  .review-container {
+  .reviewContainer {
     margin-left: 280px; /* Account for side navigation */
     padding: var(--space-xl);
   }
   
-  .deck-title {
+  .deckTitle {
     font-size: 2rem;
   }
   
-  .session-stats {
+  .sessionStats {
     gap: var(--space-2xl);
   }
 }

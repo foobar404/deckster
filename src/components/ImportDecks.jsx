@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import './ImportDecks.css'
+import styles from './ImportDecks.module.css'
 
 const ImportDecks = ({ onDecksImported }) => {
   const [importText, setImportText] = useState('')
@@ -106,11 +106,11 @@ Goodbye\tAdiós`
   }
 
   return (
-    <div className="import-decks">
-      <h1 className="header">Import Flashcards</h1>
+    <div className={styles.importDecks}>
+      <h1 className={styles.header}>Import Flashcards</h1>
 
-      <div className="import-form glass rounded-lg">
-        <div className="form-section">
+      <div className={`${styles.importForm} glass rounded-lg`}>
+        <div className={styles.formSection}>
           <label htmlFor="deckName">Deck Name</label>
           <input
             id="deckName"
@@ -121,10 +121,10 @@ Goodbye\tAdiós`
           />
         </div>
 
-        <div className="form-section">
+        <div className={styles.formSection}>
           <label>Separator Type</label>
-          <div className="radio-group">
-            <label className="radio-option">
+          <div className={styles.radioGroup}>
+            <label className={styles.radioOption}>
               <input
                 type="radio"
                 value="comma"
@@ -133,7 +133,7 @@ Goodbye\tAdiós`
               />
               <span>Comma (CSV)</span>
             </label>
-            <label className="radio-option">
+            <label className={styles.radioOption}>
               <input
                 type="radio"
                 value="tab"
@@ -145,7 +145,7 @@ Goodbye\tAdiós`
           </div>
         </div>
 
-        <div className="form-section">
+        <div className={styles.formSection}>
           <label htmlFor="importText">Card Data</label>
           <textarea
             id="importText"
@@ -154,12 +154,12 @@ Goodbye\tAdiós`
             onChange={(e) => setImportText(e.target.value)}
             rows={8}
           />
-          <div className="textarea-hint">
+          <div className={styles.textareaHint}>
             Each line should contain a front and back separated by {separator === 'comma' ? 'commas' : 'tabs'}
           </div>
         </div>
 
-        <div className="form-actions">
+        <div className={styles.formActions}>
           <button 
             className="btn-primary"
             onClick={handleImport}
@@ -170,9 +170,9 @@ Goodbye\tAdiós`
       </div>
 
       {preview && preview.length > 0 && (
-        <div className="preview-section glass rounded-lg">
+        <div className={`styles.previewSection glass rounded-lg`}>
           <h3>Preview ({preview.length} cards)</h3>
-          <div className="preview-grid">
+          <div className={styles.previewGrid}>
             {preview
               .slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)
               .map((card, index) => {
@@ -185,14 +185,14 @@ Goodbye\tAdiós`
                     className={`preview-card glass ${isFlipped ? 'flipped' : ''}`}
                     onClick={() => toggleCardFlip(index)}
                   >
-                    <div className="card-inner">
-                      <div className="card-side front">
-                        <div className="card-label">Front</div>
-                        <div className="card-content">{card.front}</div>
+                    <div className={styles.cardInner}>
+                      <div className={`styles.cardSide styles.front`}>
+                        <div className={styles.cardLabel}>Front</div>
+                        <div className={styles.cardContent}>{card.front}</div>
                       </div>
-                      <div className="card-side back">
-                        <div className="card-label">Back</div>
-                        <div className="card-content">{card.back}</div>
+                      <div className={`styles.cardSide styles.back`}>
+                        <div className={styles.cardLabel}>Back</div>
+                        <div className={styles.cardContent}>{card.back}</div>
                       </div>
                     </div>
                   </div>
@@ -201,24 +201,24 @@ Goodbye\tAdiós`
           </div>
           
           {preview.length > cardsPerPage && (
-            <div className="pagination">
+            <div className={styles.pagination}>
               <button 
-                className="pagination-btn"
+                className={styles.paginationBtn}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
               >
                 ← Previous
               </button>
               
-              <div className="pagination-info">
+              <div className={styles.paginationInfo}>
                 Page {currentPage} of {Math.ceil(preview.length / cardsPerPage)}
-                <span className="card-range">
+                <span className={styles.cardRange}>
                   (Cards {(currentPage - 1) * cardsPerPage + 1}-{Math.min(currentPage * cardsPerPage, preview.length)} of {preview.length})
                 </span>
               </div>
               
               <button 
-                className="pagination-btn"
+                className={styles.paginationBtn}
                 onClick={() => setCurrentPage(prev => Math.min(Math.ceil(preview.length / cardsPerPage), prev + 1))}
                 disabled={currentPage === Math.ceil(preview.length / cardsPerPage)}
               >

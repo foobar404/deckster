@@ -24,13 +24,13 @@
   font-size: 1.1rem;
 }
 
-.stats-grid {
+.statsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-lg);
 }
 
-.stat-card {
+.statCard {
   padding: var(--space-xl);
   display: flex;
   align-items: center;
@@ -38,20 +38,20 @@
   transition: transform 0.2s ease;
 }
 
-.stat-card:hover {
+.statCard:hover {
   transform: translateY(-2px);
 }
 
-.stat-icon {
+.statIcon {
   font-size: 2.5rem;
   flex-shrink: 0;
 }
 
-.stat-content {
+.statContent {
   flex: 1;
 }
 
-.stat-value {
+.statValue {
   font-size: 2rem;
   font-weight: 700;
   color: var(--primary-light);
@@ -59,7 +59,7 @@
   margin-bottom: var(--space-xs);
 }
 
-.stat-label {
+.statLabel {
   font-size: 0.9rem;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -67,73 +67,73 @@
   font-weight: 500;
 }
 
-.deck-progress-section,
-.performance-section {
+.deckProgressSection,
+.performanceSection {
   padding: var(--space-xl);
 }
 
-.deck-progress-section h2,
-.performance-section h2 {
+.deckProgressSection h2,
+.performanceSection h2 {
   font-size: 1.5rem;
   color: var(--text-primary);
   margin: 0 0 var(--space-xl) 0;
   font-weight: 600;
 }
 
-.deck-progress-list {
+.deckProgressList {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
 }
 
-.deck-progress-item {
+.deckProgressItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-lg);
 }
 
-.deck-info {
+.deckInfo {
   flex: 1;
 }
 
-.deck-name {
+.deckName {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 var(--space-sm) 0;
 }
 
-.deck-stats {
+.deckStats {
   display: flex;
   gap: var(--space-md);
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
 
-.progress-visual {
+.progressVisual {
   margin-left: var(--space-lg);
 }
 
-.progress-circle {
+.progressCircle {
   position: relative;
   width: 60px;
   height: 60px;
 }
 
-.circular-chart {
+.circularChart {
   width: 100%;
   height: 100%;
   transform: rotate(-90deg);
 }
 
-.circle-bg {
+.circleBg {
   fill: none;
   stroke: var(--surface-light);
   stroke-width: 3;
 }
 
-.circle-progress {
+.circleProgress {
   fill: none;
   stroke: var(--primary);
   stroke-width: 3;
@@ -141,7 +141,7 @@
   transition: stroke-dasharray 0.3s ease;
 }
 
-.progress-text {
+.progressText {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -151,26 +151,26 @@
   color: var(--text-primary);
 }
 
-.performance-chart {
+.performanceChart {
   display: flex;
   flex-direction: column;
   gap: var(--space-lg);
 }
 
-.chart-bar {
+.chartBar {
   display: flex;
   align-items: center;
   gap: var(--space-md);
 }
 
-.bar-label {
+.barLabel {
   width: 80px;
   font-size: 0.9rem;
   color: var(--text-secondary);
   font-weight: 500;
 }
 
-.bar-container {
+.barContainer {
   flex: 1;
   height: 20px;
   background: var(--surface);
@@ -178,45 +178,53 @@
   overflow: hidden;
 }
 
-.bar-fill {
+.barFill {
   height: 100%;
   border-radius: var(--radius-sm);
   transition: width 0.3s ease;
 }
 
-.bar-fill.correct {
+.barFill.correct {
   background: linear-gradient(90deg, var(--success), #34d399);
 }
 
-.bar-fill.incorrect {
+.barFill.incorrect {
   background: linear-gradient(90deg, var(--error), #f87171);
 }
 
-.bar-value {
+.correct {
+  background: linear-gradient(90deg, var(--success), #34d399);
+}
+
+.incorrect {
+  background: linear-gradient(90deg, var(--error), #f87171);
+}
+
+.barValue {
   width: 40px;
   text-align: right;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.empty-state {
+.emptyState {
   text-align: center;
   padding: var(--space-2xl);
   margin-top: var(--space-2xl);
 }
 
-.empty-icon {
+.emptyIcon {
   font-size: 4rem;
   margin-bottom: var(--space-lg);
 }
 
-.empty-state h2 {
+.emptyState h2 {
   font-size: 1.5rem;
   margin-bottom: var(--space-md);
   color: var(--text-primary);
 }
 
-.empty-state p {
+.emptyState p {
   color: var(--text-secondary);
 }
 
@@ -230,38 +238,38 @@
     font-size: 1.5rem;
   }
   
-  .stats-grid {
+  .statsGrid {
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-md);
   }
   
-  .stat-card {
+  .statCard {
     padding: var(--space-lg);
     flex-direction: column;
     text-align: center;
     gap: var(--space-md);
   }
   
-  .stat-icon {
+  .statIcon {
     font-size: 2rem;
   }
   
-  .stat-value {
+  .statValue {
     font-size: 1.5rem;
   }
   
-  .deck-progress-item {
+  .deckProgressItem {
     flex-direction: column;
     gap: var(--space-md);
     text-align: center;
   }
   
-  .progress-visual {
+  .progressVisual {
     margin-left: 0;
   }
   
-  .deck-progress-section,
-  .performance-section {
+  .deckProgressSection,
+  .performanceSection {
     padding: var(--space-lg);
   }
 }
@@ -273,7 +281,7 @@
     padding: var(--space-xl);
   }
   
-  .stats-grid {
+  .statsGrid {
     grid-template-columns: repeat(3, 1fr);
   }
 }

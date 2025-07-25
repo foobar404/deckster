@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import CardEditor from './CardEditor'
-import './DeckManager.css'
+import styles from './DeckManager.module.css'
 
 const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -55,11 +55,11 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
   }
 
   return (
-    <div className="deck-manager">
-      <div className="header">
+    <div className={styles.deckManager}>
+      <div className={styles.header}>
         <h1>My Decks</h1>
         <button 
-          className="btn-primary"
+          className={styles.btnPrimary}
           onClick={() => setShowCreateForm(true)}
         >
           ➕ New Deck
@@ -67,7 +67,7 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
       </div>
 
       {showCreateForm && (
-        <div className="create-form glass rounded-lg">
+        <div className={`${styles.createForm} glass rounded-lg`}>
           <h3>Create New Deck</h3>
           <input
             type="text"
@@ -77,68 +77,68 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
             onKeyPress={(e) => e.key === 'Enter' && createDeck()}
             autoFocus
           />
-          <div className="form-actions">
-            <button className="btn-secondary" onClick={() => setShowCreateForm(false)}>
+          <div className={styles.formActions}>
+            <button className={styles.btnSecondary} onClick={() => setShowCreateForm(false)}>
               Cancel
             </button>
-            <button className="btn-primary" onClick={createDeck}>
+            <button className={styles.btnPrimary} onClick={createDeck}>
               Create
             </button>
           </div>
         </div>
       )}
 
-      <div className="decks-grid">
+      <div className={styles.decksGrid}>
         {decks.map(deck => {
           const stats = getDeckStats(deck)
           const progress = stats.total > 0 ? (stats.reviewed / stats.total) * 100 : 0
           
           return (
-            <div key={deck.id} className="deck-card glass rounded-lg">
-              <div className="deck-header">
-                <h3 className="deck-name">{deck.name}</h3>
+            <div key={deck.id} className={`${styles.deckCard} glass rounded-lg`}>
+              <div className={styles.deckHeader}>
+                <h3 className={styles.deckName}>{deck.name}</h3>
                 <button 
-                  className="delete-btn btn-ghost"
+                  className={`${styles.deleteBtn} btn-ghost`}
                   onClick={() => deleteDeck(deck.id)}
                 >
                   🗑️
                 </button>
               </div>
               
-              <div className="deck-stats">
-                <div className="stat-row">
+              <div className={styles.deckStats}>
+                <div className={styles.statRow}>
                   <span>Cards:</span>
                   <span>{stats.total}</span>
                 </div>
-                <div className="stat-row">
+                <div className={styles.statRow}>
                   <span>Reviewed:</span>
                   <span>{stats.reviewed}</span>
                 </div>
-                <div className="stat-row">
+                <div className={styles.statRow}>
                   <span>Mastered:</span>
                   <span>{stats.mastered}</span>
                 </div>
               </div>
               
-              <div className="progress-container">
-                <div className="progress-bar">
+              <div className={styles.progressContainer}>
+                <div className={styles.progressBar}>
                   <div 
-                    className="progress-fill"
+                    className={styles.progressFill}
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>
-                <span className="progress-text">{Math.round(progress)}% complete</span>
+                <span className={styles.progressText}>{Math.round(progress)}% complete</span>
               </div>
               
-              <div className="deck-actions">
+              <div className={styles.deckActions}>
                 <button 
-                  className="btn-secondary"
+                  className={styles.btnSecondary}
                   onClick={() => setEditingDeck(deck)}
                 >
                   ✏️ Edit Cards
                 </button>
                 <button 
-                  className="btn-primary"
+                  className={styles.btnPrimary}
                   onClick={() => onDeckSelect(deck)}
                   disabled={stats.total === 0}
                 >
@@ -151,8 +151,8 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
       </div>
 
       {decks.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-icon">📚</div>
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>📚</div>
           <h2>No Decks Yet</h2>
           <p>Create your first deck to start studying!</p>
         </div>

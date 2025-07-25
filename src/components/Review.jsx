@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import FlashCard from './FlashCard'
-import './Review.css'
+import styles from './Review.module.css'
 
 const Review = ({ deck, onUpdateStats, onCardReviewed }) => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
@@ -55,9 +55,9 @@ const Review = ({ deck, onUpdateStats, onCardReviewed }) => {
 
   if (!deck || !deck.cards || deck.cards.length === 0) {
     return (
-      <div className="review-container">
-        <div className="empty-state glass rounded-lg">
-          <div className="empty-icon">📚</div>
+      <div className={styles.reviewContainer}>
+        <div className={`${styles.emptyState} glass rounded-lg`}>
+          <div className={styles.emptyIcon}>📚</div>
           <h2>No Deck Selected</h2>
           <p>Choose a deck from the Decks tab to start reviewing.</p>
         </div>
@@ -68,18 +68,18 @@ const Review = ({ deck, onUpdateStats, onCardReviewed }) => {
   if (showResult) {
     const accuracy = Math.round((sessionStats.correct / sessionStats.total) * 100)
     return (
-      <div className="review-container">
-        <div className="session-complete glass rounded-lg">
-          <div className="complete-icon">🎉</div>
+      <div className={styles.reviewContainer}>
+        <div className={`${styles.sessionComplete} glass rounded-lg`}>
+          <div className={styles.completeIcon}>🎉</div>
           <h2>Session Complete!</h2>
-          <div className="session-stats">
-            <div className="stat-item">
-              <span className="stat-value">{sessionStats.total}</span>
-              <span className="stat-label">Cards Reviewed</span>
+          <div className={styles.sessionStats}>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{sessionStats.total}</span>
+              <span className={styles.statLabel}>Cards Reviewed</span>
             </div>
-            <div className="stat-item">
-              <span className="stat-value">{accuracy}%</span>
-              <span className="stat-label">Accuracy</span>
+            <div className={styles.statItem}>
+              <span className={styles.statValue}>{accuracy}%</span>
+              <span className={styles.statLabel}>Accuracy</span>
             </div>
           </div>
           <button className="btn-primary" onClick={resetSession}>
@@ -94,35 +94,35 @@ const Review = ({ deck, onUpdateStats, onCardReviewed }) => {
   const progress = ((currentCardIndex + 1) / deck.cards.length) * 100
 
   return (
-    <div className="review-container">
+    <div className={styles.reviewContainer}>
       {/* Quadrant indicators when card is flipped */}
       {dragState.isFlipped && (
-        <div className="quadrants">
-          <div className={`quadrant tl ${dragState.isDragging && dragState.dragOffset.x < -30 && dragState.dragOffset.y < -30 ? 'active' : ''}`}>
+        <div className={styles.quadrants}>
+          <div className={`${styles.quadrant} ${styles.tl} ${dragState.isDragging && dragState.dragOffset.x < -30 && dragState.dragOffset.y < -30 ? styles.active : ''}`}>
           </div>
-          <div className={`quadrant tr ${dragState.isDragging && dragState.dragOffset.x > 30 && dragState.dragOffset.y < -30 ? 'active' : ''}`}>
+          <div className={`${styles.quadrant} ${styles.tr} ${dragState.isDragging && dragState.dragOffset.x > 30 && dragState.dragOffset.y < -30 ? styles.active : ''}`}>
           </div>
-          <div className={`quadrant bl ${dragState.isDragging && dragState.dragOffset.x < -30 && dragState.dragOffset.y > 30 ? 'active' : ''}`}>
+          <div className={`${styles.quadrant} ${styles.bl} ${dragState.isDragging && dragState.dragOffset.x < -30 && dragState.dragOffset.y > 30 ? styles.active : ''}`}>
           </div>
-          <div className={`quadrant br ${dragState.isDragging && dragState.dragOffset.x > 30 && dragState.dragOffset.y > 30 ? 'active' : ''}`}>
+          <div className={`${styles.quadrant} ${styles.br} ${dragState.isDragging && dragState.dragOffset.x > 30 && dragState.dragOffset.y > 30 ? styles.active : ''}`}>
           </div>
         </div>
       )}
 
-      <div className="review-header">
-        <h1 className="deck-title">{deck.name}</h1>
-        <div className="progress-bar">
+      <div className={styles.reviewHeader}>
+        <h1 className={styles.deckTitle}>{deck.name}</h1>
+        <div className={styles.progressBar}>
           <div 
-            className="progress-fill" 
+            className={styles.progressFill} 
             style={{ width: `${progress}%` }}
           ></div>
         </div>
-        <div className="card-counter">
+        <div className={styles.cardCounter}>
           {currentCardIndex + 1} of {deck.cards.length}
         </div>
       </div>
 
-      <div className="card-stack">
+      <div className={styles.cardStack}>
         <FlashCard 
           card={currentCard}
           onReview={handleCardReview}

@@ -1,4 +1,4 @@
-.import-decks {
+.importDecks {
   padding: var(--space-lg);
   max-width: 800px;
   margin: 0 auto;
@@ -24,24 +24,24 @@
   font-size: 1.1rem;
 }
 
-.import-form,
-.preview-section {
+.importForm,
+.previewSection {
   padding: var(--space-xl);
 }
 
-.form-section {
+.formSection {
   margin-bottom: var(--space-xl);
 }
 
-.form-section label {
+.formSection label {
   display: block;
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--space-sm);
 }
 
-.form-section input,
-.form-section textarea {
+.formSection input,
+.formSection textarea {
   width: 100%;
   padding: var(--space-md);
   border: 1px solid var(--border);
@@ -53,30 +53,30 @@
   resize: vertical;
 }
 
-.form-section input:focus,
-.form-section textarea:focus {
+.formSection input:focus,
+.formSection textarea:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.form-section textarea {
+.formSection textarea {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   line-height: 1.5;
 }
 
-.textarea-hint {
+.textareaHint {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: var(--space-xs);
 }
 
-.radio-group {
+.radioGroup {
   display: flex;
   gap: var(--space-lg);
 }
 
-.radio-option {
+.radioOption {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
@@ -84,31 +84,31 @@
   font-weight: normal;
 }
 
-.radio-option input[type="radio"] {
+.radioOption input[type="radio"] {
   width: auto;
   margin: 0;
 }
 
-.form-actions {
+.formActions {
   display: flex;
   gap: var(--space-md);
   justify-content: flex-end;
   flex-wrap: wrap;
 }
 
-.preview-section h3 {
+.previewSection h3 {
   margin: 0 0 var(--space-lg) 0;
   color: var(--text-primary);
   font-size: 1.25rem;
 }
 
-.preview-grid {
+.previewGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--space-lg);
 }
 
-.preview-card {
+.previewCard {
   border-radius: var(--radius-lg);
   min-height: 120px;
   perspective: 1000px;
@@ -118,11 +118,11 @@
   border: none;
 }
 
-.preview-card:hover {
+.previewCard:hover {
   transform: translateY(-2px);
 }
 
-.card-inner {
+.cardInner {
   position: relative;
   width: 100%;
   height: 100%;
@@ -132,11 +132,11 @@
   min-height: 120px;
 }
 
-.preview-card.flipped .card-inner {
+.previewCard.flipped .cardInner {
   transform: rotateY(180deg);
 }
 
-.card-side {
+.cardSide {
   padding: var(--space-md);
   border-bottom: 1px solid var(--border);
   position: absolute;
@@ -150,20 +150,20 @@
   border-radius: var(--radius-lg);
 }
 
-.card-side:last-child {
+.cardSide:last-child {
   border-bottom: none;
 }
 
-.card-side.front {
+.cardSide.front {
   background: rgba(99, 102, 241, 0.05);
 }
 
-.card-side.back {
+.cardSide.back {
   background: rgba(16, 185, 129, 0.05);
   transform: rotateY(180deg);
 }
 
-.card-label {
+.cardLabel {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -171,15 +171,15 @@
   margin-bottom: var(--space-xs);
 }
 
-.card-side.front .card-label {
+.cardSide.front .cardLabel {
   color: var(--primary);
 }
 
-.card-side.back .card-label {
+.cardSide.back .cardLabel {
   color: var(--success);
 }
 
-.card-content {
+.cardContent {
   color: var(--text-primary);
   font-weight: 500;
   line-height: 1.4;
@@ -191,7 +191,7 @@
   text-align: center;
 }
 
-.preview-summary {
+.previewSummary {
   text-align: center;
   color: var(--text-muted);
   font-size: 0.9rem;
@@ -213,7 +213,7 @@
   gap: var(--space-md);
 }
 
-.pagination-btn {
+.paginationBtn {
   padding: var(--space-sm) var(--space-md);
   background: var(--primary);
   color: white;
@@ -225,19 +225,19 @@
   min-width: 90px;
 }
 
-.pagination-btn:hover:not(:disabled) {
+.paginationBtn:hover:not(:disabled) {
   background: var(--primary-dark);
   transform: translateY(-1px);
 }
 
-.pagination-btn:disabled {
+.paginationBtn:disabled {
   background: var(--surface);
   color: var(--text-muted);
   cursor: not-allowed;
   transform: none;
 }
 
-.pagination-info {
+.paginationInfo {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -246,7 +246,7 @@
   font-weight: 500;
 }
 
-.card-range {
+.cardRange {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: var(--space-xs);
@@ -254,7 +254,7 @@
 
 /* Mobile optimizations */
 @media (max-width: 640px) {
-  .import-decks {
+  .importDecks {
     padding: var(--space-md);
   }
   
@@ -262,38 +262,38 @@
     font-size: 1.5rem;
   }
   
-  .import-form,
-  .preview-section {
+  .importForm,
+  .previewSection {
     padding: var(--space-lg);
   }
   
-  .form-actions {
+  .formActions {
     justify-content: stretch;
   }
   
-  .form-actions button {
+  .formActions button {
     flex: 1;
   }
   
-  .radio-group {
+  .radioGroup {
     flex-direction: column;
     gap: var(--space-md);
   }
   
-  .preview-grid {
+  .previewGrid {
     grid-template-columns: 1fr;
     gap: var(--space-md);
   }
   
-  .preview-card {
+  .previewCard {
     min-height: 100px;
   }
   
-  .card-inner {
+  .cardInner {
     min-height: 100px;
   }
   
-  .card-side {
+  .cardSide {
     padding: var(--space-sm) var(--space-md);
   }
   
@@ -302,12 +302,12 @@
     text-align: center;
   }
   
-  .pagination-info {
+  .paginationInfo {
     order: -1;
     margin-bottom: var(--space-sm);
   }
   
-  .pagination-btn {
+  .paginationBtn {
     flex: 1;
     min-width: 120px;
   }
@@ -315,7 +315,7 @@
 
 /* Desktop adjustments */
 @media (min-width: 768px) {
-  .import-decks {
+  .importDecks {
     margin-left: 280px; /* Account for side navigation */
     padding: var(--space-xl);
   }
