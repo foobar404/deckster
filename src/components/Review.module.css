@@ -55,12 +55,17 @@
   padding: var(--space-2xl);
   margin: auto;
   max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .emptyIcon,
 .completeIcon {
   font-size: 4rem;
   margin-bottom: var(--space-lg);
+  color: var(--primary);
 }
 
 .emptyState h2,
@@ -162,7 +167,7 @@
 /* Desktop adjustments */
 @media (min-width: 768px) {
   .reviewContainer {
-    margin-left: 280px; /* Account for side navigation */
+    margin-left: 240px; /* Account for side navigation */
     padding: var(--space-xl);
   }
   

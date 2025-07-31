@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import styles from './CardEditor.module.css'
+import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa'
 
 const CardEditor = ({ deck, onSave, onCancel }) => {
   const [cards, setCards] = useState([...deck.cards])
@@ -65,7 +66,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
             className={`${styles.addCardBtn} btn-primary`}
             onClick={() => setShowAddForm(true)}
           >
-            ➕ Add New Card
+            <FaPlus /> Add New Card
           </button>
         ) : (
           <div className={`styles.addCardForm glass rounded-lg`}>
@@ -111,7 +112,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
 
       <div className={styles.cardsList}>
         {cards.map((card, index) => (
-          <div key={card.id} className={`styles.cardItem glass rounded-lg`}>
+          <div key={card.id} className={`${styles.cardItem} glass rounded-lg`}>
             <div className={styles.cardNumber}>#{index + 1}</div>
             <div className={styles.cardContent}>
               <div className={styles.cardSide}>
@@ -135,7 +136,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
               className={`${styles.deleteCardBtn} btn-ghost`}
               onClick={() => deleteCard(card.id)}
             >
-              🗑️
+              <FaTrash />
             </button>
           </div>
         ))}
@@ -143,7 +144,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
 
       {cards.length === 0 && (
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📝</div>
+          <div className={styles.emptyIcon}><FaEdit /></div>
           <h2>No Cards Yet</h2>
           <p>Add your first card to get started!</p>
         </div>

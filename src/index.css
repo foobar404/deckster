@@ -35,7 +35,7 @@
   /* Glass Effects */
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+  --glass-shadow: 0 8px 8px rgba(31, 38, 135, 0.20);
   
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
@@ -89,7 +89,7 @@
 }
 
 * {
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 
 body {
@@ -152,6 +152,11 @@ input:disabled, textarea:disabled, select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   background: var(--gray-100);
+}
+
+h1{
+  font-size: 1.5rem !important;
+  font-weight: bold;
 }
 
 /* Utility Classes */

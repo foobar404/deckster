@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import FlashCard from './FlashCard'
 import styles from './Review.module.css'
+import { FaBook, FaTrophy } from 'react-icons/fa'
 
 const Review = ({ deck, onUpdateStats, onCardReviewed }) => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
@@ -57,7 +58,7 @@ const Review = ({ deck, onUpdateStats, onCardReviewed }) => {
     return (
       <div className={styles.reviewContainer}>
         <div className={`${styles.emptyState} glass rounded-lg`}>
-          <div className={styles.emptyIcon}>📚</div>
+          <div className={styles.emptyIcon}><FaBook /></div>
           <h2>No Deck Selected</h2>
           <p>Choose a deck from the Decks tab to start reviewing.</p>
         </div>
@@ -70,7 +71,7 @@ const Review = ({ deck, onUpdateStats, onCardReviewed }) => {
     return (
       <div className={styles.reviewContainer}>
         <div className={`${styles.sessionComplete} glass rounded-lg`}>
-          <div className={styles.completeIcon}>🎉</div>
+          <div className={styles.completeIcon}><FaTrophy /></div>
           <h2>Session Complete!</h2>
           <div className={styles.sessionStats}>
             <div className={styles.statItem}>

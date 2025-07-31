@@ -83,6 +83,8 @@
   position: relative;
   scroll-behavior: smooth;
   z-index: 2;
+  width: 100%;
+  max-width: 100%;
 }
 
 .mainContent::before {
@@ -194,14 +196,23 @@
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .mainContent {
-    padding-bottom: 70px;
-    margin: 0 16px;
-    border-radius: 20px 20px 0 0;
-    margin-top: 20px;
+    padding-bottom: 60px;
+    margin: 0;
+    border-radius: 0;
+    margin-top: 0;
+    padding-left: var(--space-sm);
+    padding-right: var(--space-sm);
+    padding-top: var(--space-sm);
     /* Mobile-specific touch optimizations */
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
     scroll-snap-type: y proximity;
+  }
+  
+  /* Remove glass effect borders on mobile for full width */
+  .mainContent::before {
+    border: none;
+    border-radius: 0;
   }
   
   /* Reduce animation on mobile for better performance */
@@ -219,14 +230,6 @@
     min-height: 44px;
     min-width: 44px;
     padding: var(--space-md);
-  }
-  
-  /* Safe area handling for newer phones */
-  .mainContent {
-    padding-top: env(safe-area-inset-top);
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
-    padding-bottom: calc(70px + env(safe-area-inset-bottom));
   }
   
   /* Mobile gesture hints */
@@ -253,9 +256,14 @@
 /* Tablet optimizations */
 @media (min-width: 641px) and (max-width: 1024px) {
   .mainContent {
-    margin: 0 24px;
-    margin-top: 24px;
-    border-radius: 24px 24px 0 0;
+    margin: 0;
+    margin-top: 0;
+    border-radius: 0;
+    padding: var(--space-md);
+  }
+  
+  .mainContent::before {
+    border-radius: 0;
   }
 }
 
@@ -267,19 +275,21 @@
   
   .mainContent {
     padding-bottom: 0;
-    margin: 20px;
-    border-radius: 20px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: var(--space-xl);
+    min-height: 100vh;
+  }
+  
+  .mainContent::before {
+    border-radius: 0;
   }
 }
 
 /* Large desktop enhancements */
 @media (min-width: 1440px) {
   .mainContent {
-    max-width: 1200px;
-    margin: 40px auto;
-    box-shadow: 
-      0 25px 50px rgba(0, 0, 0, 0.15),
-      0 0 0 1px rgba(255, 255, 255, 0.1);
+    padding: var(--space-2xl);
   }
 }

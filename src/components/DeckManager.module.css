@@ -1,7 +1,16 @@
 .deckManager {
-  padding: var(--space-lg);
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: var(--space-md);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+@media (min-width: 768px) {
+  .deckManager {
+    padding: var(--space-xl);
+    max-width: 1400px;
+    margin: 0 auto;
+  }
 }
 
 .header {
@@ -55,10 +64,35 @@
 }
 
 .decksGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
   margin-bottom: var(--space-xl);
+}
+
+.decksGrid > * {
+  flex: 1 1 280px;
+  min-width: 280px;
+  max-width: 100%;
+}
+
+@media (min-width: 768px) {
+  .decksGrid {
+    gap: var(--space-lg);
+  }
+  
+  .decksGrid > * {
+    flex: 1 1 320px;
+    min-width: 320px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .decksGrid > * {
+    flex: 1 1 350px;
+    min-width: 350px;
+    max-width: 400px;
+  }
 }
 
 .deckCard {
@@ -202,7 +236,7 @@
 /* Desktop adjustments */
 @media (min-width: 768px) {
   .deckManager {
-    margin-left: 280px; /* Account for side navigation */
+    margin-left: 240px; /* Account for side navigation */
     padding: var(--space-xl);
   }
 }

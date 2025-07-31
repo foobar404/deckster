@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import styles from './FlashCard.module.css'
+import { FaTimes, FaFrown, FaCheck, FaRocket } from 'react-icons/fa'
 
 const FlashCard = ({ card, onReview, onDragStateChange }) => {
     const [isFlipped, setIsFlipped] = useState(false)
@@ -9,10 +10,10 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
     const cardRef = useRef(null)
     const startPos = useRef({ x: 0, y: 0 })
     const difficultyOptions = [
-        { id: 0, label: 'Again', color: '#ef4444', emoji: '❌' },
-        { id: 1, label: 'Hard', color: '#f59e0b', emoji: '😰' },
-        { id: 2, label: 'Good', color: '#10b981', emoji: '✅' },
-        { id: 3, label: 'Easy', color: '#6366f1', emoji: '🚀' }
+        { id: 0, label: 'Again', color: '#ef4444', icon: <FaTimes /> },
+        { id: 1, label: 'Hard', color: '#f59e0b', icon: <FaFrown /> },
+        { id: 2, label: 'Good', color: '#10b981', icon: <FaCheck /> },
+        { id: 3, label: 'Easy', color: '#6366f1', icon: <FaRocket /> }
     ]
 
     const handleCardClick = (e) => {
@@ -189,7 +190,7 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
                         className={styles.swipeIndicator}
                         style={{ color: swipeIndicator.color }}
                     >
-                        <span className={styles.indicatorEmoji}>{swipeIndicator.emoji}</span>
+                        <span className={styles.indicatorEmoji}>{swipeIndicator.icon}</span>
                         <span className={styles.indicatorLabel}>{swipeIndicator.label}</span>
                     </div>
                 )}

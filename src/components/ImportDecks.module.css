@@ -1,10 +1,24 @@
 .importDecks {
-  padding: var(--space-lg);
-  max-width: 800px;
+  padding: var(--space-md);
+  width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
+}
+
+@media (min-width: 768px) {
+  .importDecks {
+    padding: var(--space-xl);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1200px) {
+  .importDecks {
+    max-width: 1000px;
+  }
 }
 
 .header {
@@ -316,7 +330,7 @@
 /* Desktop adjustments */
 @media (min-width: 768px) {
   .importDecks {
-    margin-left: 280px; /* Account for side navigation */
+    margin-left: 240px; /* Account for side navigation */
     padding: var(--space-xl);
   }
 }

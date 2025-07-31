@@ -1,4 +1,5 @@
 import styles from './Stats.module.css'
+import { FaChartBar, FaBullseye, FaFire, FaBook, FaCheckCircle, FaTrophy, FaChartLine } from 'react-icons/fa'
 
 const Stats = ({ stats, decks }) => {
   const getTotalCards = () => {
@@ -54,7 +55,7 @@ const Stats = ({ stats, decks }) => {
 
       <div className={styles.statsGrid}>
         <div className={`${styles.statCard} glass rounded-lg`}>
-          <div className={styles.statIcon}>📊</div>
+          <div className={styles.statIcon}><FaChartBar /></div>
           <div className={styles.statContent}>
             <div className={styles.statValue}>{stats.totalReviews}</div>
             <div className={styles.statLabel}>Total Reviews</div>
@@ -62,7 +63,7 @@ const Stats = ({ stats, decks }) => {
         </div>
 
         <div className={`${styles.statCard} glass rounded-lg`}>
-          <div className={styles.statIcon}>🎯</div>
+          <div className={styles.statIcon}><FaBullseye /></div>
           <div className={styles.statContent}>
             <div className={styles.statValue}>{accuracy}%</div>
             <div className={styles.statLabel}>Accuracy</div>
@@ -70,7 +71,7 @@ const Stats = ({ stats, decks }) => {
         </div>
 
         <div className={`${styles.statCard} glass rounded-lg`}>
-          <div className={styles.statIcon}>🔥</div>
+          <div className={styles.statIcon}><FaFire /></div>
           <div className={styles.statContent}>
             <div className={styles.statValue}>{stats.streakCount}</div>
             <div className={styles.statLabel}>Current Streak</div>
@@ -78,7 +79,7 @@ const Stats = ({ stats, decks }) => {
         </div>
 
         <div className={`${styles.statCard} glass rounded-lg`}>
-          <div className={styles.statIcon}>📚</div>
+          <div className={styles.statIcon}><FaBook /></div>
           <div className={styles.statContent}>
             <div className={styles.statValue}>{totalCards}</div>
             <div className={styles.statLabel}>Total Cards</div>
@@ -86,7 +87,7 @@ const Stats = ({ stats, decks }) => {
         </div>
 
         <div className={`${styles.statCard} glass rounded-lg`}>
-          <div className={styles.statIcon}>✅</div>
+          <div className={styles.statIcon}><FaCheckCircle /></div>
           <div className={styles.statContent}>
             <div className={styles.statValue}>{reviewedCards}</div>
             <div className={styles.statLabel}>Cards Reviewed</div>
@@ -94,7 +95,7 @@ const Stats = ({ stats, decks }) => {
         </div>
 
         <div className={`${styles.statCard} glass rounded-lg`}>
-          <div className={styles.statIcon}>🏆</div>
+          <div className={styles.statIcon}><FaTrophy /></div>
           <div className={styles.statContent}>
             <div className={styles.statValue}>{masteredCards}</div>
             <div className={styles.statLabel}>Cards Mastered</div>
@@ -171,7 +172,7 @@ const Stats = ({ stats, decks }) => {
 
       {stats.totalReviews === 0 && (
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📈</div>
+          <div className={styles.emptyIcon}><FaChartLine /></div>
           <h2>No Data Yet</h2>
           <p>Start reviewing cards to see your statistics!</p>
         </div>

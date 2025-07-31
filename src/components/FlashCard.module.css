@@ -1,9 +1,23 @@
 .flashcardContainer {
   position: relative;
   width: 100%;
-  height: calc(100vh - 125px);
-  max-height: 600px;
+  height: calc(100vh - 80px);
   margin: 0 auto;
+  padding: 0;
+}
+
+@media (min-width: 768px) {
+  .flashcardContainer {
+    height: calc(100vh - 120px);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1200px) {
+  .flashcardContainer {
+    max-width: 1000px;
+  }
 }
 
 .flashcard {
@@ -51,11 +65,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-lg);
+  padding: var(--space-md);
   background: #fff;
   backdrop-filter: blur(20px);
   border: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 768px) {
+  .cardFront,
+  .cardBack {
+    padding: var(--space-xl);
+  }
 }
 
 .cardFront {
@@ -76,11 +97,12 @@
 }
 
 .cardText {
-  font-size: 1.5rem;
+  font-size: clamp(1.2rem, 4vw, 2rem);
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.4;
   word-break: break-word;
+  max-width: 100%;
 }
 
 .flipHint {
@@ -109,14 +131,14 @@
 /* Mobile-specific enhancements */
 @media (max-width: 768px) {
   .flashcardContainer {
-    height: calc(100vh - 160px); /* Account for mobile navigation */
-    padding: 0 var(--space-sm);
+    height: calc(100vh - 80px); /* Account for mobile navigation */
+    padding: 0;
   }
   
   .cardText {
-    font-size: clamp(1.1rem, 4vw, 1.4rem);
+    font-size: clamp(1.2rem, 5vw, 1.6rem);
     line-height: 1.5;
-    padding: var(--space-md);
+    padding: 0;
   }
   
   .flipHint {
@@ -142,7 +164,7 @@
   /* Improved touch feedback */
   .cardFront,
   .cardBack {
-    padding: var(--space-xl) var(--space-lg);
+    padding: var(--space-lg);
   }
   
   /* Mobile swipe indicators */

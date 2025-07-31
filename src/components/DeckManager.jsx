@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import CardEditor from './CardEditor'
 import styles from './DeckManager.module.css'
+import { FaPlus, FaTrash, FaEdit, FaBook } from 'react-icons/fa'
 
 const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -62,7 +63,7 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
           className={styles.btnPrimary}
           onClick={() => setShowCreateForm(true)}
         >
-          ➕ New Deck
+          <FaPlus /> New Deck
         </button>
       </div>
 
@@ -101,7 +102,7 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
                   className={`${styles.deleteBtn} btn-ghost`}
                   onClick={() => deleteDeck(deck.id)}
                 >
-                  🗑️
+                  <FaTrash />
                 </button>
               </div>
               
@@ -135,7 +136,7 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
                   className={styles.btnSecondary}
                   onClick={() => setEditingDeck(deck)}
                 >
-                  ✏️ Edit Cards
+                  <FaEdit /> Edit Cards
                 </button>
                 <button 
                   className={styles.btnPrimary}
@@ -152,7 +153,7 @@ const DeckManager = ({ decks, onDecksChange, onDeckSelect }) => {
 
       {decks.length === 0 && (
         <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📚</div>
+          <div className={styles.emptyIcon}><FaBook /></div>
           <h2>No Decks Yet</h2>
           <p>Create your first deck to start studying!</p>
         </div>
