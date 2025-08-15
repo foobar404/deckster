@@ -1,14 +1,24 @@
 import { useState, useRef, useEffect } from 'react'
 import styles from './FlashCard.module.css'
-import { FaTimes, FaFrown, FaCheck, FaRocket } from 'react-icons/fa'
+import { FaTimes, FaFrown, FaCheck, FaRocket, FaVolumeUp, FaVolumeMute } from 'react-icons/fa'
+import { speakText, stopSpeech, isSpeechSupported, detectLanguage, extractImageUrl, cleanTextFromImages } from '../utils/speechUtils'
 
 const FlashCard = ({ card, onReview, onDragStateChange }) => {
     const [isFlipped, setIsFlipped] = useState(false)
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
     const [selectedAnswer, setSelectedAnswer] = useState(null)
+    const [isSpeaking, setIsSpeaking] = useState(false)
     const cardRef = useRef(null)
     const startPos = useRef({ x: 0, y: 0 })
+    
+    // Extract image URLs and clean text for both sides
+    // Check for dedicated image URL properties first, then fallback to extracting from text
+    const frontImageUrl = card.frontImageUrl || extractImageUrl(card.front)
+    const backImageUrl = card.backImageUrl || card.imageUrl || extractImageUrl(card.back)
+    const frontText = card.frontImageUrl ? card.front : cleanTextFromImages(card.front)
+    const backText = card.backImageUrl || card.imageUrl ? card.back : cleanTextFromImages(card.back)
+    
     const difficultyOptions = [
         { id: 0, label: 'Again', color: '#ef4444', icon: <FaTimes /> },
         { id: 1, label: 'Hard', color: '#f59e0b', icon: <FaFrown /> },
@@ -21,6 +31,34 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
         if (!isFlipped) {
             e.preventDefault()
             setIsFlipped(!isFlipped)
+        }
+    }
+
+    const handleSpeech = async (e) => {
+        e.stopPropagation() // Prevent card flip
+        
+        if (isSpeaking) {
+            stopSpeech()
+            setIsSpeaking(false)
+            return
+        }
+        
+        const textToSpeak = isFlipped ? backText : frontText
+        if (!textToSpeak.trim()) return
+        
+        try {
+            setIsSpeaking(true)
+            const language = detectLanguage(textToSpeak)
+            await speakText(textToSpeak, { 
+                language,
+                rate: 0.9,
+                pitch: 1,
+                volume: 0.8 
+            })
+        } catch (error) {
+            console.error('Speech synthesis failed:', error)
+        } finally {
+            setIsSpeaking(false)
         }
     }
 
@@ -113,7 +151,16 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
         setDragOffset({ x: 0, y: 0 })
         setIsDragging(false)
         setSelectedAnswer(null)
+        setIsSpeaking(false)
+        stopSpeech() // Stop any ongoing speech
     }, [card.id]);
+
+    // Cleanup speech on unmount
+    useEffect(() => {
+        return () => {
+            stopSpeech()
+        }
+    }, [])
 
     useEffect(() => {
         if (isDragging && dragOffset.x < -30 && dragOffset.y < -30) setSelectedAnswer(0);
@@ -169,15 +216,43 @@ const FlashCard = ({ card, onReview, onDragStateChange }) => {
                         transform: isFlipped ? 'rotateY(180deg)' : ''
                     }}
                 >
-                    <div className={styles.cardFront}>
+                    <div className={styles.cardFront} style={{
+                        backgroundImage: frontImageUrl ? `url(${frontImageUrl})` : 'none',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }}>
+                        {isSpeechSupported() && frontText.trim() && (
+                            <button 
+                                className={styles.speechButton}
+                                onClick={handleSpeech}
+                                aria-label="Read text aloud"
+                            >
+                                {isSpeaking && !isFlipped ? <FaVolumeMute /> : <FaVolumeUp />}
+                            </button>
+                        )}
                         <div className={styles.cardContent}>
-                            <div className={styles.cardText}>{card.front}</div>
+                            <div className={styles.cardText}>{frontText}</div>
                             <div className={styles.flipHint}>Tap to reveal</div>
                         </div>
                     </div>
-                    <div className={styles.cardBack}>
+                    <div className={styles.cardBack} style={{
+                        backgroundImage: backImageUrl ? `url(${backImageUrl})` : 'none',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat'
+                    }}>
+                        {isSpeechSupported() && backText.trim() && (
+                            <button 
+                                className={styles.speechButton}
+                                onClick={handleSpeech}
+                                aria-label="Read text aloud"
+                            >
+                                {isSpeaking && isFlipped ? <FaVolumeMute /> : <FaVolumeUp />}
+                            </button>
+                        )}
                         <div className={styles.cardContent}>
-                            <div className={styles.cardText}>{card.back}</div>
+                            <div className={styles.cardText}>{backText}</div>
                             <div className={styles.swipeHint}>
                                 Drag to corners to rate difficulty
                             </div>

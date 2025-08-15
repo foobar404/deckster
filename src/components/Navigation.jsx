@@ -1,9 +1,20 @@
 import { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { BiBookReader, BiFolderOpen, BiImport, BiBarChart } from 'react-icons/bi'
 import styles from './Navigation.module.css'
 
-const Navigation = ({ currentView, onViewChange }) => {
+const Navigation = () => {
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  // Get current view from location pathname (since we're using HashRouter)
+  const getCurrentView = () => {
+    const pathname = location.pathname
+    return pathname.replace('/', '') || 'decks' // Default to decks since that's the main page
+  }
+  
+  const currentView = getCurrentView()
   
   // Update CSS custom property when collapse state changes
   useEffect(() => {
@@ -33,11 +44,15 @@ const Navigation = ({ currentView, onViewChange }) => {
   }, [isCollapsed])
   
   const navItems = [
-    { id: 'review', icon: BiBookReader, label: 'Review' },
-    { id: 'decks', icon: BiFolderOpen, label: 'Decks' },
-    { id: 'import', icon: BiImport, label: 'Import' },
-    { id: 'stats', icon: BiBarChart, label: 'Stats' }
+    { id: 'decks', icon: BiFolderOpen, label: 'Decks', path: '/decks' },
+    { id: 'review', icon: BiBookReader, label: 'Review', path: '/review' },
+    { id: 'import', icon: BiImport, label: 'Import', path: '/import' },
+    { id: 'stats', icon: BiBarChart, label: 'Stats', path: '/stats' }
   ]
+
+  const handleNavigation = (path) => {
+    navigate(path)
+  }
 
   return (
     <nav className={`${styles.navigation} glass ${isCollapsed ? styles.collapsed : ''}`}>
@@ -48,7 +63,7 @@ const Navigation = ({ currentView, onViewChange }) => {
             <button
               key={item.id}
               className={`${styles.navItem} ${currentView === item.id ? styles.active : ''}`}
-              onClick={() => onViewChange(item.id)}
+              onClick={() => handleNavigation(item.path)}
               title={isCollapsed ? item.label : ''}
             >
               <IconComponent className={styles.navIcon} />

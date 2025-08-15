@@ -2,7 +2,8 @@
 
 export const STORAGE_KEYS = {
   DECKS: 'flashcards_decks',
-  STATS: 'flashcards_stats'
+  STATS: 'flashcards_stats',
+  STUDY_OPTIONS: 'flashcards_study_options'
 }
 
 export const saveToStorage = (key, data) => {

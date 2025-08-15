@@ -135,6 +135,23 @@
   border-color: var(--primary-light);
 }
 
+.imagePreview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.imagePreview svg {
+  font-size: 0.9rem;
+}
+
 .formActions {
   display: flex;
   gap: var(--space-md);
@@ -226,6 +243,23 @@
 
 .cardSide textarea:hover {
   border-color: var(--primary-light);
+}
+
+.cardSide .imagePreview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  color: var(--primary);
+}
+
+.cardSide .imagePreview svg {
+  font-size: 0.9rem;
 }
 
 .deleteCardBtn {

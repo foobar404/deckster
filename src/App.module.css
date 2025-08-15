@@ -1,7 +1,8 @@
 .app {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height when available */
   width: 100%;
   position: relative;
   --nav-width: 0px;
@@ -19,6 +20,13 @@
   background-attachment: fixed;
   overflow: hidden;
   position: relative;
+}
+
+@media (min-width: 768px) {
+  .app {
+    min-height: 100vh;
+    height: auto;
+  }
 }
 
 /* Modern grain texture overlay */
@@ -75,7 +83,7 @@
 .mainContent {
   flex: 1;
   padding-bottom: 80px; /* Space for navigation */
-  overflow-y: auto;
+  overflow-y: auto; /* Allow scrolling by default */
   margin-left: var(--nav-width);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   backdrop-filter: blur(12px);
@@ -85,6 +93,25 @@
   z-index: 2;
   width: 100%;
   max-width: 100%;
+  min-height: 0; /* Allow flex shrinking */
+}
+
+@media (min-width: 768px) {
+  .mainContent {
+    padding-bottom: 0;
+    min-height: 100vh;
+    height: auto;
+    overflow-y: auto; /* Allow scrolling on desktop */
+  }
+}
+
+/* Review mode specific styling - no scroll on mobile */
+@media (max-width: 640px) {
+  .mainContent.reviewMode {
+    overflow: hidden;
+    padding: 0;
+    padding-bottom: 0;
+  }
 }
 
 .mainContent::before {
@@ -196,13 +223,14 @@
 /* Mobile optimizations */
 @media (max-width: 640px) {
   .mainContent {
-    padding-bottom: 60px;
+    padding-bottom: 80px; /* Keep space for navigation */
     margin: 0;
     border-radius: 0;
     margin-top: 0;
     padding-left: var(--space-sm);
     padding-right: var(--space-sm);
     padding-top: var(--space-sm);
+    overflow-y: auto; /* Allow scrolling on mobile by default */
     /* Mobile-specific touch optimizations */
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;

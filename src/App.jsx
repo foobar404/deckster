@@ -1,139 +1,49 @@
-import { useState, useEffect } from 'react'
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Navigation from './components/Navigation'
-import Review from './components/Review'
-import DeckManager from './components/DeckManager'
-import ImportDecks from './components/ImportDecks'
-import Stats from './components/Stats'
-import { STORAGE_KEYS, saveToStorage, loadFromStorage } from './utils/storage'
+import ToastContainer from './components/Toast'
+import { ReviewPage, DecksPage, ImportPage, StatsPage } from './pages'
+import { AppProvider } from './context/AppContext'
+import { ToastProvider } from './context/ToastContext'
 import styles from './App.module.css'
 
-function App() {
-  const [currentView, setCurrentView] = useState('review')
-  const [decks, setDecks] = useState([])
-  const [activeDeck, setActiveDeck] = useState(null)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [reviewStats, setReviewStats] = useState({
-    totalReviews: 0,
-    correct: 0,
-    incorrect: 0,
-    streakCount: 0
-  })
-
-  // Load data from localStorage on app start
-  useEffect(() => {
-    const savedDecks = loadFromStorage(STORAGE_KEYS.DECKS, [])
-    const savedStats = loadFromStorage(STORAGE_KEYS.STATS, {
-      totalReviews: 0,
-      correct: 0,
-      incorrect: 0,
-      streakCount: 0
-    })
-
-    setDecks(savedDecks)
-    setReviewStats(savedStats)
-    setIsInitialized(true) // Mark as initialized after loading
-  }, [])
-
-  // Save decks to localStorage whenever decks change (but only after initialization)
-  useEffect(() => {
-    if (isInitialized) {
-      saveToStorage(STORAGE_KEYS.DECKS, decks)
-    }
-  }, [decks, isInitialized])
-
-  // Save stats to localStorage whenever stats change (but only after initialization)
-  useEffect(() => {
-    if (isInitialized) {
-      saveToStorage(STORAGE_KEYS.STATS, reviewStats)
-    }
-  }, [reviewStats, isInitialized])
-
-  // Update decks and ensure activeDeck stays in sync
-  const handleDecksChange = (newDecks) => {
-    setDecks(newDecks)
-    
-    // If active deck was deleted, clear it
-    if (activeDeck && typeof newDecks === 'function') {
-      // Handle function updates
-      const updatedDecks = newDecks(decks)
-      const deckStillExists = updatedDecks.find(deck => deck.id === activeDeck.id)
-      if (!deckStillExists) {
-        setActiveDeck(null)
-      }
-    } else if (activeDeck && Array.isArray(newDecks)) {
-      // Handle direct array updates
-      const deckStillExists = newDecks.find(deck => deck.id === activeDeck.id)
-      if (!deckStillExists) {
-        setActiveDeck(null)
-      }
-    }
+// Component to handle layout and current view detection
+const AppLayout = () => {
+  const location = useLocation()
+  
+  // Get current view from location pathname
+  const getCurrentView = () => {
+    const pathname = location.pathname
+    return pathname.replace('/', '') || 'decks'
   }
-
-  const renderView = () => {
-    switch (currentView) {
-      case 'review':
-        return (
-          <Review 
-            deck={activeDeck} 
-            onUpdateStats={setReviewStats}
-            onCardReviewed={(cardId, difficulty) => {
-              // Update card difficulty and last reviewed date
-              if (activeDeck) {
-                const updatedDecks = decks.map(deck => 
-                  deck.id === activeDeck.id 
-                    ? {
-                        ...deck,
-                        cards: deck.cards.map(card =>
-                          card.id === cardId
-                            ? { ...card, difficulty, lastReviewed: new Date().toISOString() }
-                            : card
-                        )
-                      }
-                    : deck
-                )
-                setDecks(updatedDecks)
-                
-                // Update active deck reference
-                const updatedActiveDeck = updatedDecks.find(deck => deck.id === activeDeck.id)
-                setActiveDeck(updatedActiveDeck)
-              }
-            }}
-          />
-        )
-      case 'decks':
-        return (
-          <DeckManager 
-            decks={decks} 
-            onDecksChange={handleDecksChange}
-            onDeckSelect={(deck) => {
-              setActiveDeck(deck)
-              setCurrentView('review')
-            }}
-          />
-        )
-      case 'import':
-        return <ImportDecks onDecksImported={(newDecks) => {
-          console.log('Received new decks:', newDecks) // Debug log
-          setDecks(prev => {
-            const updated = [...prev, ...newDecks]
-            console.log('Updated decks array:', updated) // Debug log
-            return updated
-          })
-        }} />
-      case 'stats':
-        return <Stats stats={reviewStats} decks={decks} />
-      default:
-        return <Review deck={activeDeck} onUpdateStats={setReviewStats} />
-    }
-  }
+  
+  const currentView = getCurrentView()
 
   return (
     <div className={styles.app}>
-      <main className={styles.mainContent}>
-        {renderView()}
+      <main className={`${styles.mainContent} ${currentView === 'review' ? styles.reviewMode : ''}`}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/decks" replace />} />
+          <Route path="/decks" element={<DecksPage />} />
+          <Route path="/review" element={<ReviewPage />} />
+          <Route path="/import" element={<ImportPage />} />
+          <Route path="/stats" element={<StatsPage />} />
+        </Routes>
       </main>
-      <Navigation currentView={currentView} onViewChange={setCurrentView} />
+      <Navigation />
+      <ToastContainer />
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AppProvider>
+      <ToastProvider>
+        <Router>
+          <AppLayout />
+        </Router>
+      </ToastProvider>
+    </AppProvider>
   )
 }
 

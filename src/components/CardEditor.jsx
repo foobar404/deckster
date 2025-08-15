@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useToast } from '../context/ToastContext'
 import styles from './CardEditor.module.css'
-import { FaPlus, FaTrash, FaEdit } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaEdit, FaImage } from 'react-icons/fa'
+import { extractImageUrl } from '../utils/speechUtils'
 
 const CardEditor = ({ deck, onSave, onCancel }) => {
+  const { showWarning, showInfo } = useToast()
   const [cards, setCards] = useState([...deck.cards])
   const [showAddForm, setShowAddForm] = useState(false)
   const [newCard, setNewCard] = useState({ front: '', back: '' })
@@ -30,8 +33,10 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
   }
 
   const deleteCard = (cardId) => {
-    if (confirm('Are you sure you want to delete this card?')) {
-      setCards(prev => prev.filter(card => card.id !== cardId))
+    const cardToDelete = cards.find(card => card.id === cardId)
+    setCards(prev => prev.filter(card => card.id !== cardId))
+    if (cardToDelete) {
+      showWarning(`Deleted card: "${cardToDelete.front}"`)
     }
   }
 
@@ -41,6 +46,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
       cards: cards.filter(card => card.front.trim() && card.back.trim())
     }
     onSave(updatedDeck)
+    showInfo(`Saved changes to "${deck.name}"`)
   }
 
   return (
@@ -77,18 +83,30 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
                 <textarea
                   value={newCard.front}
                   onChange={(e) => setNewCard(prev => ({ ...prev, front: e.target.value }))}
-                  placeholder="Enter the question or prompt..."
-                  rows={2}
+                  placeholder="Enter the question or prompt... (You can include image URLs)"
+                  rows={3}
                 />
+                {extractImageUrl(newCard.front) && (
+                  <div className={styles.imagePreview}>
+                    <FaImage />
+                    <span>Image detected in text</span>
+                  </div>
+                )}
               </div>
               <div className={styles.formGroup}>
                 <label>Back (Answer)</label>
                 <textarea
                   value={newCard.back}
                   onChange={(e) => setNewCard(prev => ({ ...prev, back: e.target.value }))}
-                  placeholder="Enter the answer..."
-                  rows={2}
+                  placeholder="Enter the answer... (You can include image URLs)"
+                  rows={3}
                 />
+                {extractImageUrl(newCard.back) && (
+                  <div className={styles.imagePreview}>
+                    <FaImage />
+                    <span>Image detected in text</span>
+                  </div>
+                )}
               </div>
             </div>
             <div className={styles.formActions}>
@@ -120,16 +138,30 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
                 <textarea
                   value={card.front}
                   onChange={(e) => updateCard(card.id, 'front', e.target.value)}
-                  rows={2}
+                  rows={3}
+                  placeholder="Text and/or image URL (https://...)"
                 />
+                {extractImageUrl(card.front) && (
+                  <div className={styles.imagePreview}>
+                    <FaImage />
+                    <span>Image detected</span>
+                  </div>
+                )}
               </div>
               <div className={styles.cardSide}>
                 <label>Back</label>
                 <textarea
                   value={card.back}
                   onChange={(e) => updateCard(card.id, 'back', e.target.value)}
-                  rows={2}
+                  rows={3}
+                  placeholder="Text and/or image URL (https://...)"
                 />
+                {extractImageUrl(card.back) && (
+                  <div className={styles.imagePreview}>
+                    <FaImage />
+                    <span>Image detected</span>
+                  </div>
+                )}
               </div>
             </div>
             <button 

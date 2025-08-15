@@ -1,7 +1,11 @@
-import styles from './Stats.module.css'
+import { useContext } from 'react'
+import { AppContext } from '../context/AppContext'
+import styles from '../components/Stats.module.css'
 import { FaChartBar, FaBullseye, FaFire, FaBook, FaCheckCircle, FaTrophy, FaChartLine } from 'react-icons/fa'
 
-const Stats = ({ stats, decks }) => {
+const StatsPage = () => {
+  const { reviewStats: stats, decks } = useContext(AppContext)
+
   const getTotalCards = () => {
     return decks.reduce((total, deck) => total + deck.cards.length, 0)
   }
@@ -181,4 +185,4 @@ const Stats = ({ stats, decks }) => {
   )
 }
 
-export default Stats
+export default StatsPage

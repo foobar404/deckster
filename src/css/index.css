@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 :root {
   /* Color Palette - Enhanced */
   --primary: #667eea;
@@ -94,18 +96,39 @@
 
 body {
   margin: 0;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height when available */
   background: var(--background);
   color: var(--text-primary);
   overflow-x: hidden;
   font-size: var(--font-size-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
 }
 
 #root {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height when available */
   width: 100%;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  body {
+    position: static;
+    min-height: 100vh;
+    height: auto;
+  }
+  
+  #root {
+    min-height: 100vh;
+    height: auto;
+    overflow: visible;
+  }
 }
 
 /* Enhanced Focus States */
