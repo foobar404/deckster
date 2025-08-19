@@ -1,0 +1,465 @@
+.flashcardContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0;
+  max-height: calc(100vh - 140px); /* Account for header + nav + padding */
+  overflow: hidden; /* Prevent any overflow */
+  filter: drop-shadow(0 20px 20px rgba(0, 0, 0, 0.2));
+  z-index: 10; /* Ensure card appears above quadrant indicators */
+  border-radius: var(--radius-xl);
+}
+
+/* Gradient overlay for better text readability over background images */
+.cardGradientOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 0, 0, 0.4) 0%,
+    rgba(0, 0, 0, 0.2) 30%,
+    rgba(0, 0, 0, 0.1) 60%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
+  z-index: 2;
+  pointer-events: none; /* Allow clicks to pass through */
+}
+
+@media (min-width: 768px) {
+  .flashcardContainer {
+    height: calc(100vh - 120px);
+    max-width: 800px;
+    margin: 0 auto;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (min-width: 1200px) {
+  .flashcardContainer {
+    max-width: 1000px;
+  }
+}
+
+.flashcard {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-xl);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.6s ease, box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  user-select: none;
+  z-index: 10;
+  /* Mobile touch optimizations */
+  touch-action: pan-x pan-y;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+.flashcard:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+.flashcard.dragging {
+  transition: none;
+  background: rgba(255, 255, 255, 1) !important; /* Opaque when dragging */
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+.cardInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+}
+
+.cardFront,
+.cardBack {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: #fff;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden; /* Prevent text overflow */
+
+  border: 10px solid var(--primary);
+  border-radius: var(--radius-xl);
+}
+
+/* Speech button styles */
+.speechButton {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  width: 50px;
+  height: 50px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  font-size: 1rem;
+}
+
+
+.speechButton:active {
+  transform: scale(0.95);
+}
+
+@media (min-width: 768px) {
+  .cardFront,
+  .cardBack {
+    padding: var(--space-xl);
+  }
+  
+  .speechButton {
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+  }
+}
+
+.cardFront {
+  transform: rotateY(0deg);
+}
+
+.cardBack {
+  transform: rotateY(180deg);
+}
+
+.cardContent {
+  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  align-items: center;
+  overflow: hidden; /* Prevent overflow */
+  max-height: 100%;
+  /* Ensure proper centering within the card */
+  margin: auto;
+  /* Let hints be positioned relative to the card itself (.cardFront/.cardBack)
+    by not creating a new containing block here. */
+  position: relative;
+  z-index: 2;
+}
+
+/* Card image display */
+.cardImage {
+  position: relative;
+  z-index: 3;
+  max-width: 100%;
+  max-height: 50%;
+  padding: var(--space-sm);
+}
+
+.cardImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--radius-xl);
+  box-shadow: 5px 5px 10px rgba(0, 0, 0, .4);
+}
+
+.cardText {
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+  max-width: 100%;
+  overflow: hidden; /* Prevent text overflow */
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 8; /* Limit to 8 lines max */
+  line-clamp: 8; /* Standard property for compatibility */
+  -webkit-box-orient: vertical;
+  /* Enhanced readability over background images */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.95);
+  padding: var(--space-md);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(8px);
+  position: relative;
+  z-index: 3;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Both sides layout styles */
+.bothSidesContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+}
+
+.sideSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.sideLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-xs);
+}
+
+.sideDivider {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  border-radius: 1px;
+  margin: var(--space-xs) 0;
+}
+
+/* Mobile-specific enhancements */
+@media (max-width: 768px) {
+  .flashcardContainer {
+    height: 100%;
+    padding: 0;
+  }
+
+  .flashcard {
+    height: 100%;
+  }
+
+  .cardFront,
+  .cardBack {
+    padding: var(--space-lg);
+  }
+
+  .cardText {
+    font-size: clamp(1rem, 5vw, 1.8rem);
+    padding: var(--space-sm);
+  }
+  
+  /* Mobile styles for both sides layout */
+  .bothSidesContainer {
+    gap: var(--space-sm);
+  }
+}
+
+.showOptionsBtn {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+}
+
+.swipeIndicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: var(--space-md);
+  border-radius: var(--radius-xl);
+  text-align: center;
+  pointer-events: none;
+  z-index: 20;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.indicatorEmoji {
+  font-size: 2rem;
+  display: block;
+  margin-bottom: var(--space-xs);
+}
+
+.indicatorLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quadrants {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.quadrant {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  opacity: 0.3;
+  backdrop-filter: blur(5px);
+}
+
+.quadrant.active {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.quadrant.tl {
+  top: 0;
+  left: 0;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.4));
+  border: 2px solid rgba(239, 68, 68, 0.5);
+}
+
+.quadrant.tr {
+  top: 0;
+  right: 0;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.4));
+  border: 2px solid rgba(99, 102, 241, 0.5);
+}
+
+.quadrant.bl {
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.4));
+  border: 2px solid rgba(245, 158, 11, 0.5);
+}
+
+.quadrant.br {
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.4));
+  border: 2px solid rgba(16, 185, 129, 0.5);
+}
+
+.quadrantEmoji {
+  font-size: 2rem;
+  margin-bottom: var(--space-xs);
+}
+
+.quadrantLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.difficultyButtons {
+  position: absolute;
+  bottom: -180px;
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+.swipeInstructions {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.buttonGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.difficultyBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border: 2px solid;
+  border-radius: var(--radius-xl);
+  background: transparent;
+  color: var(--text-primary);
+  font-weight: 600;
+  transition: all 0.2s ease;
+  min-height: 80px;
+}
+
+.difficultyBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btnEmoji {
+  font-size: 1.5rem;
+}
+
+.btnLabel {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .cardText {
+    font-size: 1.5rem;
+  }
+  
+  .difficultyButtons {
+    bottom: -160px;
+  }
+  
+  .buttonGrid {
+    gap: var(--space-sm);
+  }
+  
+  .difficultyBtn {
+    min-height: 70px;
+    padding: var(--space-sm);
+  }
+}
+
+/* Desktop adjustments */
+@media (min-width: 768px) {
+  .flashcardContainer {
+    height: calc(100vh - 300px);
+    max-height: 700px;
+  }
+  
+  .cardText {
+    font-size: 2rem;
+  }
+  
+  .buttonGrid {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 400px;
+  }
+  
+  .difficultyBtn {
+    min-height: 90px;
+  }
+}

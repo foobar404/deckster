@@ -1,0 +1,336 @@
+.importDecks {
+  padding: var(--space-md);
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+@media (min-width: 768px) {
+  .importDecks {
+    padding: var(--space-xl);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+}
+
+@media (min-width: 1200px) {
+  .importDecks {
+    max-width: 1000px;
+  }
+}
+
+.header {
+  text-align: center;
+  margin: 0 !important;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.header p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.importForm,
+.previewSection {
+  padding: var(--space-xl);
+}
+
+.formSection {
+  margin-bottom: var(--space-xl);
+}
+
+.formSection label {
+  display: block;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.formSection input,
+.formSection textarea {
+  width: 100%;
+  padding: var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.formSection input:focus,
+.formSection textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.formSection textarea {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  line-height: 1.5;
+}
+
+.textareaHint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
+}
+
+.radioGroup {
+  display: flex;
+  gap: var(--space-lg);
+}
+
+.radioOption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  font-weight: normal;
+}
+
+.radioOption input[type="radio"] {
+  width: auto;
+  margin: 0;
+}
+
+.formActions {
+  display: flex;
+  gap: var(--space-md);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.previewSection h3 {
+  margin: 0 0 var(--space-lg) 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-lg);
+}
+
+.previewCard {
+  border-radius: var(--radius-lg);
+  min-height: 120px;
+  perspective: 1000px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+  background: transparent;
+  border: none;
+}
+
+.previewCard:hover {
+  transform: translateY(-2px);
+}
+
+.cardInner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+  min-height: 120px;
+}
+
+.previewCard.flipped .cardInner {
+  transform: rotateY(180deg);
+}
+
+.cardSide {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--border);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+}
+
+.cardSide:last-child {
+  border-bottom: none;
+}
+
+.cardSide.front {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.cardSide.back {
+  background: rgba(16, 185, 129, 0.05);
+  transform: rotateY(180deg);
+}
+
+.cardLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-xs);
+}
+
+.cardSide.front .cardLabel {
+  color: var(--primary);
+}
+
+.cardSide.back .cardLabel {
+  color: var(--success);
+}
+
+.cardContent {
+  color: var(--text-primary);
+  font-weight: 500;
+  line-height: 1.4;
+  word-wrap: break-word;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.previewSummary {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.paginationBtn {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 90px;
+}
+
+.paginationBtn:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.paginationBtn:disabled {
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.paginationInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.cardRange {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .importDecks {
+    padding: var(--space-md);
+  }
+  
+  .header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .importForm,
+  .previewSection {
+    padding: var(--space-lg);
+  }
+  
+  .formActions {
+    justify-content: stretch;
+  }
+  
+  .formActions button {
+    flex: 1;
+  }
+  
+  .radioGroup {
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+  
+  .previewGrid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+  
+  .previewCard {
+    min-height: 100px;
+  }
+  
+  .cardInner {
+    min-height: 100px;
+  }
+  
+  .cardSide {
+    padding: var(--space-sm) var(--space-md);
+  }
+  
+  .pagination {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .paginationInfo {
+    order: -1;
+    margin-bottom: var(--space-sm);
+  }
+  
+  .paginationBtn {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+/* Desktop adjustments */
+@media (min-width: 768px) {
+  .importDecks {
+    margin-left: 240px; /* Account for side navigation */
+    padding: var(--space-xl);
+  }
+}
