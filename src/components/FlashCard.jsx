@@ -1,14 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import styles from './FlashCard.module.css'
-import { FaTimes, FaFrown, FaCheck, FaRocket, FaVolumeUp, FaVolumeMute } from 'react-icons/fa'
-import { speakText, stopSpeech, isSpeechSupported, detectLanguage, extractImageUrl, cleanTextFromImages } from '../utils/speechUtils'
+import { FaTimes, FaFrown, FaCheck, FaRocket } from 'react-icons/fa'
+import { speakText, stopSpeech, isSpeechSupported, detectLanguage, extractImageUrl, cleanTextFromImages, cleanTextForSpeech } from '../utils/speechUtils'
 
 const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     const [isFlipped, setIsFlipped] = useState(false)
+    const [showBackContent, setShowBackContent] = useState(false)
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
     const [selectedAnswer, setSelectedAnswer] = useState(null)
-    const [isSpeaking, setIsSpeaking] = useState(false)
     const cardRef = useRef(null)
     const startPos = useRef({ x: 0, y: 0 })
     
@@ -27,60 +27,66 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     ]
 
     const handleCardClick = (e) => {
-        // Only flip if card is not flipped and not dragging
-        if (!isFlipped) {
+        // Only flip if not dragging
+        if (!isDragging) {
             e.preventDefault()
             setIsFlipped(!isFlipped)
         }
     }
 
-    const handleSpeech = async (e) => {
-        e.stopPropagation() // Prevent card flip
-        
-        console.log('Speech button clicked')
-        console.log('isSpeaking:', isSpeaking)
-        console.log('isSpeechSupported:', isSpeechSupported())
-        
-        if (isSpeaking) {
-            console.log('Stopping speech')
+    // Handle delayed back content visibility for smooth animations
+    useEffect(() => {
+        if (isFlipped) {
+            // Show back content after flip animation starts (150ms delay)
+            const timer = setTimeout(() => {
+                setShowBackContent(true)
+            }, 150)
+            return () => clearTimeout(timer)
+        } else {
+            // Hide back content immediately when flipping to front
+            setShowBackContent(false)
+        }
+    }, [isFlipped])
+
+    // Cleanup speech when card changes
+    useEffect(() => {
+        return () => {
             stopSpeech()
-            setIsSpeaking(false)
-            return
         }
+    }, [card.id])
+
+    // Auto-read functionality
+    useEffect(() => {
+        if (!studyOptions?.autoRead || !isSpeechSupported()) return
         
-        // Use cleaned text for TTS (URLs are already stripped from frontText/backText)
-        const textToSpeak = isFlipped ? backText : frontText
-        console.log('Text to speak:', textToSpeak)
-        console.log('Is flipped:', isFlipped)
+        // Stop any ongoing speech first
+        stopSpeech()
         
-        if (!textToSpeak || !textToSpeak.trim()) {
-            console.log('No text to speak')
-            return
-        }
-        
-        try {
-            setIsSpeaking(true)
-            const language = detectLanguage(textToSpeak)
-            console.log('Detected language:', language)
+        // Wait a moment for any animations to settle
+        const timer = setTimeout(() => {
+            const textToSpeak = isFlipped ? cleanTextForSpeech(card.back) : cleanTextForSpeech(card.front)
             
-            await speakText(textToSpeak, { 
-                language,
-                rate: 0.9,
-                pitch: 1,
-                volume: 0.8 
-            })
-            
-            console.log('Speech completed successfully')
-        } catch (error) {
-            console.error('Speech synthesis failed:', error)
-            // Show user-friendly error message
-            if (error.message.includes('not supported')) {
-                console.log('TTS not supported on this device')
+            if (textToSpeak && textToSpeak.trim()) {
+                try {
+                    const language = detectLanguage(textToSpeak)
+                    speakText(textToSpeak, { 
+                        language,
+                        rate: 0.9,
+                        pitch: 1,
+                        volume: 0.8 
+                    }).catch(error => {
+                        console.error('Auto-read failed:', error)
+                    })
+                } catch (error) {
+                    console.error('Auto-read setup failed:', error)
+                }
             }
-        } finally {
-            setIsSpeaking(false)
+        }, 300) // Small delay to let flip animation settle
+        
+        return () => {
+            clearTimeout(timer)
         }
-    }
+    }, [isFlipped, card, studyOptions?.autoRead])
 
     const handleTouchStart = (e) => {
         const touch = e.touches[0]
@@ -116,11 +122,19 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
 
     const handleTouchEnd = (e) => {
         const currentSelectedAnswer = selectedAnswer // Capture before clearing state
+        const wasDragging = isDragging
         setIsDragging(false)
 
         // If card is not flipped, handle flip logic
         if (!isFlipped) {
             setIsFlipped(true)
+            setDragOffset({ x: 0, y: 0 })
+            return
+        }
+
+        // If card is flipped and no dragging occurred and no answer selected, flip back to front
+        if (!wasDragging && currentSelectedAnswer === null) {
+            setIsFlipped(false)
             setDragOffset({ x: 0, y: 0 })
             return
         }
@@ -135,7 +149,6 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     }
 
     const handleMouseEnd = () => {
-        if (!isFlipped) return
         handleTouchEnd()
     }
 
@@ -168,10 +181,10 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     // Reset card state when card changes
     useEffect(() => {
         setIsFlipped(false)
+        setShowBackContent(false)
         setDragOffset({ x: 0, y: 0 })
         setIsDragging(false)
         setSelectedAnswer(null)
-        setIsSpeaking(false)
         stopSpeech() // Stop any ongoing speech
     }, [card.id]);
 
@@ -247,19 +260,15 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
                         {frontImageUrl && (
                             <div className={styles.cardGradientOverlay}></div>
                         )}
-                        {isSpeechSupported() && frontText.trim() && (
-                            <button 
-                                className={styles.speechButton}
-                                onClick={handleSpeech}
-                                aria-label="Read text aloud"
-                            >
-                                {isSpeaking && !isFlipped ? <FaVolumeMute /> : <FaVolumeUp />}
-                            </button>
-                        )}
                         <div className={styles.cardContent}>
                             {frontImageUrl && (
                                 <div className={styles.cardImage}>
-                                    <img src={frontImageUrl} alt="Card visual" />
+                                    <img 
+                                        src={frontImageUrl} 
+                                        alt="Card visual" 
+                                        draggable={false}
+                                        onDragStart={(e) => e.preventDefault()}
+                                    />
                                 </div>
                             )}
                             {frontText && frontText.trim() ? (
@@ -271,62 +280,74 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
                         backgroundImage: backImageUrl ? `url(${backImageUrl})` : 'none',
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat'
+                        backgroundRepeat: 'no-repeat',
+                        opacity: showBackContent ? 1 : 0,
+                        visibility: showBackContent ? 'visible' : 'hidden'
                     }}>
-                        {backImageUrl && (
-                            <div className={styles.cardGradientOverlay}></div>
-                        )}
-                        {isSpeechSupported() && backText.trim() && (
-                            <button 
-                                className={styles.speechButton}
-                                onClick={handleSpeech}
-                                aria-label="Read text aloud"
-                            >
-                                {isSpeaking && isFlipped ? <FaVolumeMute /> : <FaVolumeUp />}
-                            </button>
-                        )}
-                        <div className={styles.cardContent}>
-                            {studyOptions?.showBothSides ? (
-                                // Show both sides when option is enabled
-                                <div className={styles.bothSidesContainer}>
-                                    <div className={styles.sideSection}>
-                                        <div className={styles.sideLabel}>Front:</div>
-                                        {frontImageUrl && (
-                                            <div className={styles.cardImage}>
-                                                <img src={frontImageUrl} alt="Front visual" />
+                        {showBackContent && (
+                            <>
+                                {backImageUrl && (
+                                    <div className={styles.cardGradientOverlay}></div>
+                                )}
+                                <div className={styles.cardContent}>
+                                    {studyOptions?.showBothSides ? (
+                                        // Show both sides when option is enabled
+                                        <div className={styles.bothSidesContainer}>
+                                            <div className={styles.sideSection}>
+                                                <div className={styles.sideLabel}>Front:</div>
+                                                {frontImageUrl && (
+                                                    <div className={styles.cardImage}>
+                                                        <img 
+                                                            src={frontImageUrl} 
+                                                            alt="Front visual" 
+                                                            draggable={false}
+                                                            onDragStart={(e) => e.preventDefault()}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {frontText && frontText.trim() ? (
+                                                    <div className={styles.cardText}>{frontText}</div>
+                                                ) : null}
                                             </div>
-                                        )}
-                                        {frontText && frontText.trim() ? (
-                                            <div className={styles.cardText}>{frontText}</div>
-                                        ) : null}
-                                    </div>
-                                    <div className={styles.sideDivider}></div>
-                                    <div className={styles.sideSection}>
-                                        <div className={styles.sideLabel}>Back:</div>
-                                        {backImageUrl && (
-                                            <div className={styles.cardImage}>
-                                                <img src={backImageUrl} alt="Back visual" />
+                                            <div className={styles.sideDivider}></div>
+                                            <div className={styles.sideSection}>
+                                                <div className={styles.sideLabel}>Back:</div>
+                                                {backImageUrl && (
+                                                    <div className={styles.cardImage}>
+                                                        <img 
+                                                            src={backImageUrl} 
+                                                            alt="Back visual" 
+                                                            draggable={false}
+                                                            onDragStart={(e) => e.preventDefault()}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {backText && backText.trim() ? (
+                                                    <div className={styles.cardText}>{backText}</div>
+                                                ) : null}
                                             </div>
-                                        )}
-                                        {backText && backText.trim() ? (
-                                            <div className={styles.cardText}>{backText}</div>
-                                        ) : null}
-                                    </div>
-                                </div>
-                            ) : (
-                                // Show only back side when option is disabled
-                                <>
-                                    {backImageUrl && (
-                                        <div className={styles.cardImage}>
-                                            <img src={backImageUrl} alt="Card visual" />
                                         </div>
+                                    ) : (
+                                        // Show only back side when option is disabled
+                                        <>
+                                            {backImageUrl && (
+                                                <div className={styles.cardImage}>
+                                                    <img 
+                                                        src={backImageUrl} 
+                                                        alt="Card visual" 
+                                                        draggable={false}
+                                                        onDragStart={(e) => e.preventDefault()}
+                                                    />
+                                                </div>
+                                            )}
+                                            {backText && backText.trim() ? (
+                                                <div className={styles.cardText}>{backText}</div>
+                                            ) : null}
+                                        </>
                                     )}
-                                    {backText && backText.trim() ? (
-                                        <div className={styles.cardText}>{backText}</div>
-                                    ) : null}
-                                </>
-                            )}
-                        </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 

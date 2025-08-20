@@ -1,6 +1,7 @@
 import { useState, useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CardEditor from '../components/CardEditor'
+import Portal from '../components/Portal'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaRandom, FaExclamationTriangle, FaTimes } from 'react-icons/fa'
@@ -79,88 +80,101 @@ const DecksPage = () => {
     <div className={styles.deckManager}>
       {/* Study Options Modal */}
       {showOptions && (
-        <div className={styles.optionsModal} onClick={() => setShowOptions(false)}>
-          <div className={`${styles.optionsContent} rounded-lg`} onClick={(e) => e.stopPropagation()}>
-            <button 
-              className={styles.closeButton}
-              onClick={() => setShowOptions(false)}
-              aria-label="Close"
-            >
-              <FaTimes />
-            </button>
-            <h3>Study Options</h3>
-            
-            <div className={styles.optionGroup}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={studyOptions.randomOrder}
-                  onChange={(e) => setStudyOptions(prev => ({ ...prev, randomOrder: e.target.checked }))}
-                />
-                <FaRandom /> Shuffle Cards
-              </label>
-            </div>
-            
-            <div className={styles.optionGroup}>
-              <label>Card Direction:</label>
-              <div className={styles.radioGroup}>
+        <Portal>
+          <div className={styles.optionsModal} onClick={() => setShowOptions(false)}>
+            <div className={`${styles.optionsContent} rounded-lg`} onClick={(e) => e.stopPropagation()}>
+              <button 
+                className={styles.closeButton}
+                onClick={() => setShowOptions(false)}
+                aria-label="Close"
+              >
+                <FaTimes />
+              </button>
+              <h3>Study Options</h3>
+              
+              <div className={styles.optionGroup}>
                 <label>
                   <input
-                    type="radio"
-                    value="front-to-back"
-                    checked={studyOptions.direction === 'front-to-back'}
-                    onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
+                    type="checkbox"
+                    checked={studyOptions.randomOrder}
+                    onChange={(e) => setStudyOptions(prev => ({ ...prev, randomOrder: e.target.checked }))}
                   />
-                  Front → Back
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="back-to-front"
-                    checked={studyOptions.direction === 'back-to-front'}
-                    onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
-                  />
-                  Back → Front
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    value="random"
-                    checked={studyOptions.direction === 'random'}
-                    onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
-                  />
-                  <FaRandom /> Mixed Direction
+                  <FaRandom /> Shuffle Cards
                 </label>
               </div>
-            </div>
-            
-            <div className={styles.optionGroup}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={studyOptions.onlyMissed}
-                  onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyMissed: e.target.checked }))}
-                />
-                <FaExclamationTriangle /> Focus on Missed Cards
-              </label>
-            </div>
-            
-            <div className={styles.optionGroup}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={studyOptions.showBothSides}
-                  onChange={(e) => setStudyOptions(prev => ({ ...prev, showBothSides: e.target.checked }))}
-                />
-                Show Both Sides When Flipped
-              </label>
-            </div>
-            
-            <div className={styles.optionActions}>
-              {/* Close button removed - using X in top right instead */}
+              
+              <div className={styles.optionGroup}>
+                <label>Card Direction:</label>
+                <div className={styles.radioGroup}>
+                  <label>
+                    <input
+                      type="radio"
+                      value="front-to-back"
+                      checked={studyOptions.direction === 'front-to-back'}
+                      onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
+                    />
+                    Front → Back
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      value="back-to-front"
+                      checked={studyOptions.direction === 'back-to-front'}
+                      onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
+                    />
+                    Back → Front
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      value="random"
+                      checked={studyOptions.direction === 'random'}
+                      onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
+                    />
+                    <FaRandom /> Mixed Direction
+                  </label>
+                </div>
+              </div>
+              
+              <div className={styles.optionGroup}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={studyOptions.onlyMissed}
+                    onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyMissed: e.target.checked }))}
+                  />
+                  <FaExclamationTriangle /> Focus on Missed Cards
+                </label>
+              </div>
+              
+              <div className={styles.optionGroup}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={studyOptions.showBothSides}
+                    onChange={(e) => setStudyOptions(prev => ({ ...prev, showBothSides: e.target.checked }))}
+                  />
+                  Show Both Sides When Flipped
+                </label>
+              </div>
+              
+              <div className={styles.optionGroup}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={studyOptions.autoRead}
+                    onChange={(e) => setStudyOptions(prev => ({ ...prev, autoRead: e.target.checked }))}
+                  />
+                  Auto-Read Card Contents
+                </label>
+              </div>
+              
+              <div className={styles.optionActions}>
+                {/* Close button removed - using X in top right instead */}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       <div className={styles.header}>

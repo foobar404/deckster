@@ -18,7 +18,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         scope: '/',
-        start_url: '/',
+        start_url: '/deckster',
         icons: [
           {
             src: 'pwa-192x192.png',
@@ -37,5 +37,6 @@ export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/deckster/' : '/',
   server: {
     port: 5174, // bumped port number
+    host: '0.0.0.0', // Allow external connections
   },
 })

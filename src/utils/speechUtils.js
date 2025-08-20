@@ -75,9 +75,7 @@ export const detectLanguage = (text) => {
  * @returns {boolean}
  */
 export const isSpeechSupported = () => {
-  const supported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window
-  console.log('Speech synthesis supported:', supported)
-  return supported
+  return 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window
 }
 
 /**
@@ -85,12 +83,9 @@ export const isSpeechSupported = () => {
  */
 export const testSpeech = async () => {
   try {
-    console.log('Testing speech synthesis...')
     await speakText('Hello, this is a test of the speech system.', { volume: 0.5 })
-    console.log('Speech test completed successfully')
     return true
   } catch (error) {
-    console.error('Speech test failed:', error)
     return false
   }
 }
@@ -125,19 +120,14 @@ export const getVoicesForLanguage = (languageCode) => {
 export const speakText = (text, options = {}) => {
   return new Promise((resolve, reject) => {
     if (!isSpeechSupported()) {
-      console.error('Speech synthesis not supported')
       reject(new Error('Speech synthesis not supported'))
       return
     }
     
     if (!text || typeof text !== 'string' || !text.trim()) {
-      console.error('Invalid text provided:', text)
       reject(new Error('Invalid text provided'))
       return
     }
-    
-    console.log('Starting TTS for text:', text)
-    console.log('TTS options:', options)
     
     // Stop any ongoing speech
     window.speechSynthesis.cancel()
@@ -150,8 +140,6 @@ export const speakText = (text, options = {}) => {
       const language = options.language || detectLanguage(text)
       const speechLang = SPEECH_LANGUAGES[language] || 'en-US'
       
-      console.log('Detected language:', language, 'Speech lang:', speechLang)
-      
       // Set speech parameters
       utterance.lang = speechLang
       utterance.rate = options.rate || 0.9
@@ -161,7 +149,6 @@ export const speakText = (text, options = {}) => {
       // Get voices - wait for voices to be loaded
       const setVoiceAndSpeak = () => {
         const voices = window.speechSynthesis.getVoices()
-        console.log('Available voices:', voices.length)
         
         if (voices.length > 0) {
           const languageVoices = voices.filter(voice => 
@@ -169,44 +156,34 @@ export const speakText = (text, options = {}) => {
             voice.lang === speechLang
           )
           
-          console.log('Language voices found:', languageVoices.length)
-          
           if (languageVoices.length > 0) {
             // Prefer native voices
             const nativeVoice = languageVoices.find(voice => voice.localService) || languageVoices[0]
             utterance.voice = nativeVoice
-            console.log('Selected voice:', nativeVoice.name, nativeVoice.lang)
           }
         }
         
         // Set up event handlers
-        utterance.onstart = () => {
-          console.log('Speech started')
-        }
+        utterance.onstart = () => {}
         
         utterance.onend = () => {
-          console.log('Speech ended')
           resolve()
         }
         
         utterance.onerror = (event) => {
-          console.error('Speech synthesis error:', event.error)
           reject(new Error(`Speech synthesis error: ${event.error}`))
         }
         
         // Start speaking
         try {
-          console.log('Starting speech synthesis...')
           window.speechSynthesis.speak(utterance)
         } catch (error) {
-          console.error('Error starting speech:', error)
           reject(error)
         }
       }
       
       // If voices are not loaded yet, wait for them
       if (window.speechSynthesis.getVoices().length === 0) {
-        console.log('Waiting for voices to load...')
         window.speechSynthesis.onvoiceschanged = setVoiceAndSpeak
       } else {
         setVoiceAndSpeak()
@@ -221,7 +198,6 @@ export const speakText = (text, options = {}) => {
 export const stopSpeech = () => {
   if (isSpeechSupported()) {
     try {
-      console.log('Stopping speech synthesis')
       window.speechSynthesis.cancel()
       
       // Force stop if still speaking
@@ -233,7 +209,7 @@ export const stopSpeech = () => {
         }, 100)
       }
     } catch (error) {
-      console.error('Error stopping speech:', error)
+      // Silently handle errors
     }
   }
 }
@@ -277,6 +253,19 @@ export const cleanTextFromImages = (text) => {
   if (!text || typeof text !== 'string') return ''
   
   // Remove all URLs from text (http/https) for clean study experience
+  const urlRegex = /https?:\/\/[^\s]+/gi
+  return text.replace(urlRegex, '').trim()
+}
+
+/**
+ * Clean text for speech synthesis by removing URLs and extracting readable content
+ * @param {string} text - Original text
+ * @returns {string} - Text cleaned for speech, without URLs
+ */
+export const cleanTextForSpeech = (text) => {
+  if (!text || typeof text !== 'string') return ''
+  
+  // Remove all URLs from text (http/https) for speech
   const urlRegex = /https?:\/\/[^\s]+/gi
   return text.replace(urlRegex, '').trim()
 }

@@ -21,6 +21,48 @@ const ReviewPage = () => {
     selectedAnswer: null
   })
 
+  // Save review state to localStorage
+  const saveReviewState = useCallback(() => {
+    if (activeDeck && studyCards.length > 0) {
+      const reviewState = {
+        deckId: activeDeck.id,
+        currentCardIndex,
+        showResult,
+        sessionStats,
+        studyCards,
+        timestamp: Date.now()
+      }
+      localStorage.setItem('deckster_review_state', JSON.stringify(reviewState))
+    }
+  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards])
+
+  // Load review state from localStorage
+  const loadReviewState = useCallback(() => {
+    const savedState = localStorage.getItem('deckster_review_state')
+    if (savedState) {
+      try {
+        const reviewState = JSON.parse(savedState)
+        // Only restore if it's for the same deck and recent (within 24 hours)
+        if (reviewState.deckId === activeDeck?.id && 
+            Date.now() - reviewState.timestamp < 24 * 60 * 60 * 1000) {
+          setCurrentCardIndex(reviewState.currentCardIndex)
+          setShowResult(reviewState.showResult)
+          setSessionStats(reviewState.sessionStats)
+          setStudyCards(reviewState.studyCards)
+          return true
+        }
+      } catch (error) {
+        console.error('Error loading review state:', error)
+      }
+    }
+    return false
+  }, [activeDeck])
+
+  // Clear review state
+  const clearReviewState = useCallback(() => {
+    localStorage.removeItem('deckster_review_state')
+  }, [])
+
   // Prepare study cards based on options
   const prepareStudyCards = useCallback((deck, options) => {
     if (!deck || !deck.cards || deck.cards.length === 0) return []
@@ -67,12 +109,42 @@ const ReviewPage = () => {
   // Initialize study cards when deck changes
   useEffect(() => {
     if (activeDeck) {
-      const cards = prepareStudyCards(activeDeck, studyOptions)
-      setStudyCards(cards)
-      setCurrentCardIndex(0)
-      setShowResult(false)
+      // Try to load saved review state first
+      const stateLoaded = loadReviewState()
+      
+      if (!stateLoaded) {
+        // No saved state, start fresh
+        const cards = prepareStudyCards(activeDeck, studyOptions)
+        setStudyCards(cards)
+        setCurrentCardIndex(0)
+        setShowResult(false)
+        setSessionStats({ correct: 0, total: 0 })
+      }
     }
-  }, [activeDeck, prepareStudyCards])
+  }, [activeDeck, prepareStudyCards, loadReviewState])
+
+  // Save review state whenever it changes
+  useEffect(() => {
+    saveReviewState()
+  }, [currentCardIndex, showResult, sessionStats, studyCards, saveReviewState])
+
+  // Save state when component unmounts (navigating away)
+  useEffect(() => {
+    return () => {
+      // Save current state before unmounting
+      if (activeDeck && studyCards.length > 0 && !showResult) {
+        const reviewState = {
+          deckId: activeDeck.id,
+          currentCardIndex,
+          showResult,
+          sessionStats,
+          studyCards,
+          timestamp: Date.now()
+        }
+        localStorage.setItem('deckster_review_state', JSON.stringify(reviewState))
+      }
+    }
+  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards])
 
   const handleCardReview = (difficulty) => {
     if (!activeDeck || !studyCards || studyCards.length === 0) return
@@ -122,6 +194,9 @@ const ReviewPage = () => {
   }
 
   const resetSession = () => {
+    // Clear saved review state
+    clearReviewState()
+    
     // Update activeDeck with latest changes from decks
     const updatedActiveDeck = decks.find(deck => deck.id === activeDeck?.id)
     if (updatedActiveDeck) {

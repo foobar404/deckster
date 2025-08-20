@@ -1,14 +1,16 @@
 import { useState, useEffect, useContext } from 'react'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
+import { FaChevronDown } from 'react-icons/fa'
 import styles from '../components/ImportDecks.module.css'
 
 const ImportPage = () => {
-  const { setDecks } = useContext(AppContext)
+  const { decks, setDecks } = useContext(AppContext)
   const { showError, showInfo } = useToast()
   const [importText, setImportText] = useState('')
   const [deckName, setDeckName] = useState('')
   const [preview, setPreview] = useState(null)
+  const [showDropdown, setShowDropdown] = useState(false)
 
   const parseCards = (text) => {
     if (!text.trim()) return []
@@ -83,36 +85,48 @@ const ImportPage = () => {
   }, [importText])
 
   const handleImport = () => {
-    if (!deckName.trim()) {
+    const targetName = deckName.trim()
+    if (!targetName) {
       showError('Please enter a deck name.')
       return
     }
-    
+
     if (!preview || preview.length === 0) {
       showError('Please add some card data to import.')
       return
     }
-    
-    const newDeck = {
-      id: Date.now(),
-      name: deckName.trim(),
-      cards: preview
+
+    // Prepare cards with unique ids
+    const baseId = Date.now()
+    const cardsToAdd = preview.map((c, i) => ({ ...c, id: baseId + i }))
+
+    // Case-insensitive match for existing deck name
+    const existingIndex = decks ? decks.findIndex(d => d.name.toLowerCase() === targetName.toLowerCase()) : -1
+
+    if (existingIndex !== -1) {
+      // Append cards to existing deck
+      setDecks(prev => prev.map((d, idx) => idx === existingIndex ? { ...d, cards: [...d.cards, ...cardsToAdd] } : d))
+      setImportText('')
+      setPreview(null)
+      showInfo(`Appended ${cardsToAdd.length} cards to "${decks[existingIndex].name}".`)
+    } else {
+      // Create a new deck
+      const newDeck = {
+        id: baseId + 9999, // ensure different id than card ids
+        name: targetName,
+        cards: cardsToAdd
+      }
+
+      setDecks(prev => {
+        const updated = [...prev, newDeck]
+        return updated
+      })
+
+      // Reset form but keep the name so user can import more if desired
+      setImportText('')
+      setPreview(null)
+      showInfo(`Successfully imported ${cardsToAdd.length} cards to "${newDeck.name}"!`)
     }
-    
-    console.log('Importing deck:', newDeck) // Debug log
-    
-    setDecks(prev => {
-      const updated = [...prev, newDeck]
-      console.log('Updated decks array:', updated) // Debug log
-      return updated
-    })
-    
-    // Reset form
-    setImportText('')
-    setDeckName('')
-    setPreview(null)
-    
-    showInfo(`Successfully imported ${preview.length} cards to "${newDeck.name}"!`)
   }
 
   const sampleData = `"cuchillo"	"knife https://upload.wikimedia.org/wikipedia/commons/3/3c/Kitchen_Knife.jpg"
@@ -129,13 +143,47 @@ Please,Por favor`
       <div className={`${styles.importForm} glass rounded-lg`}>
         <div className={styles.formSection}>
           <label htmlFor="deckName">Deck Name</label>
-          <input
-            id="deckName"
-            type="text"
-            placeholder="Enter deck name..."
-            value={deckName}
-            onChange={(e) => setDeckName(e.target.value)}
-          />
+          <div className={styles.inputWithDropdown}>
+            <input
+              id="deckName"
+              type="text"
+              placeholder="Enter deck name"
+              value={deckName}
+              onChange={(e) => setDeckName(e.target.value)}
+              onFocus={() => setShowDropdown(false)}
+            />
+            <button 
+              type="button"
+              className={styles.dropdownToggle}
+              onClick={() => setShowDropdown(!showDropdown)}
+              aria-label="Show deck options"
+            >
+              <FaChevronDown className={showDropdown ? styles.rotated : ''} />
+            </button>
+            {showDropdown && decks && decks.length > 0 && (
+              <div className={styles.dropdownList}>
+                {decks.map(deck => (
+                  <div 
+                    key={deck.id}
+                    className={styles.dropdownItem}
+                    onClick={() => {
+                      setDeckName(deck.name)
+                      setShowDropdown(false)
+                    }}
+                  >
+                    <span className={styles.deckName}>{deck.name}</span>
+                    <span className={styles.cardCount}>({deck.cards.length} cards)</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className={styles.inputHint}>
+            {decks && decks.length > 0 
+              ? `Type or select from ${decks.length} existing deck${decks.length === 1 ? '' : 's'}.`
+              : 'Enter a name for your new deck.'
+            }
+          </div>
         </div>
 
         <div className={styles.formSection}>

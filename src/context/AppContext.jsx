@@ -17,7 +17,8 @@ export const AppProvider = ({ children }) => {
     randomOrder: false,
     direction: 'front-to-back', // 'front-to-back', 'back-to-front', 'random'
     onlyMissed: false,
-    showBothSides: false // Show both front and back when card flips
+    showBothSides: false, // Show both front and back when card flips
+    autoRead: false // Auto-read card contents using TTS
   })
 
   // Load data from localStorage on app start
@@ -33,7 +34,8 @@ export const AppProvider = ({ children }) => {
       randomOrder: false,
       direction: 'front-to-back',
       onlyMissed: false,
-      showBothSides: false
+      showBothSides: false,
+      autoRead: false
     })
 
     setDecks(savedDecks)
