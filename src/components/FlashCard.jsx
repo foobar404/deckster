@@ -9,8 +9,10 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
     const [selectedAnswer, setSelectedAnswer] = useState(null)
+    const [isFlipping, setIsFlipping] = useState(false)
     const cardRef = useRef(null)
     const startPos = useRef({ x: 0, y: 0 })
+    const hasDragged = useRef(false)
     
     // Extract image URLs and clean text for both sides - URLs are stripped from display text
     const frontImageUrl = extractImageUrl(card.front)
@@ -18,6 +20,22 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     // Clean text removes ALL URLs, not just images, for clean display during study
     const frontText = cleanTextFromImages(card.front)
     const backText = cleanTextFromImages(card.back)
+    
+    // Preload images to prevent flicker during flip
+    useEffect(() => {
+        const preloadImages = () => {
+            if (frontImageUrl) {
+                const frontImg = new Image()
+                frontImg.src = frontImageUrl
+            }
+            if (backImageUrl) {
+                const backImg = new Image()
+                backImg.src = backImageUrl
+            }
+        }
+        
+        preloadImages()
+    }, [frontImageUrl, backImageUrl])
     
     const difficultyOptions = [
         { id: 0, label: 'Again', color: '#ef4444', icon: <FaTimes /> },
@@ -27,17 +45,37 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     ]
 
     const handleCardClick = (e) => {
-        // Only flip if not dragging
-        if (!isDragging) {
-            e.preventDefault()
-            setIsFlipped(!isFlipped)
+        // Prevent click if user has dragged or already flipping
+        if (hasDragged.current || isFlipping) {
+            hasDragged.current = false
+            return
         }
+        
+        e.preventDefault()
+        
+        // Ensure dragging state is cleared before flip
+        if (isDragging) {
+            setIsDragging(false)
+        }
+        
+        // Add flipping state for smoother animation
+        setIsFlipping(true)
+        
+        // Start flip animation
+        setTimeout(() => {
+            setIsFlipped(!isFlipped)
+            
+            // Clear flipping state after animation completes
+            setTimeout(() => {
+                setIsFlipping(false)
+            }, 300) // Match CSS animation duration (0.3s)
+        }, 10)
     }
 
     // Handle delayed back content visibility for smooth animations
     useEffect(() => {
         if (isFlipped) {
-            // Show back content after flip animation starts (150ms delay)
+            // Show back content after flip animation reaches halfway point (150ms for faster animation)
             const timer = setTimeout(() => {
                 setShowBackContent(true)
             }, 150)
@@ -91,6 +129,7 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
     const handleTouchStart = (e) => {
         const touch = e.touches[0]
         startPos.current = { x: touch.clientX, y: touch.clientY }
+        hasDragged.current = false
 
         // Enable dragging when card is flipped (showing answer)
         if (isFlipped) {
@@ -110,8 +149,11 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
         }
 
         // Start dragging if moved more than 10px
-        if (distance > 10 && !isDragging) {
-            setIsDragging(true)
+        if (distance > 10) {
+            hasDragged.current = true
+            if (!isDragging) {
+                setIsDragging(true)
+            }
         }
 
         if (isDragging) {
@@ -125,27 +167,23 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
         const wasDragging = isDragging
         setIsDragging(false)
 
-        // If card is not flipped, handle flip logic
+        // If card is not flipped, flip is handled by click event
         if (!isFlipped) {
-            setIsFlipped(true)
             setDragOffset({ x: 0, y: 0 })
             return
         }
 
-        // If card is flipped and no dragging occurred and no answer selected, flip back to front
-        if (!wasDragging && currentSelectedAnswer === null) {
-            setIsFlipped(false)
-            setDragOffset({ x: 0, y: 0 })
-            return
+        // If card is flipped and user dragged, handle drag logic
+        if (hasDragged.current) {
+            // Submit the selected answer if we have one
+            if (currentSelectedAnswer !== null) {
+                onReview(currentSelectedAnswer)
+            } else {
+                // No answer selected, reset position
+                setDragOffset({ x: 0, y: 0 })
+            }
         }
-
-        // Submit the selected answer if we have one
-        if (currentSelectedAnswer !== null) {
-            onReview(currentSelectedAnswer)
-        } else {
-            // No answer selected, reset position
-            setDragOffset({ x: 0, y: 0 })
-        }
+        // If no dragging occurred, flip is handled by click event
     }
 
     const handleMouseEnd = () => {
@@ -156,6 +194,7 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
         // Only allow mouse interactions when card is flipped
         if (!isFlipped) return
         startPos.current = { x: e.clientX, y: e.clientY }
+        hasDragged.current = false
         setIsDragging(true)
     }
 
@@ -185,6 +224,8 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
         setDragOffset({ x: 0, y: 0 })
         setIsDragging(false)
         setSelectedAnswer(null)
+        setIsFlipping(false)
+        hasDragged.current = false
         stopSpeech() // Stop any ongoing speech
     }, [card.id]);
 
@@ -216,13 +257,13 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
 
     const getSwipeIndicator = () => {
         if (isDragging && dragOffset.x < -30 && dragOffset.y < -30)
-            return difficultyOptions[0];
+            return { ...difficultyOptions[0], gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.4))', borderColor: 'rgba(239, 68, 68, 0.8)' };
         if (isDragging && dragOffset.x < -30 && dragOffset.y > 30)
-            return difficultyOptions[1];
+            return { ...difficultyOptions[1], gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.4))', borderColor: 'rgba(245, 158, 11, 0.8)' };
         if (isDragging && dragOffset.x > 30 && dragOffset.y > 30)
-            return difficultyOptions[2];
+            return { ...difficultyOptions[2], gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.4))', borderColor: 'rgba(16, 185, 129, 0.8)' };
         if (isDragging && dragOffset.x > 30 && dragOffset.y < -30)
-            return difficultyOptions[3];
+            return { ...difficultyOptions[3], gradient: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.4))', borderColor: 'rgba(99, 102, 241, 0.8)' };
     }
 
     const swipeIndicator = getSwipeIndicator()
@@ -231,9 +272,9 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
         <div 
             className={styles.flashcardContainer}
             style={{
-                transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x * 0.1}deg)`,
+                transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x * 0.1}deg) ${isFlipping ? 'scale(1.02)' : 'scale(1)'}`,
                 opacity: isDragging ? 0.8 : 1,
-                touchAction: isFlipped ? 'none' : 'auto'
+                touchAction: isDragging ? 'none' : 'auto'
             }}
             onClick={handleCardClick}
             onTouchStart={handleTouchStart}
@@ -248,17 +289,20 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
                 <div
                     className={styles.cardInner}
                     style={{
-                        transform: isFlipped ? 'rotateY(180deg)' : ''
+                        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
                     }}
                 >
-                    <div className={styles.cardFront} style={{
-                        backgroundImage: frontImageUrl ? `url(${frontImageUrl})` : 'none',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat'
-                    }}>
+                    <div className={styles.cardFront}>
                         {frontImageUrl && (
-                            <div className={styles.cardGradientOverlay}></div>
+                            <>
+                                <div 
+                                    className={styles.cardBackground}
+                                    style={{
+                                        backgroundImage: `url(${frontImageUrl})`
+                                    }}
+                                ></div>
+                                <div className={styles.cardGradientOverlay}></div>
+                            </>
                         )}
                         <div className={styles.cardContent}>
                             {frontImageUrl && (
@@ -276,65 +320,50 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
                             ) : null}
                         </div>
                     </div>
-                    <div className={styles.cardBack} style={{
-                        backgroundImage: backImageUrl ? `url(${backImageUrl})` : 'none',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        backgroundRepeat: 'no-repeat',
-                        opacity: showBackContent ? 1 : 0,
-                        visibility: showBackContent ? 'visible' : 'hidden'
-                    }}>
-                        {showBackContent && (
+                    <div className={styles.cardBack}>
+                        {showBackContent && backImageUrl && (
                             <>
-                                {backImageUrl && (
-                                    <div className={styles.cardGradientOverlay}></div>
-                                )}
-                                <div className={styles.cardContent}>
-                                    {studyOptions?.showBothSides ? (
-                                        // Show both sides when option is enabled
-                                        <div className={styles.bothSidesContainer}>
-                                            <div className={styles.sideSection}>
-                                                <div className={styles.sideLabel}>Front:</div>
-                                                {frontImageUrl && (
-                                                    <div className={styles.cardImage}>
-                                                        <img 
-                                                            src={frontImageUrl} 
-                                                            alt="Front visual" 
-                                                            draggable={false}
-                                                            onDragStart={(e) => e.preventDefault()}
-                                                        />
-                                                    </div>
-                                                )}
-                                                {frontText && frontText.trim() ? (
-                                                    <div className={styles.cardText}>{frontText}</div>
-                                                ) : null}
-                                            </div>
-                                            <div className={styles.sideDivider}></div>
-                                            <div className={styles.sideSection}>
-                                                <div className={styles.sideLabel}>Back:</div>
-                                                {backImageUrl && (
-                                                    <div className={styles.cardImage}>
-                                                        <img 
-                                                            src={backImageUrl} 
-                                                            alt="Back visual" 
-                                                            draggable={false}
-                                                            onDragStart={(e) => e.preventDefault()}
-                                                        />
-                                                    </div>
-                                                )}
-                                                {backText && backText.trim() ? (
-                                                    <div className={styles.cardText}>{backText}</div>
-                                                ) : null}
-                                            </div>
+                                <div 
+                                    className={styles.cardBackground}
+                                    style={{
+                                        backgroundImage: `url(${backImageUrl})`
+                                    }}
+                                ></div>
+                                <div className={styles.cardGradientOverlay}></div>
+                            </>
+                        )}
+                        <div className={styles.cardContent} style={{
+                            opacity: showBackContent ? 1 : 0,
+                            visibility: showBackContent ? 'visible' : 'hidden'
+                        }}>
+                            {showBackContent && (
+                                studyOptions?.showBothSides ? (
+                                    // Show both sides when option is enabled
+                                    <div className={styles.bothSidesContainer}>
+                                        <div className={styles.sideSection}>
+                                            <div className={styles.sideLabel}>Front:</div>
+                                            {frontImageUrl && (
+                                                <div className={styles.cardImage}>
+                                                    <img 
+                                                        src={frontImageUrl} 
+                                                        alt="Front visual" 
+                                                        draggable={false}
+                                                        onDragStart={(e) => e.preventDefault()}
+                                                    />
+                                                </div>
+                                            )}
+                                            {frontText && frontText.trim() ? (
+                                                <div className={styles.cardText}>{frontText}</div>
+                                            ) : null}
                                         </div>
-                                    ) : (
-                                        // Show only back side when option is disabled
-                                        <>
+                                        <div className={styles.sideDivider}></div>
+                                        <div className={styles.sideSection}>
+                                            <div className={styles.sideLabel}>Back:</div>
                                             {backImageUrl && (
                                                 <div className={styles.cardImage}>
                                                     <img 
                                                         src={backImageUrl} 
-                                                        alt="Card visual" 
+                                                        alt="Back visual" 
                                                         draggable={false}
                                                         onDragStart={(e) => e.preventDefault()}
                                                     />
@@ -343,18 +372,39 @@ const FlashCard = ({ card, onReview, onDragStateChange, studyOptions }) => {
                                             {backText && backText.trim() ? (
                                                 <div className={styles.cardText}>{backText}</div>
                                             ) : null}
-                                        </>
-                                    )}
-                                </div>
-                            </>
-                        )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // Show only back side when option is disabled
+                                    <>
+                                        {backImageUrl && (
+                                            <div className={styles.cardImage}>
+                                                <img 
+                                                    src={backImageUrl} 
+                                                    alt="Card visual" 
+                                                    draggable={false}
+                                                    onDragStart={(e) => e.preventDefault()}
+                                                />
+                                            </div>
+                                        )}
+                                        {backText && backText.trim() ? (
+                                            <div className={styles.cardText}>{backText}</div>
+                                        ) : null}
+                                    </>
+                                )
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 {swipeIndicator && (
                     <div
                         className={styles.swipeIndicator}
-                        style={{ color: swipeIndicator.color }}
+                        style={{ 
+                            background: swipeIndicator.gradient,
+                            borderColor: swipeIndicator.borderColor,
+                            color: 'white'
+                        }}
                     >
                         <span className={styles.indicatorEmoji}>{swipeIndicator.icon}</span>
                         <span className={styles.indicatorLabel}>{swipeIndicator.label}</span>
