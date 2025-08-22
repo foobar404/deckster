@@ -133,12 +133,12 @@ const useImportPage = () => {
     }
   }
 
-  const sampleData = `"cuchillo"	"knife https://upload.wikimedia.org/wikipedia/commons/3/3c/Kitchen_Knife.jpg"
-"sartén"	"frying pan https://upload.wikimedia.org/wikipedia/commons/e/e5/Frying_pan.jpg"
-"audio example"	"pronunciation https://example.com/audio.mp3"
-Hello	Hola
-Thank you,Gracias
-Please,Por favor`
+  const sampleData = `"cuchillo"\t"knife"
+"sartén"\t"frying pan"
+"audio example"\t"pronunciation"
+Hello\tHola
+Thank you\tGracias
+Please\tPor favor`
 
   return {
     decks,
@@ -170,7 +170,7 @@ export function ImportPage() {
 
   // Custom styles for ImportPage
   const customStyles = {
-    container: 'min-h-screen p-4 pb-20 md:pb-4',
+    container: 'p-4 pb-20 md:pb-4',
     form: 'p-6 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg',
     formSection: 'mb-6',
     label: 'block text-sm font-medium text-gray-700 mb-2',
@@ -180,16 +180,18 @@ export function ImportPage() {
     hint: 'text-sm text-gray-500 mt-1',
     dropdown: 'relative',
     // make the toggle a small square button, center the icon with flexbox; disable transitions so clicks are instant
-    dropdownToggle: 'absolute right-0 top-0 flex items-center justify-center w-8 h-8 p-0 text-gray-400 hover:text-gray-600 rounded-md bg-transparent hover:bg-gray-50 transition-none',
+    dropdownToggle: 'absolute right-0 top-0 flex items-center justify-center w-8 h-8 p-0 text-gray-400 hover:text-gray-600 rounded-md bg-transparent hover:bg-gray-50 transition-none transform scale-[0.8]',
+    importButton: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200',
     dropdownList: 'absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto'
   }
 
   const baseStyles = useStyle()
-  const styles = { ...baseStyles, import: { ...baseStyles.import, ...customStyles } }
+  const styles = { ...baseStyles, import: customStyles }
 
-  return (
-    <div className={styles.import.container}>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Import Flashcards</h1>
+  return (<>
+    <section className={styles.import.container}>
+      <h1 className="w-full text-left text-2xl font-bold text-gray-900 mb-2">Import Flashcards</h1>
+      <p className="w-full text-left text-gray-600 mb-6">Quickly import flashcards from plain text (tab/comma-separated or quoted lines).</p>
 
       <div className={styles.import.form}>
         <div className={styles.import.formSection}>
@@ -242,7 +244,7 @@ export function ImportPage() {
           <label htmlFor="importText" className={styles.import.label}>Card Data</label>
           <textarea
             id="importText"
-            placeholder={`One card per line — front\tback or front,back. Quotes allowed. URLs accepted.\n\nExample:\n${sampleData}`}
+            placeholder={`One card per line: front\tback or front,back. Use quotes for commas.\n\nExample:\n${sampleData}`}
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
             rows={8}
@@ -255,15 +257,15 @@ export function ImportPage() {
 
         <div className="flex justify-center">
           <button
-            className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+            className={styles.import.importButton}
             onClick={handleImport}
           >
             Import Deck ({preview ? preview.length : 0} cards)
           </button>
         </div>
       </div>
-    </div>
-  )
+    </section>
+  </>)
 }
 
 

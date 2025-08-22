@@ -11,48 +11,48 @@
   --warning: #f59e0b;
   --error: #ef4444;
   --neutral: #64748b;
-  
+
   /* Modern Background System */
   --background: #fafafa;
   --background-secondary: #f4f4f5;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
   --surface-glass: rgba(255, 255, 255, 0.8);
-  
+
   /* Sophisticated Text Colors */
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
   --text-inverse: #ffffff;
-  
+
   /* Modern Border System */
   --border: #e4e4e7;
   --border-strong: #d4d4d8;
   --border-subtle: #f4f4f5;
-  
+
   /* Contemporary Gradients */
   --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
   --gradient-accent: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
   --gradient-neutral: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-  --gradient-mesh: radial-gradient(at 40% 20%, #6366f1 0px, transparent 50%), 
-                   radial-gradient(at 80% 0%, #8b5cf6 0px, transparent 50%), 
-                   radial-gradient(at 40% 40%, #06b6d4 0px, transparent 50%),
-                   radial-gradient(at 0% 50%, #f59e0b 0px, transparent 50%);
-  
+  --gradient-mesh: radial-gradient(at 40% 20%, #6366f1 0px, transparent 50%),
+    radial-gradient(at 80% 0%, #8b5cf6 0px, transparent 50%),
+    radial-gradient(at 40% 40%, #06b6d4 0px, transparent 50%),
+    radial-gradient(at 0% 50%, #f59e0b 0px, transparent 50%);
+
   /* Advanced Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   --shadow-colored: 0 25px 50px -12px rgba(99, 102, 241, 0.25);
-  
+
   /* Fluid Transitions */
   --transition-micro: 0.1s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 0.5s cubic-bezier(0.23, 1, 0.320, 1);
   --transition-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  
+
   /* Modern Spacing Scale */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -60,10 +60,10 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --space-2xl: 3rem;
-  
+
   /* Dynamic Viewport Height Fix */
   --vh: 1vh;
-  
+
   /* Typography - Modern font stack */
   font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
@@ -107,8 +107,15 @@ body {
 }
 
 @keyframes gradientShift {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 #root {
@@ -127,7 +134,7 @@ body {
     min-height: 100vh;
     height: auto;
   }
-  
+
   #root {
     min-height: 100vh;
     height: auto;
@@ -153,10 +160,13 @@ body {
 }
 
 /* Modern Form Elements */
-input, textarea, select {
+input,
+textarea,
+select {
   border: 1px solid var(--border);
   font-family: inherit;
-  font-size: 16px; /* Prevent iOS zoom */
+  font-size: 16px;
+  /* Prevent iOS zoom */
   transition: all var(--transition-fast);
   background: var(--surface-glass);
   backdrop-filter: blur(10px);
@@ -173,7 +183,8 @@ input, textarea, select {
    Generic input styles above (padding, border-radius, background) make checkboxes
    and radios render oversized and inconsistent. Revert those for check/radio
    so they use the native control sizes and a sensible margin for labels. */
-input[type="checkbox"], input[type="radio"] {
+input[type="checkbox"],
+input[type="radio"] {
   /* Use native appearance so platform-specific visuals remain familiar */
   -webkit-appearance: auto;
   appearance: auto;
@@ -192,21 +203,24 @@ input[type="checkbox"], input[type="radio"] {
 /* Modern custom checkbox and radio styles */
 
 /* Use native controls for functionality, but scale up and tint using accent-color */
-.form-check, input.form-check[type="checkbox"] {
+.form-check,
+input.form-check[type="checkbox"] {
   -webkit-appearance: checkbox;
   appearance: auto;
-  width: 1.3rem; /* 20.8px */
+  width: 1.3rem;
+  /* 20.8px */
   height: 1.3rem;
   vertical-align: middle;
   cursor: pointer;
   display: inline-block;
-  accent-color: rgba(99,102,241,0.95);
+  accent-color: rgba(99, 102, 241, 0.95);
   /* Keep border/background native; rely on accent-color for checked indication */
   background: transparent;
   border: none;
 }
 
-.form-radio, input.form-radio[type="radio"] {
+.form-radio,
+input.form-radio[type="radio"] {
   -webkit-appearance: radio;
   appearance: auto;
   width: 1.3rem;
@@ -214,7 +228,7 @@ input[type="checkbox"], input[type="radio"] {
   vertical-align: middle;
   cursor: pointer;
   display: inline-block;
-  accent-color: rgba(99,102,241,0.95);
+  accent-color: rgba(99, 102, 241, 0.95);
   background: transparent;
   border: none;
 }
@@ -223,18 +237,23 @@ input[type="checkbox"], input[type="radio"] {
 
 /* Slightly larger tap target on mobile while preserving native look */
 @media (hover: none) {
-  input[type="checkbox"], input[type="radio"] {
+
+  input[type="checkbox"],
+  input[type="radio"] {
     transform: scale(1.1);
   }
 }
 
 /* Focus styles for accessibility */
-input[type="checkbox"]:focus, input[type="radio"]:focus {
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
 
-input:focus, textarea:focus, select:focus {
+input:focus,
+textarea:focus,
+select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), var(--shadow-md);
   outline: none;
@@ -242,7 +261,9 @@ input:focus, textarea:focus, select:focus {
   transform: translateY(-1px);
 }
 
-input:disabled, textarea:disabled, select:disabled {
+input:disabled,
+textarea:disabled,
+select:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--background-secondary);
@@ -250,21 +271,30 @@ input:disabled, textarea:disabled, select:disabled {
 }
 
 /* Mobile tap feedback */
-input:active, textarea:active, select:active {
+input:active,
+textarea:active,
+select:active {
   transform: scale(0.998);
 }
 
 /* Desktop hover effects only on hover-capable devices */
 @media (hover: hover) and (pointer: fine) {
-  input, textarea, select {
+
+  input,
+  textarea,
+  select {
     font-size: 1rem;
   }
-  
-  input:hover, textarea:hover, select:hover {
+
+  input:hover,
+  textarea:hover,
+  select:hover {
     border-color: var(--primary-light);
   }
-  
-  input:focus, textarea:focus, select:focus {
+
+  input:focus,
+  textarea:focus,
+  select:focus {
     transform: translateY(-1px);
   }
 }
@@ -284,8 +314,13 @@ h1 {
 }
 
 @keyframes textShimmer {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 100% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 100% 50%;
+  }
 }
 
 h2 {
@@ -316,7 +351,6 @@ button {
   border: none;
   font-family: inherit;
   cursor: pointer;
-  transition: all var(--transition-fast);
   position: relative;
   overflow: hidden;
   border-radius: 12px;
@@ -339,7 +373,6 @@ button::before {
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left var(--transition-smooth);
   z-index: 1;
 }
 
@@ -349,7 +382,6 @@ button:hover::before {
 
 button:active {
   transform: scale(0.98);
-  transition: transform var(--transition-micro);
 }
 
 /* Desktop button refinements */
@@ -369,7 +401,6 @@ button:disabled {
 /* Mobile tap feedback */
 button:active {
   transform: scale(0.98);
-  transition: transform 0.1s ease;
 }
 
 /* Desktop hover effects override mobile tap on larger screens */
@@ -385,18 +416,18 @@ button:active {
     width: 8px;
     height: 8px;
   }
-  
+
   *::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 4px;
   }
-  
+
   *::-webkit-scrollbar-thumb {
     background: rgba(102, 126, 234, 0.3);
     border-radius: 4px;
     transition: background var(--transition-normal);
   }
-  
+
   *::-webkit-scrollbar-thumb:hover {
     background: rgba(102, 126, 234, 0.5);
   }
@@ -421,24 +452,49 @@ button:active {
 
 /* Essential Animations and Keyframes */
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7); }
-  70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(102, 126, 234, 0);
+  }
 }
 
 @keyframes skeleton-loading {
-  0% { background-position: -200px 0; }
-  100% { background-position: calc(200px + 100%) 0; }
+  0% {
+    background-position: -200px 0;
+  }
+
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
 }
 
 @keyframes breathe {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.03); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
 }
 
 /* Utility Classes for Special Effects */
@@ -457,7 +513,7 @@ button:active {
 }
 
 /* Touch Enhancements */
-.touchable, 
+.touchable,
 button,
 [role="button"],
 input[type="button"],
@@ -492,6 +548,15 @@ input[type="reset"] {
   padding-right: env(safe-area-inset-right);
 }
 
+/* Utility to hide scrollbars while keeping scrolling functional */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 /* Responsive Utilities */
 .mobile-only {
   display: block;
@@ -505,7 +570,7 @@ input[type="reset"] {
   .mobile-only {
     display: none;
   }
-  
+
   .desktop-only {
     display: block;
   }

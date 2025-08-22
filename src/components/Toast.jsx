@@ -1,5 +1,5 @@
 import { useStyle } from '../utils'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useToast } from '../context/ToastContext'
 import { FaInfoCircle, FaExclamationTriangle, FaExclamationCircle, FaTimes } from 'react-icons/fa'
 
@@ -12,23 +12,30 @@ const useToastItem = (toast) => {
   const { removeToast } = useToast()
   const [isVisible, setIsVisible] = useState(false)
   const [isLeaving, setIsLeaving] = useState(false)
+  const exitTimerRef = useRef(null)
 
   useEffect(() => {
     // Trigger enter animation
     setTimeout(() => setIsVisible(true), 10)
 
-    // Start exit animation before removal
-    const exitTimer = setTimeout(() => {
+    // Start exit animation before removal for automatic timeout
+    exitTimerRef.current = setTimeout(() => {
       setIsLeaving(true)
-      setTimeout(() => removeToast(toast.id), 200)
+      exitTimerRef.current = setTimeout(() => removeToast(toast.id), 200)
     }, 2800)
 
-    return () => clearTimeout(exitTimer)
+    return () => {
+      if (exitTimerRef.current) clearTimeout(exitTimerRef.current)
+    }
   }, [toast.id, removeToast])
 
   const handleClose = () => {
-    setIsLeaving(true)
-    setTimeout(() => removeToast(toast.id), 200)
+    // When user manually closes, remove immediately without running the exit animation.
+    if (exitTimerRef.current) {
+      clearTimeout(exitTimerRef.current)
+      exitTimerRef.current = null
+    }
+    removeToast(toast.id)
   }
 
   const getIcon = () => {
@@ -57,25 +64,38 @@ function Toast({ toast }) {
   // Custom styles for Toast
   const customStyles = {
     toast: {
-      // on mobile: full-width with small side margins; on sm+ use a narrower max width
-      base: 'w-full mx-3 sm:mx-0 sm:w-auto flex items-center gap-1 sm:gap-2 p-2 sm:p-3 mb-2 rounded-md shadow-sm backdrop-blur-sm transform transition-all duration-150 ease-out max-w-none sm:max-w-sm text-sm',
-      info: 'bg-blue-500/90 text-white border border-blue-400/30',
-      warning: 'bg-orange-500/90 text-white border border-orange-400/30',
-      error: 'bg-red-500/90 text-white border border-red-400/30',
+      // mobile: full-width with small side margins, slightly larger padding and rounded corners
+      base: 'w-full mx-3 sm:mx-0 sm:w-auto flex items-center gap-3 p-3 sm:p-3 mb-2 rounded-lg shadow-md backdrop-blur-sm transform transition-all duration-150 ease-out max-w-none sm:max-w-sm text-sm',
+      info: 'bg-blue-500/95 text-white border border-blue-400/30',
+      warning: 'bg-orange-500/95 text-white border border-orange-400/30',
+      error: 'bg-red-500/95 text-white border border-red-400/30',
       visible: 'translate-x-0 opacity-100',
       hidden: 'translate-x-full opacity-0',
       leaving: 'translate-x-full opacity-0'
     },
     icon: 'text-lg sm:text-xl flex-shrink-0',
-    message: 'flex-1 text-sm font-medium leading-relaxed break-words',
-    closeButton: 'flex-shrink-0 w-7 h-7 flex items-center justify-center p-0.5 hover:bg-white/20 rounded transition-colors duration-150 touch-manipulation'
+    message: 'flex-1 min-w-0 max-w-[50vw] text-sm font-medium leading-relaxed break-words pr-2 whitespace-pre-wrap',
   }
 
   const baseStyles = useStyle()
-  const styles = { ...baseStyles, toast: customStyles }
+
+  // Merge base toast styles with local custom styles correctly.
+  // baseStyles.toast contains shared toast type classes; customStyles.toast contains layout/state classes.
+  const styles = {
+    ...baseStyles,
+    toast: {
+      ...baseStyles.toast,
+      ...customStyles.toast,
+      icon: customStyles.icon,
+      message: customStyles.message,
+      closeButton: customStyles.closeButton,
+    },
+  }
 
   const getToastStyles = () => {
-    let baseStyles = `${styles.toast.base} ${styles.toast[toast.type]}`
+    // ensure we always pick a valid toast type so background classes are applied
+    const typeKey = ['info', 'warning', 'error'].includes(toast.type) ? toast.type : 'info'
+    let baseStyles = `${styles.toast.base} ${styles.toast[typeKey]}`
 
     if (isLeaving) {
       baseStyles += ` ${styles.toast.leaving}`
@@ -88,6 +108,8 @@ function Toast({ toast }) {
     return baseStyles
   }
 
+  console.log(styles.toast.closeButton)
+
   return (
     <div className={getToastStyles()}>
       <div className={styles.toast.icon}>
@@ -96,13 +118,6 @@ function Toast({ toast }) {
       <div className={styles.toast.message}>
         {toast.message}
       </div>
-      <button
-        className={styles.toast.closeButton}
-        onClick={handleClose}
-        aria-label="Close notification"
-      >
-        <FaTimes size={14} />
-      </button>
     </div>
   )
 }

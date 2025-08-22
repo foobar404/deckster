@@ -1,6 +1,6 @@
 import { Portal } from './Portal';
 import { useToast } from '../context/ToastContext';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useStyle, useSpeech, useStorage } from '../utils';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft } from 'react-icons/fa';
 
@@ -246,18 +246,21 @@ export function CardEditor({ deck, onSave, onCancel }) {
     formGroup: 'flex flex-col gap-2',
     formLabel: 'font-semibold text-gray-900 text-sm uppercase tracking-wide',
     formTextarea: 'p-4 border-2 border-gray-300 rounded-lg bg-white/80 text-gray-900 text-base resize-vertical min-h-20 transition-all duration-200 focus:outline-none focus:border-indigo-500 focus:bg-white focus:shadow-sm focus:-translate-y-0.5 hover:border-indigo-400',
-    imagePreview: 'flex items-center gap-2 mt-1 px-2 py-1 bg-blue-100 border border-blue-200 rounded-lg text-sm text-blue-600',
-    imagePreviewThumb: 'w-8 h-8 object-cover rounded-lg border border-blue-300 flex-shrink-0',
-    imagePreviewText: 'flex items-center gap-1',
+  imagePreview: 'flex items-center gap-3 mt-2 px-3 py-2 bg-white/80 border border-gray-200 rounded-lg text-sm text-gray-700',
+  imagePreviewThumb: 'w-10 h-10 object-cover rounded-lg border border-gray-200 flex-shrink-0',
+  imagePreviewText: 'flex items-center gap-2',
     formActions: 'flex flex-col gap-2 justify-center pt-6 border-t border-gray-200 md:flex-row md:gap-4',
-    cardsList: 'flex flex-col gap-6',
-    cardItem: 'p-8 bg-white bg-opacity-90 backdrop-blur-xl rounded-2xl border border-white border-opacity-20 shadow-sm grid grid-cols-1 gap-4 items-start transition-all duration-200 relative hover:-translate-y-0.5 hover:shadow-md md:grid-cols-[auto,1fr] md:gap-6 md:p-12',
-    cardNumber: 'font-bold text-blue-600 text-lg text-center mx-auto mb-4 self-center min-w-8 md:mt-2 md:mb-0',
-    cardContent: 'grid grid-cols-1 gap-4 w-full md:grid-cols-2 md:gap-6',
-    cardSide: 'flex flex-col gap-2',
-    cardSideLabel: 'font-semibold text-gray-600 text-sm uppercase tracking-wide',
-    cardSideTextarea: 'p-4 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-900 text-base resize-vertical min-h-20 transition-all duration-200 focus:outline-none focus:border-blue-500 focus:bg-white focus:shadow-sm focus:-translate-y-0.5 hover:border-blue-400',
-    deleteCardBtn: 'text-lg p-1 rounded-lg bg-transparent text-gray-400 border-2 border-transparent transition-all duration-200 flex items-center justify-center min-w-10 min-h-10 absolute top-2 right-2 hover:bg-red-100 hover:text-red-600 hover:border-red-600 hover:-translate-y-0.5 md:top-4 md:right-4 md:min-w-9 md:min-h-9',
+  // make the list a scrollable container so virtualization can measure and manage visible items
+  // make the list a scrollable container so virtualization can measure and manage visible items
+  // increased height and width on md+ to give the virtual view more room
+  cardsList: 'relative overflow-auto max-h-[85vh] min-h-[60vh] touch-manipulation space-y-6 w-full md:w-[900px] mx-auto pb-32 hide-scrollbar',
+  cardItem: 'p-6 bg-white/60 backdrop-blur-md rounded-2xl border border-white/10 shadow-md grid grid-cols-1 gap-4 items-start transition-all duration-200 relative hover:shadow-lg md:grid-cols-[auto,1fr] md:gap-6 md:p-8',
+  cardNumber: 'font-bold text-white bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center text-lg mx-auto mb-4 self-center md:mx-0 md:mr-4',
+  cardContent: 'grid grid-cols-1 gap-4 w-full md:grid-cols-2 md:gap-6 min-w-0',
+  cardSide: 'flex flex-col gap-2 min-w-0',
+  cardSideLabel: 'font-semibold text-gray-700 text-sm uppercase tracking-wide',
+  cardSideTextarea: 'p-4 border border-gray-200 rounded-lg bg-white text-gray-900 text-base resize-vertical min-h-24 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-300',
+  deleteCardBtn: 'text-lg p-2 rounded-md bg-white/60 text-red-600 hover:bg-red-50 transition-all duration-200 flex items-center justify-center min-w-10 min-h-10 absolute top-3 right-3 md:top-4 md:right-4',
     emptyState: 'text-center py-16 mx-auto max-w-96 flex flex-col items-center justify-center',
     emptyIcon: 'text-6xl mb-6 text-blue-600 opacity-70',
     emptyTitle: 'text-2xl mb-4 text-gray-900 font-semibold',
@@ -266,6 +269,51 @@ export function CardEditor({ deck, onSave, onCancel }) {
 
   const baseStyles = useStyle()
   const styles = { ...baseStyles, cardEditor: customStyles }
+
+  // --- Virtualization setup ---
+  // Assumption: card items have approximately fixed height. Using a fixed ITEM_HEIGHT simplifies virtualization without extra dependencies.
+  const listRef = useRef(null)
+  const [scrollTop, setScrollTop] = useState(0)
+  const [containerHeight, setContainerHeight] = useState(600)
+  // ITEM_HEIGHT includes the card height plus the vertical gap created by `space-y-6` (~24px)
+  const ITEM_HEIGHT = 384 // px - tuned for card layout (adjustable)
+  const OVERSCAN = 3
+
+  useEffect(() => {
+    const el = listRef.current
+    if (!el) return
+
+    const handleResize = () => {
+      setContainerHeight(el.clientHeight || 600)
+    }
+
+    const onScroll = (e) => setScrollTop(e.target.scrollTop)
+
+    // Use ResizeObserver when available to track container size changes
+    let ro
+    try {
+      ro = new ResizeObserver(handleResize)
+      ro.observe(el)
+    } catch (err) {
+      window.addEventListener('resize', handleResize)
+    }
+
+    el.addEventListener('scroll', onScroll)
+    handleResize()
+
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      if (ro) ro.disconnect()
+      else window.removeEventListener('resize', handleResize)
+    }
+  }, [listRef.current, cards.length])
+
+  const totalHeight = cards.length * ITEM_HEIGHT
+  const visibleCount = Math.max(1, Math.ceil(containerHeight / ITEM_HEIGHT))
+  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN)
+  const endIndex = Math.min(cards.length, startIndex + visibleCount + OVERSCAN * 2)
+  const visibleCards = cards.slice(startIndex, endIndex)
+  // --- end virtualization ---
 
   return (
     <div className={styles.cardEditor.cardEditor}>
@@ -369,81 +417,76 @@ export function CardEditor({ deck, onSave, onCancel }) {
         </Portal>
       )}
 
-      <div className={styles.cardEditor.cardsList}>
-        {cards.map((card, index) => (
-          <div key={card.id} className={styles.cardEditor.cardItem}>
-            <div className={styles.cardEditor.cardNumber}>#{index + 1}</div>
-            <div className={styles.cardEditor.cardContent}>
-              <div className={styles.cardEditor.cardSide}>
-                <label className={styles.cardEditor.cardSideLabel}>Front</label>
-                <textarea
-                  value={card.front || ''}
-                  onChange={(e) => updateCard(card.id, 'front', e.target.value)}
-                  rows={3}
-                  placeholder="Text and/or URLs (images, audio, video, etc.)"
-                  className={styles.cardEditor.cardSideTextarea}
-                />
-                {extractImageUrl(card.front) && (
-                  <div className={styles.cardEditor.imagePreview}>
-                    <img
-                      src={extractImageUrl(card.front)}
-                      alt="Preview"
-                      className={styles.cardEditor.imagePreviewThumb}
-                      onError={(e) => e.target.style.display = 'none'}
-                    />
-                    <div className={styles.cardEditor.imagePreviewText}>
-                      <FaImage />
-                      <span>Image URL detected</span>
+      <div ref={listRef} className={styles.cardEditor.cardsList}>
+        <div style={{ height: startIndex * ITEM_HEIGHT }} />
+        {visibleCards.map((card, idx) => {
+          const actualIndex = startIndex + idx
+          return (
+            <div key={card.id} className={styles.cardEditor.cardItem} style={{ transform: `translateY(0)` }}>
+              <div className={styles.cardEditor.cardNumber}>#{actualIndex + 1}</div>
+              <div className={styles.cardEditor.cardContent}>
+                <div className={styles.cardEditor.cardSide}>
+                  <label className={styles.cardEditor.cardSideLabel}>Front</label>
+                  <textarea
+                    value={card.front || ''}
+                    onChange={(e) => updateCard(card.id, 'front', e.target.value)}
+                    rows={3}
+                    placeholder="Text and/or URLs (images, audio, video, etc.)"
+                    className={styles.cardEditor.cardSideTextarea}
+                  />
+                  {extractImageUrl(card.front) && (
+                    <div className={styles.cardEditor.imagePreview}>
+                      <img
+                        src={extractImageUrl(card.front)}
+                        alt="Preview"
+                        className={styles.cardEditor.imagePreviewThumb}
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
+                      <div className={styles.cardEditor.imagePreviewText}>
+                        <FaImage />
+                        <span>Image URL detected</span>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-              <div className={styles.cardEditor.cardSide}>
-                <label className={styles.cardEditor.cardSideLabel}>Back</label>
-                <textarea
-                  value={card.back || ''}
-                  onChange={(e) => updateCard(card.id, 'back', e.target.value)}
-                  rows={3}
-                  placeholder="Text and/or URLs (images, audio, video, etc.)"
-                  className={styles.cardEditor.cardSideTextarea}
-                />
-                {extractImageUrl(card.back) && (
-                  <div className={styles.cardEditor.imagePreview}>
-                    <img
-                      src={extractImageUrl(card.back)}
-                      alt="Preview"
-                      className={styles.cardEditor.imagePreviewThumb}
-                      onError={(e) => e.target.style.display = 'none'}
-                    />
-                    <div className={styles.cardEditor.imagePreviewText}>
-                      <FaImage />
-                      <span>Image URL detected</span>
+                  )}
+                </div>
+                <div className={styles.cardEditor.cardSide}>
+                  <label className={styles.cardEditor.cardSideLabel}>Back</label>
+                  <textarea
+                    value={card.back || ''}
+                    onChange={(e) => updateCard(card.id, 'back', e.target.value)}
+                    rows={3}
+                    placeholder="Text and/or URLs (images, audio, video, etc.)"
+                    className={styles.cardEditor.cardSideTextarea}
+                  />
+                  {extractImageUrl(card.back) && (
+                    <div className={styles.cardEditor.imagePreview}>
+                      <img
+                        src={extractImageUrl(card.back)}
+                        alt="Preview"
+                        className={styles.cardEditor.imagePreviewThumb}
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
+                      <div className={styles.cardEditor.imagePreviewText}>
+                        <FaImage />
+                        <span>Image URL detected</span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+              <button
+                className={styles.cardEditor.deleteCardBtn}
+                onClick={() => deleteCard(card.id)}
+              >
+                <FaTrash />
+              </button>
             </div>
-            <button
-              className={styles.cardEditor.deleteCardBtn}
-              onClick={() => deleteCard(card.id)}
-            >
-              <FaTrash />
-            </button>
-          </div>
-        ))}
+          )
+        })}
+        <div style={{ height: Math.max(0, (cards.length - endIndex) * ITEM_HEIGHT) }} />
       </div>
 
-      {/* Add card button at the end of the list */}
-      {hasCards && (
-        <div className={styles.cardEditor.addCardSectionBottom}>
-          <button
-            className={styles.button.primary}
-            onClick={openAddForm}
-          >
-            <FaPlus /> Add New Card
-          </button>
-        </div>
-      )}
+  {/* Add card button moved to top; bottom button removed to reduce visual noise */}
 
       {!hasCards && (
         <div className={styles.cardEditor.emptyState}>

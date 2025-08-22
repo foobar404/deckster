@@ -1,5 +1,6 @@
 import { useStyle } from '../utils'
 import { useState, useEffect } from 'react'
+import { Portal } from './Portal'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { BiBookReader, BiFolderOpen, BiImport, BiBarChart } from 'react-icons/bi'
 
@@ -72,8 +73,8 @@ export function Navigation() {
   // Custom styles for Navigation
   const customStyles = {
     navigation: {
-      // rounded top corners on mobile, no rounding on md+ where nav is vertical
-      base: 'fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-lg border-t border-gray-200 rounded-t-3xl md:rounded-none shadow-lg md:relative md:border-t-0 md:border-r md:shadow-none md:h-screen md:w-20 md:bg-white/95',
+      // rounded top corners on mobile; on md+ keep nav fixed to the left so it remains visible while scrolling
+      base: 'fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-lg border-t border-gray-200 rounded-t-3xl md:rounded-none shadow-lg md:fixed md:top-0 md:bottom-0 md:left-0 md:border-t-0 md:border-r md:shadow-none md:h-screen md:w-20 md:bg-white/95',
       collapsed: 'md:w-20'
     },
     container: 'flex items-center justify-around py-2 px-4 md:flex-col md:items-center md:justify-start md:py-6 md:px-2 md:gap-6',
@@ -89,25 +90,27 @@ export function Navigation() {
   const styles = { ...baseStyles, navigation: customStyles }
 
   return (
-    <nav className={`${customStyles.navigation.base} ${isCollapsed ? styles.navigation.collapsed : ''}`}>
-      <div className={styles.navigation.container}>
-        {navItems.map(item => {
-          const IconComponent = item.icon
-          const isActive = currentView === item.id
-          return (
-            <button
-              key={item.id}
-              className={isActive ? styles.navigation.item.active : styles.navigation.item.base}
-              onClick={() => handleNavigation(item.path)}
-              title={isCollapsed ? item.label : ''}
-            >
-              <IconComponent className={styles.navigation.icon} />
-              <span className={styles.navigation.label}>{item.label}</span>
-            </button>
-          )
-        })}
-      </div>
-    </nav>
+    <Portal containerId="nav-root">
+      <nav className={`${customStyles.navigation.base} ${isCollapsed ? styles.navigation.collapsed : ''}`}>
+        <div className={styles.navigation.container}>
+          {navItems.map(item => {
+            const IconComponent = item.icon
+            const isActive = currentView === item.id
+            return (
+              <button
+                key={item.id}
+                className={isActive ? styles.navigation.item.active : styles.navigation.item.base}
+                onClick={() => handleNavigation(item.path)}
+                title={isCollapsed ? item.label : ''}
+              >
+                <IconComponent className={styles.navigation.icon} />
+                <span className={styles.navigation.label}>{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+    </Portal>
   )
 }
 

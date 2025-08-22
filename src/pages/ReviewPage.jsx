@@ -185,9 +185,7 @@ export function ReviewPage() {
 
   // Custom styles for ReviewPage
   const customStyles = {
-    // Make the page a flex column and give it an explicit viewport height so h-full children can size correctly
-    // Use full viewport height but prevent page scroll by hiding overflow
-    container: 'h-full flex flex-col overflow-hidden',
+    container: 'h-full flex flex-col p-4',
     emptyState: 'flex flex-col items-center justify-center min-h-96 p-6 text-center',
     emptyIcon: 'text-5xl text-gray-400 mb-3',
     // Tighten header spacing and ensure it stacks above the card
@@ -199,12 +197,12 @@ export function ReviewPage() {
     // Card visual style available to the page: translucent background + 10px solid border
     card: 'bg-white/30 border-[10px] border-gray-200/50 border-solid rounded-2xl p-4',
     // Allow the card stack to flex and shrink without producing vertical scroll
-    cardStack: 'flex-1 flex items-center justify-center p-3 min-h-0 overflow-hidden',
+    cardStack: 'flex-1 flex items-center justify-center p-3 min-h-0',
     // Panel styles used for empty/result states
-    panel: 'flex flex-col items-center justify-center bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg p-6 text-center',
+    panel: 'flex flex-col items-center justify-center p-6 text-center',
     panelLarge: 'flex flex-col items-center justify-center bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg p-8 text-center',
     // Buttons
-    resetButton: 'p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors duration-200',
+    resetButton: 'p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors duration-200 flex justify-center items-center',
     backButton: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200',
     resultButton: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200',
     // Quadrant overlays
@@ -371,10 +369,11 @@ export function ReviewPage() {
   if (!activeDeck || !activeDeck.cards || activeDeck.cards.length === 0) {
     return (
       <div className={styles.review.container}>
+        <h1 className="w-full text-left text-2xl font-bold text-gray-900 mb-2">Review</h1>
+        <p className="w-full text-left text-gray-600 mb-6">Start a study session by selecting a deck from the Decks page.</p>
         <div className={styles.review.panel}>
           <div className={styles.review.emptyIcon}><FaBook /></div>
           <h2>No Deck Selected</h2>
-          <p>Choose a deck from the Decks tab to start reviewing.</p>
         </div>
       </div>
     )

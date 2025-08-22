@@ -76,7 +76,7 @@ export function StatsPage() {
 
   // Custom styles for StatsPage
   const customStyles = {
-    container: 'min-h-screen p-4 pb-20 md:pb-4',
+    container: 'p-4 pb-5 md:pb-4',
     header: 'mb-6',
     statsGrid: 'grid grid-cols-2 md:grid-cols-3 gap-4 mb-8',
     statCard: 'p-4 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg flex items-center gap-4',

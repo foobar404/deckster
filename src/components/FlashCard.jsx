@@ -30,7 +30,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         setDragOffset({ x: offset.x, y: offset.y })
     }
 
-    const animateTo = (target, duration = 250, cb) => {
+    const animateTo = (target, duration = 30, cb) => {
         const start = performance.now()
         const from = { x: dragOffsetRef.current.x, y: dragOffsetRef.current.y }
         const dx = target.x - from.x
@@ -39,8 +39,8 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         const step = (t) => {
             const now = performance.now()
             const p = Math.min(1, (now - start) / duration)
-            // easeOutCubic
-            const ease = 1 - Math.pow(1 - p, 3)
+            // easeOutQuart for snappier feel
+            const ease = 1 - Math.pow(1 - p, 4)
             const nx = from.x + dx * ease
             const ny = from.y + dy * ease
             updateDragOffset({ x: nx, y: ny })
@@ -114,24 +114,24 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         // Add flipping state for smoother animation
         setIsFlipping(true)
 
-        // Start flip animation
+        // Start flip animation quickly
         setTimeout(() => {
             setIsFlipped(!isFlipped)
 
-            // Clear flipping state after animation completes
+            // Clear flipping state after a shorter animation period
             setTimeout(() => {
                 setIsFlipping(false)
-            }, 300) // Match CSS animation duration (0.3s)
-        }, 10)
+            }, 180)
+        }, 8)
     }
 
     // Handle delayed back content visibility for smooth animations
     useEffect(() => {
         if (isFlipped) {
-            // Show back content after flip animation reaches halfway point (150ms for faster animation)
+            // Show back content after flip animation reaches halfway point (shorter delay for snappy feel)
             const timer = setTimeout(() => {
                 setShowBackContent(true)
-            }, 150)
+            }, 90)
             return () => clearTimeout(timer)
         } else {
             // Hide back content immediately when flipping to front
@@ -206,8 +206,8 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             return
         }
 
-        // Start dragging if moved more than 10px
-        if (distance > 10) {
+        // Start dragging if moved more than 5px (reduced threshold for faster response)
+        if (distance > 5) {
             hasDragged.current = true
             if (!isDragging) {
                 setIsDragging(true)
@@ -240,10 +240,10 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             if (!offset) return null
             const x = offset.x
             const y = offset.y
-            if (x < -30 && y < -30) return 0
-            if (x < -30 && y > 30) return 1
-            if (x > 30 && y > 30) return 2
-            if (x > 30 && y < -30) return 3
+            if (x < -20 && y < -20) return 0
+            if (x < -20 && y > 20) return 1
+            if (x > 20 && y > 20) return 2
+            if (x > 20 && y < -20) return 3
             return null
         }
 
@@ -264,8 +264,8 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             const vy = (lastMove.current.y - prevMove.current.y) / dt
             const speed = Math.sqrt(vx * vx + vy * vy)
 
-            // If a quick flick happened, use velocity direction to pick answer even if offset small
-            const flingSpeedThreshold = 0.5 // px per ms (~500 px/s)
+            // Reduced threshold for faster flick detection
+            const flingSpeedThreshold = 0.3 // px per ms (~300 px/s)
             let finalAnswer = currentSelectedAnswer
 
             if (speed > flingSpeedThreshold) {
@@ -281,12 +281,12 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             }
 
             if (finalAnswer !== null) {
-                // Animate card off-screen in the selected direction, then submit
+                // Animate card off-screen faster in the selected direction
                 const rect = cardRef.current?.getBoundingClientRect()
                 const offX = rect ? (Math.sign(dragOffsetRef.current.x || vx) * (rect.width * 1.6)) : (finalAnswer % 2 === 0 ? -800 : 800)
                 const offY = rect ? (Math.sign(dragOffsetRef.current.y || vy) * (rect.height * 1.6)) : (finalAnswer < 2 ? -800 : 800)
 
-                animateTo({ x: offX, y: offY }, 300, () => {
+                animateTo({ x: offX, y: offY }, 120, () => {
                     try {
                         onReview(finalAnswer)
                     } catch (err) {
@@ -296,8 +296,8 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
                     updateDragOffset({ x: 0, y: 0 })
                 })
             } else {
-                // No answer selected, animate back to center
-                animateTo({ x: 0, y: 0 }, 220)
+                // No answer selected, animate back to center faster
+                animateTo({ x: 0, y: 0 }, 100)
             }
         }
         // If no dragging occurred, flip is handled by click event
@@ -322,7 +322,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         const deltaY = e.clientY - startPos.current.y
         const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
-        if (distance > 10) {
+        if (distance > 5) {
             hasDragged.current = true
         }
 
@@ -352,7 +352,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             const deltaY = e.clientY - startPos.current.y
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
-            if (distance > 10) {
+            if (distance > 5) {
                 hasDragged.current = true
                 if (!isDragging) setIsDragging(true)
             }
@@ -424,10 +424,10 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     }, [card.id])
 
     useEffect(() => {
-        if (isDragging && dragOffset.x < -30 && dragOffset.y < -30) setSelectedAnswer(0);
-        if (isDragging && dragOffset.x < -30 && dragOffset.y > 30) setSelectedAnswer(1);
-        if (isDragging && dragOffset.x > 30 && dragOffset.y > 30) setSelectedAnswer(2);
-        if (isDragging && dragOffset.x > 30 && dragOffset.y < -30) setSelectedAnswer(3);
+        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20) setSelectedAnswer(0);
+        if (isDragging && dragOffset.x < -20 && dragOffset.y > 20) setSelectedAnswer(1);
+        if (isDragging && dragOffset.x > 20 && dragOffset.y > 20) setSelectedAnswer(2);
+        if (isDragging && dragOffset.x > 20 && dragOffset.y < -20) setSelectedAnswer(3);
     }, [dragOffset]);
 
     // Notify parent of drag state changes
@@ -443,13 +443,13 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     }, [isFlipped, isDragging, dragOffset, selectedAnswer]); // Removed onDragStateChange from dependencies
 
     const getSwipeIndicator = () => {
-        if (isDragging && dragOffset.x < -30 && dragOffset.y < -30)
+        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20)
             return { ...difficultyOptions[0], gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.4))', borderColor: 'rgba(239, 68, 68, 0.8)' };
-        if (isDragging && dragOffset.x < -30 && dragOffset.y > 30)
+        if (isDragging && dragOffset.x < -20 && dragOffset.y > 20)
             return { ...difficultyOptions[1], gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.4))', borderColor: 'rgba(245, 158, 11, 0.8)' };
-        if (isDragging && dragOffset.x > 30 && dragOffset.y > 30)
+        if (isDragging && dragOffset.x > 20 && dragOffset.y > 20)
             return { ...difficultyOptions[2], gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.4))', borderColor: 'rgba(16, 185, 129, 0.8)' };
-        if (isDragging && dragOffset.x > 30 && dragOffset.y < -30)
+        if (isDragging && dragOffset.x > 20 && dragOffset.y < -20)
             return { ...difficultyOptions[3], gradient: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.4))', borderColor: 'rgba(99, 102, 241, 0.8)' };
     }
 

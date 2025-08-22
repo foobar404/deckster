@@ -128,7 +128,8 @@ export function DecksPage() {
     optionsBtn: 'p-2 bg-white/90 border border-white/10 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center w-11 h-11',
     btnPrimary: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-3 min-w-[140px] justify-center shadow-md',
     btnSecondary: 'bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2',
-    closeButton: 'absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200',
+    // ensure the close button is a centered square so the icon is visually centered
+    closeButton: 'absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 flex items-center justify-center w-9 h-9',
     optionGroup: 'mb-4',
     radioGroup: 'flex flex-col gap-2 ml-4',
     optionActions: 'flex gap-3 mt-6',
@@ -268,6 +269,7 @@ export function DecksPage() {
       <div className={styles.decks.header}>
         <div className="md:col-span-3">
           <h1 className="text-3xl font-bold text-gray-900">My Decks</h1>
+          <p className="text-gray-600 mt-2">Organize your decks — create, edit, and start studying.</p>
         </div>
 
         <div className="md:col-span-3 flex items-center justify-center gap-4">
