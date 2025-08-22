@@ -21,14 +21,14 @@ export const ToastProvider = ({ children }) => {
       type, // 'info', 'warning', 'error'
       timestamp: Date.now()
     }
-    
+
     setToasts(prev => [...prev, newToast])
-    
+
     // Auto remove after 3 seconds
     setTimeout(() => {
       removeToast(id)
     }, 3000)
-    
+
     return id
   }, [])
 

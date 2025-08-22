@@ -1,27 +1,57 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useToast } from '../context/ToastContext'
-import styles from './CardEditor.module.css'
-import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft } from 'react-icons/fa'
-import { extractImageUrl } from '../utils/speechUtils'
-import Portal from './Portal'
+import { Portal } from './Portal';
+import { useToast } from '../context/ToastContext';
+import { useState, useEffect, useCallback } from 'react';
+import { useStyle, useSpeech, useStorage } from '../utils';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft } from 'react-icons/fa';
 
-const CardEditor = ({ deck, onSave, onCancel }) => {
+
+/**
+ * Custom hook for CardEditor logic and state management
+ * Encapsulates all business logic, leaving the component as a pure view
+ * 
+ * @param {Object} deck - The deck object being edited
+ * @param {Function} onSave - Callback when save and exit is triggered
+ * @param {Function} onCancel - Callback when cancel is triggered
+ * @returns {Object} All state and handlers needed by the CardEditor component
+ */
+const useCardEditor = (deck, onSave, onCancel) => {
   const { showWarning, showInfo } = useToast()
-  
-  // Ensure deck.cards exists and is an array, with proper card structure
-  const initialCards = (deck.cards || []).map(card => ({
-    id: card.id || Date.now() + Math.random(),
-    front: card.front || '',
-    back: card.back || '',
-    difficulty: card.difficulty || 0,
-    lastReviewed: card.lastReviewed || null,
-    ...card // Preserve any other properties
-  }))
-  
-  const [cards, setCards] = useState(initialCards)
+  const { extractImageUrl } = useSpeech()
+  const { saveToStorage, STORAGE_KEYS } = useStorage()
+
+  // Initialize cards with proper structure
+  const initializeCards = useCallback(() => {
+    return (deck.cards || []).map(card => ({
+      id: card.id || Date.now() + Math.random(),
+      front: card.front || '',
+      back: card.back || '',
+      difficulty: card.difficulty || 0,
+      lastReviewed: card.lastReviewed || null,
+      ...card // Preserve any other properties
+    }))
+  }, [deck.cards])
+
+  // State management
+  const [cards, setCards] = useState(initializeCards)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newCard, setNewCard] = useState({ front: '', back: '' })
   const [deckName, setDeckName] = useState(deck.name || '')
+
+  // Auto-save with debounce to avoid excessive saves
+  const debouncedSave = useCallback((cardsToSave, nameToSave = deckName) => {
+    const updatedDeck = {
+      ...deck,
+      name: nameToSave,
+      cards: cardsToSave
+    }
+
+    // Update the deck directly in localStorage to persist changes
+    const storedDecks = JSON.parse(localStorage.getItem(STORAGE_KEYS.DECKS) || '[]')
+    const updatedDecks = storedDecks.map(d =>
+      d.id === deck.id ? updatedDeck : d
+    )
+    saveToStorage(STORAGE_KEYS.DECKS, updatedDecks)
+  }, [deck, deckName])
 
   // Handle modal positioning on mobile
   useEffect(() => {
@@ -52,25 +82,9 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
     }
   }, [showAddForm])
 
-  // Auto-save with debounce to avoid excessive saves
-  const debouncedSave = useCallback((cardsToSave, nameToSave = deckName) => {
-    const updatedDeck = {
-      ...deck,
-      name: nameToSave,
-      cards: cardsToSave
-    }
-    // Update the deck in the parent's context/state without navigating
-    // We'll save to localStorage or context directly instead of calling onSave
-    
-    // Update the deck directly in localStorage to persist changes
-    const storedDecks = JSON.parse(localStorage.getItem('deckster_decks') || '[]')
-    const updatedDecks = storedDecks.map(d => 
-      d.id === deck.id ? updatedDeck : d
-    )
-    localStorage.setItem('deckster_decks', JSON.stringify(updatedDecks))
-  }, [deck, deckName])
-
+  // Auto-save cards when they change
   useEffect(() => {
+    const initialCards = initializeCards()
     const timeoutId = setTimeout(() => {
       if (cards.length !== initialCards.length || JSON.stringify(cards) !== JSON.stringify(initialCards)) {
         debouncedSave(cards)
@@ -78,7 +92,7 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
     }, 1000) // Debounce for 1 second
 
     return () => clearTimeout(timeoutId)
-  }, [cards, debouncedSave, initialCards])
+  }, [cards, debouncedSave, initializeCards])
 
   // Auto-save deck name changes
   useEffect(() => {
@@ -91,9 +105,10 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
     return () => clearTimeout(timeoutId)
   }, [deckName, deck.name, cards, debouncedSave])
 
-  const addCard = () => {
+  // Card management handlers
+  const addCard = useCallback(() => {
     if (!newCard.front.trim() || !newCard.back.trim()) return
-    
+
     const card = {
       id: Date.now(),
       front: newCard.front.trim(),
@@ -101,62 +116,181 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
       difficulty: 0,
       lastReviewed: null
     }
-    
+
     setCards(prev => [...prev, card])
     setNewCard({ front: '', back: '' })
     setShowAddForm(false) // Close the modal after adding
-  }
+  }, [newCard])
 
-  const updateCard = (cardId, field, value) => {
+  const updateCard = useCallback((cardId, field, value) => {
     setCards(prev => {
       const updated = prev.map(card =>
         card.id === cardId ? { ...card, [field]: value } : card
       )
       return updated
     })
-  }
+  }, [])
 
-  const deleteCard = (cardId) => {
+  const deleteCard = useCallback((cardId) => {
     const cardToDelete = cards.find(card => card.id === cardId)
     setCards(prev => prev.filter(card => card.id !== cardId))
     if (cardToDelete) {
       showWarning(`Deleted card: "${cardToDelete.front}"`)
     }
-  }
+  }, [cards, showWarning])
 
-  const handleSaveAndExit = () => {
+  // Modal handlers
+  const openAddForm = useCallback(() => {
+    setShowAddForm(true)
+  }, [])
+
+  const closeAddForm = useCallback(() => {
+    setShowAddForm(false)
+    setNewCard({ front: '', back: '' })
+  }, [])
+
+  const updateNewCard = useCallback((field, value) => {
+    setNewCard(prev => ({ ...prev, [field]: value }))
+  }, [])
+
+  // Deck name handler
+  const updateDeckName = useCallback((name) => {
+    setDeckName(name)
+  }, [])
+
+  // Save and exit handler
+  const handleSaveAndExit = useCallback(() => {
     const updatedDeck = {
       ...deck,
       name: deckName,
       cards: cards
     }
     onSave(updatedDeck) // This will trigger navigation back to deck list
+  }, [deck, deckName, cards, onSave])
+
+  // Computed values
+  const isAddCardDisabled = !newCard.front.trim() || !newCard.back.trim()
+  const cardCount = cards.length
+  const hasCards = cardCount > 0
+
+  return {
+    // State
+    cards,
+    showAddForm,
+    newCard,
+    deckName,
+
+    // Computed values
+    isAddCardDisabled,
+    cardCount,
+    hasCards,
+
+    // Card management
+    addCard,
+    updateCard,
+    deleteCard,
+
+    // Modal management
+    openAddForm,
+    closeAddForm,
+
+    // Form management
+    updateNewCard,
+    updateDeckName,
+    // Utilities
+    extractImageUrl,
+
+    // Navigation
+    handleSaveAndExit
+  }
+}
+
+export function CardEditor({ deck, onSave, onCancel }) {
+  // Use the custom hook for all logic and state
+  const {
+    cards,
+    showAddForm,
+    newCard,
+    deckName,
+    isAddCardDisabled,
+    cardCount,
+    hasCards,
+    addCard,
+    updateCard,
+    deleteCard,
+    openAddForm,
+    closeAddForm,
+    updateNewCard,
+    updateDeckName,
+    handleSaveAndExit,
+    extractImageUrl
+  } = useCardEditor(deck, onSave, onCancel)
+
+  // Custom styles for CardEditor
+  const customStyles = {
+    cardEditor: 'p-4 max-w-5xl mx-auto flex flex-col gap-6 md:ml-60 md:p-8 md:gap-8',
+    header: 'flex flex-col items-stretch gap-4 md:flex-row md:justify-between md:items-center md:flex-wrap',
+    backButton: 'flex items-center gap-2 py-2 px-4 text-sm font-medium text-gray-600 transition-all duration-200 hover:text-blue-600 hover:-translate-x-0.5',
+    // allow the header content to shrink inside a flex row (prevents overflow)
+    headerContent: 'flex flex-col gap-1 min-w-0 flex-1',
+    // make the deck name input responsive: full width but constrained on larger screens
+    nameInput: 'text-2xl md:text-3xl font-bold text-gray-900 bg-white border-2 border-blue-500 rounded-lg px-4 py-3 w-full max-w-full md:max-w-3xl outline-none placeholder:text-gray-500 placeholder:opacity-70',
+    headerDescription: 'text-gray-600 text-base',
+    addCardSection: 'flex justify-center py-6',
+    addCardSectionBottom: 'flex justify-center py-8 px-6 border-t border-gray-200 mt-6',
+    addCardBtn: 'py-2 px-6 text-sm font-medium flex items-center gap-2',
+    modalOverlay: 'fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-hidden',
+    addCardModal: 'w-full max-h-[80vh] overflow-y-auto p-8 bg-white bg-opacity-95 backdrop-blur-3xl rounded-2xl border border-white border-opacity-30 shadow-2xl animate-in slide-in-from-bottom-4 duration-300 md:max-w-3xl md:p-12 md:rounded-3xl',
+    modalTitle: 'text-xl font-bold text-gray-900 text-center mb-8 md:text-2xl',
+    formRow: 'grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 md:gap-6',
+    formGroup: 'flex flex-col gap-2',
+    formLabel: 'font-semibold text-gray-900 text-sm uppercase tracking-wide',
+    formTextarea: 'p-4 border-2 border-gray-300 rounded-lg bg-white/80 text-gray-900 text-base resize-vertical min-h-20 transition-all duration-200 focus:outline-none focus:border-indigo-500 focus:bg-white focus:shadow-sm focus:-translate-y-0.5 hover:border-indigo-400',
+    imagePreview: 'flex items-center gap-2 mt-1 px-2 py-1 bg-blue-100 border border-blue-200 rounded-lg text-sm text-blue-600',
+    imagePreviewThumb: 'w-8 h-8 object-cover rounded-lg border border-blue-300 flex-shrink-0',
+    imagePreviewText: 'flex items-center gap-1',
+    formActions: 'flex flex-col gap-2 justify-center pt-6 border-t border-gray-200 md:flex-row md:gap-4',
+    cardsList: 'flex flex-col gap-6',
+    cardItem: 'p-8 bg-white bg-opacity-90 backdrop-blur-xl rounded-2xl border border-white border-opacity-20 shadow-sm grid grid-cols-1 gap-4 items-start transition-all duration-200 relative hover:-translate-y-0.5 hover:shadow-md md:grid-cols-[auto,1fr] md:gap-6 md:p-12',
+    cardNumber: 'font-bold text-blue-600 text-lg text-center mx-auto mb-4 self-center min-w-8 md:mt-2 md:mb-0',
+    cardContent: 'grid grid-cols-1 gap-4 w-full md:grid-cols-2 md:gap-6',
+    cardSide: 'flex flex-col gap-2',
+    cardSideLabel: 'font-semibold text-gray-600 text-sm uppercase tracking-wide',
+    cardSideTextarea: 'p-4 border-2 border-gray-300 rounded-lg bg-gray-100 text-gray-900 text-base resize-vertical min-h-20 transition-all duration-200 focus:outline-none focus:border-blue-500 focus:bg-white focus:shadow-sm focus:-translate-y-0.5 hover:border-blue-400',
+    deleteCardBtn: 'text-lg p-1 rounded-lg bg-transparent text-gray-400 border-2 border-transparent transition-all duration-200 flex items-center justify-center min-w-10 min-h-10 absolute top-2 right-2 hover:bg-red-100 hover:text-red-600 hover:border-red-600 hover:-translate-y-0.5 md:top-4 md:right-4 md:min-w-9 md:min-h-9',
+    emptyState: 'text-center py-16 mx-auto max-w-96 flex flex-col items-center justify-center',
+    emptyIcon: 'text-6xl mb-6 text-blue-600 opacity-70',
+    emptyTitle: 'text-2xl mb-4 text-gray-900 font-semibold',
+    emptyDescription: 'text-gray-600 text-base leading-relaxed'
   }
 
+  const baseStyles = useStyle()
+  const styles = { ...baseStyles, cardEditor: customStyles }
+
   return (
-    <div className={styles.cardEditor}>
-      <div className={styles.header}>
-        <button className={`${styles.backButton} btn-ghost`} onClick={handleSaveAndExit}>
+    <div className={styles.cardEditor.cardEditor}>
+      <div className={styles.cardEditor.header}>
+        <button className={`${styles.cardEditor.backButton} ${styles.button.secondary}`} onClick={handleSaveAndExit}>
           <FaArrowLeft /> Back to Decks
         </button>
-        <div className={styles.headerContent}>
-          <div className={styles.nameEditContainer}>
+        <div className={styles.cardEditor.headerContent}>
+          <div>
             <input
               type="text"
               value={deckName}
-              onChange={(e) => setDeckName(e.target.value)}
-              className={styles.nameInput}
+              onChange={(e) => updateDeckName(e.target.value)}
+              className={styles.cardEditor.nameInput}
               placeholder="Deck name..."
             />
           </div>
-          <p>{cards.length} cards • Auto-saved</p>
+          <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
         </div>
       </div>
 
-      <div className={styles.addCardSection}>
-        <button 
-          className={`${styles.addCardBtn} btn-primary`}
-          onClick={() => setShowAddForm(true)}
+      <div className={styles.cardEditor.addCardSection}>
+        <button
+          className={styles.button.primary}
+          onClick={openAddForm}
         >
           <FaPlus /> Add New Card
         </button>
@@ -165,50 +299,52 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
       {/* Add Card Modal */}
       {showAddForm && (
         <Portal>
-          <div className={styles.modalOverlay} onClick={() => setShowAddForm(false)}>
-            <div className={styles.addCardModal} onClick={(e) => e.stopPropagation()}>
-              <h3>Add New Card</h3>
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Front (Question)</label>
+          <div className={styles.cardEditor.modalOverlay} onClick={closeAddForm}>
+            <div className={styles.cardEditor.addCardModal} onClick={(e) => e.stopPropagation()}>
+              <h3 className={styles.cardEditor.modalTitle}>Add New Card</h3>
+              <div className={styles.cardEditor.formRow}>
+                <div className={styles.cardEditor.formGroup}>
+                  <label className={styles.cardEditor.formLabel}>Front (Question)</label>
                   <textarea
                     value={newCard.front}
-                    onChange={(e) => setNewCard(prev => ({ ...prev, front: e.target.value }))}
+                    onChange={(e) => updateNewCard('front', e.target.value)}
                     placeholder="Enter the question or prompt... (URLs supported: images, audio, video, etc.)"
                     rows={3}
+                    className={styles.cardEditor.formTextarea}
                   />
                   {extractImageUrl(newCard.front) && (
-                    <div className={styles.imagePreview}>
-                      <img 
-                        src={extractImageUrl(newCard.front)} 
-                        alt="Preview" 
-                        className={styles.imagePreviewThumb}
+                    <div className={styles.cardEditor.imagePreview}>
+                      <img
+                        src={extractImageUrl(newCard.front)}
+                        alt="Preview"
+                        className={styles.cardEditor.imagePreviewThumb}
                         onError={(e) => e.target.style.display = 'none'}
                       />
-                      <div className={styles.imagePreviewText}>
+                      <div className={styles.cardEditor.imagePreviewText}>
                         <FaImage />
                         <span>Image URL detected</span>
                       </div>
                     </div>
                   )}
                 </div>
-                <div className={styles.formGroup}>
-                  <label>Back (Answer)</label>
+                <div className={styles.cardEditor.formGroup}>
+                  <label className={styles.cardEditor.formLabel}>Back (Answer)</label>
                   <textarea
                     value={newCard.back}
-                    onChange={(e) => setNewCard(prev => ({ ...prev, back: e.target.value }))}
+                    onChange={(e) => updateNewCard('back', e.target.value)}
                     placeholder="Enter the answer... (URLs supported: images, audio, video, etc.)"
                     rows={3}
+                    className={styles.cardEditor.formTextarea}
                   />
                   {extractImageUrl(newCard.back) && (
-                    <div className={styles.imagePreview}>
-                      <img 
-                        src={extractImageUrl(newCard.back)} 
-                        alt="Preview" 
-                        className={styles.imagePreviewThumb}
+                    <div className={styles.cardEditor.imagePreview}>
+                      <img
+                        src={extractImageUrl(newCard.back)}
+                        alt="Preview"
+                        className={styles.cardEditor.imagePreviewThumb}
                         onError={(e) => e.target.style.display = 'none'}
                       />
-                      <div className={styles.imagePreviewText}>
+                      <div className={styles.cardEditor.imagePreviewText}>
                         <FaImage />
                         <span>Image URL detected</span>
                       </div>
@@ -216,17 +352,14 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
                   )}
                 </div>
               </div>
-              <div className={styles.formActions}>
-                <button className="btn-secondary" onClick={() => {
-                  setShowAddForm(false)
-                  setNewCard({ front: '', back: '' })
-                }}>
+              <div className={styles.cardEditor.formActions}>
+                <button className={styles.button.secondary} onClick={closeAddForm}>
                   Cancel
                 </button>
-                <button 
-                  className="btn-primary" 
+                <button
+                  className={styles.button.primary}
                   onClick={addCard}
-                  disabled={!newCard.front.trim() || !newCard.back.trim()}
+                  disabled={isAddCardDisabled}
                 >
                   Add Card
                 </button>
@@ -236,51 +369,53 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
         </Portal>
       )}
 
-      <div className={styles.cardsList}>
+      <div className={styles.cardEditor.cardsList}>
         {cards.map((card, index) => (
-          <div key={card.id} className={`${styles.cardItem} glass rounded-lg`}>
-            <div className={styles.cardNumber}>#{index + 1}</div>
-            <div className={styles.cardContent}>
-              <div className={styles.cardSide}>
-                <label>Front</label>
+          <div key={card.id} className={styles.cardEditor.cardItem}>
+            <div className={styles.cardEditor.cardNumber}>#{index + 1}</div>
+            <div className={styles.cardEditor.cardContent}>
+              <div className={styles.cardEditor.cardSide}>
+                <label className={styles.cardEditor.cardSideLabel}>Front</label>
                 <textarea
                   value={card.front || ''}
                   onChange={(e) => updateCard(card.id, 'front', e.target.value)}
                   rows={3}
                   placeholder="Text and/or URLs (images, audio, video, etc.)"
+                  className={styles.cardEditor.cardSideTextarea}
                 />
                 {extractImageUrl(card.front) && (
-                  <div className={styles.imagePreview}>
-                    <img 
-                      src={extractImageUrl(card.front)} 
-                      alt="Preview" 
-                      className={styles.imagePreviewThumb}
+                  <div className={styles.cardEditor.imagePreview}>
+                    <img
+                      src={extractImageUrl(card.front)}
+                      alt="Preview"
+                      className={styles.cardEditor.imagePreviewThumb}
                       onError={(e) => e.target.style.display = 'none'}
                     />
-                    <div className={styles.imagePreviewText}>
+                    <div className={styles.cardEditor.imagePreviewText}>
                       <FaImage />
                       <span>Image URL detected</span>
                     </div>
                   </div>
                 )}
               </div>
-              <div className={styles.cardSide}>
-                <label>Back</label>
+              <div className={styles.cardEditor.cardSide}>
+                <label className={styles.cardEditor.cardSideLabel}>Back</label>
                 <textarea
                   value={card.back || ''}
                   onChange={(e) => updateCard(card.id, 'back', e.target.value)}
                   rows={3}
                   placeholder="Text and/or URLs (images, audio, video, etc.)"
+                  className={styles.cardEditor.cardSideTextarea}
                 />
                 {extractImageUrl(card.back) && (
-                  <div className={styles.imagePreview}>
-                    <img 
-                      src={extractImageUrl(card.back)} 
-                      alt="Preview" 
-                      className={styles.imagePreviewThumb}
+                  <div className={styles.cardEditor.imagePreview}>
+                    <img
+                      src={extractImageUrl(card.back)}
+                      alt="Preview"
+                      className={styles.cardEditor.imagePreviewThumb}
                       onError={(e) => e.target.style.display = 'none'}
                     />
-                    <div className={styles.imagePreviewText}>
+                    <div className={styles.cardEditor.imagePreviewText}>
                       <FaImage />
                       <span>Image URL detected</span>
                     </div>
@@ -288,8 +423,8 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
                 )}
               </div>
             </div>
-            <button 
-              className={`${styles.deleteCardBtn} btn-ghost`}
+            <button
+              className={styles.cardEditor.deleteCardBtn}
               onClick={() => deleteCard(card.id)}
             >
               <FaTrash />
@@ -299,26 +434,24 @@ const CardEditor = ({ deck, onSave, onCancel }) => {
       </div>
 
       {/* Add card button at the end of the list */}
-      {cards.length > 0 && (
-        <div className={styles.addCardSectionBottom}>
-          <button 
-            className={`${styles.addCardBtn} btn-primary`}
-            onClick={() => setShowAddForm(true)}
+      {hasCards && (
+        <div className={styles.cardEditor.addCardSectionBottom}>
+          <button
+            className={styles.button.primary}
+            onClick={openAddForm}
           >
             <FaPlus /> Add New Card
           </button>
         </div>
       )}
 
-      {cards.length === 0 && (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}><FaEdit /></div>
-          <h2>No Cards Yet</h2>
-          <p>Add your first card to get started!</p>
+      {!hasCards && (
+        <div className={styles.cardEditor.emptyState}>
+          <div className={styles.cardEditor.emptyIcon}><FaEdit /></div>
+          <h2 className={styles.cardEditor.emptyTitle}>No Cards Yet</h2>
+          <p className={styles.cardEditor.emptyDescription}>Add your first card to get started!</p>
         </div>
       )}
     </div>
   )
 }
-
-export default CardEditor

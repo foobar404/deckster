@@ -47,7 +47,7 @@ export default defineConfig({
   ],
   base: process.env.NODE_ENV === 'production' ? '/deckster/' : '/',
   server: {
-    port: 5174, // bumped port number
+    port: 5175, // bumped port number
     host: '0.0.0.0', // Allow external connections
   },
 })

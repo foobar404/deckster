@@ -1,10 +1,14 @@
-import { useState, useEffect, useContext } from 'react'
+import { useStyle } from '../utils'
+import { FaChevronDown } from 'react-icons/fa'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
-import { FaChevronDown } from 'react-icons/fa'
-import styles from '../components/ImportDecks.module.css'
+import { useState, useEffect, useContext } from 'react'
 
-const ImportPage = () => {
+/**
+ * Custom hook for ImportPage logic and state management
+ * @returns {Object} All state and handlers needed by the ImportPage component
+ */
+const useImportPage = () => {
   const { decks, setDecks } = useContext(AppContext)
   const { showError, showInfo } = useToast()
   const [importText, setImportText] = useState('')
@@ -14,16 +18,16 @@ const ImportPage = () => {
 
   const parseCards = (text) => {
     if (!text.trim()) return []
-    
+
     const lines = text.split('\n').filter(line => line.trim())
-    
+
     const parsedCards = lines.map((line, index) => {
       // First try to parse quoted sections
       const quotedRegex = /"([^"]*)"/g
       const quotedMatches = [...line.matchAll(quotedRegex)]
-      
+
       let front, back
-      
+
       if (quotedMatches.length >= 2) {
         // If we have quoted sections, use them
         front = quotedMatches[0][1]
@@ -39,11 +43,11 @@ const ImportPage = () => {
           // Fallback to space separation
           parts = line.split(/\s+/)
         }
-        
+
         if (parts.length >= 2) {
           front = parts[0].trim()
           back = parts[1].trim()
-          
+
           // Remove quotes if present
           if (front.startsWith('"') && front.endsWith('"')) {
             front = front.slice(1, -1)
@@ -55,11 +59,11 @@ const ImportPage = () => {
           return null
         }
       }
-      
+
       if (!front || !back) {
         return null
       }
-      
+
       const card = {
         id: Date.now() + index,
         front: front.trim(),
@@ -67,10 +71,10 @@ const ImportPage = () => {
         difficulty: 0,
         lastReviewed: null
       }
-      
+
       return card
     }).filter(Boolean)
-    
+
     return parsedCards
   }
 
@@ -136,14 +140,61 @@ Hello	Hola
 Thank you,Gracias
 Please,Por favor`
 
-  return (
-    <div className={styles.importDecks}>
-      <h1 className={styles.header}>Import Flashcards</h1>
+  return {
+    decks,
+    importText,
+    setImportText,
+    deckName,
+    setDeckName,
+    preview,
+    showDropdown,
+    setShowDropdown,
+    handleImport,
+    sampleData
+  }
+}
 
-      <div className={`${styles.importForm} glass rounded-lg`}>
-        <div className={styles.formSection}>
-          <label htmlFor="deckName">Deck Name</label>
-          <div className={styles.inputWithDropdown}>
+export function ImportPage() {
+  const {
+    decks,
+    importText,
+    setImportText,
+    deckName,
+    setDeckName,
+    preview,
+    showDropdown,
+    setShowDropdown,
+    handleImport,
+    sampleData
+  } = useImportPage()
+
+  // Custom styles for ImportPage
+  const customStyles = {
+    container: 'min-h-screen p-4 pb-20 md:pb-4',
+    form: 'p-6 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg',
+    formSection: 'mb-6',
+    label: 'block text-sm font-medium text-gray-700 mb-2',
+    // add right padding so input text doesn't sit under the absolute toggle button
+    input: 'w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+    textarea: 'w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical',
+    hint: 'text-sm text-gray-500 mt-1',
+    dropdown: 'relative',
+    // make the toggle a small square button, center the icon with flexbox; disable transitions so clicks are instant
+    dropdownToggle: 'absolute right-0 top-0 flex items-center justify-center w-8 h-8 p-0 text-gray-400 hover:text-gray-600 rounded-md bg-transparent hover:bg-gray-50 transition-none',
+    dropdownList: 'absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto'
+  }
+
+  const baseStyles = useStyle()
+  const styles = { ...baseStyles, import: { ...baseStyles.import, ...customStyles } }
+
+  return (
+    <div className={styles.import.container}>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">Import Flashcards</h1>
+
+      <div className={styles.import.form}>
+        <div className={styles.import.formSection}>
+          <label htmlFor="deckName" className={styles.import.label}>Deck Name</label>
+          <div className={styles.import.dropdown}>
             <input
               id="deckName"
               type="text"
@@ -151,58 +202,60 @@ Please,Por favor`
               value={deckName}
               onChange={(e) => setDeckName(e.target.value)}
               onFocus={() => setShowDropdown(false)}
+              className={styles.import.input}
             />
-            <button 
+            <button
               type="button"
-              className={styles.dropdownToggle}
+              className={styles.import.dropdownToggle}
               onClick={() => setShowDropdown(!showDropdown)}
-              aria-label="Show deck options"
+              aria-hidden="true"
             >
-              <FaChevronDown className={showDropdown ? styles.rotated : ''} />
+              <FaChevronDown size={14} className={showDropdown ? 'transform rotate-180' : ''} />
             </button>
             {showDropdown && decks && decks.length > 0 && (
-              <div className={styles.dropdownList}>
+              <div className={styles.import.dropdownList}>
                 {decks.map(deck => (
-                  <div 
+                  <div
                     key={deck.id}
-                    className={styles.dropdownItem}
+                    className="p-3 hover:bg-white/5 cursor-pointer flex justify-between items-center"
                     onClick={() => {
                       setDeckName(deck.name)
                       setShowDropdown(false)
                     }}
                   >
-                    <span className={styles.deckName}>{deck.name}</span>
-                    <span className={styles.cardCount}>({deck.cards.length} cards)</span>
+                    <span className="font-medium">{deck.name}</span>
+                    <span className="text-sm text-gray-500">({deck.cards.length} cards)</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          <div className={styles.inputHint}>
-            {decks && decks.length > 0 
+          <div className={styles.import.hint}>
+            {decks && decks.length > 0
               ? `Type or select from ${decks.length} existing deck${decks.length === 1 ? '' : 's'}.`
               : 'Enter a name for your new deck.'
             }
           </div>
         </div>
 
-        <div className={styles.formSection}>
-          <label htmlFor="importText">Card Data</label>
+        <div className={styles.import.formSection}>
+          <label htmlFor="importText" className={styles.import.label}>Card Data</label>
           <textarea
             id="importText"
-            placeholder={`Format: front\tback or front,back\nOr: "front text" "back text"\nAny URLs (images, audio, video) can be included in text\n\nExample:\n${sampleData}`}
+            placeholder={`One card per line — front\tback or front,back. Quotes allowed. URLs accepted.\n\nExample:\n${sampleData}`}
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
             rows={8}
+            className={styles.import.textarea}
           />
-          <div className={styles.textareaHint}>
+          <div className={styles.import.hint}>
             Supports quoted text, any URLs in text, and auto-detects separators (tab/comma/space)
           </div>
         </div>
 
-        <div className={styles.formActions}>
-          <button 
-            className="btn-primary"
+        <div className="flex justify-center">
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
             onClick={handleImport}
           >
             Import Deck ({preview ? preview.length : 0} cards)
@@ -213,4 +266,4 @@ Please,Por favor`
   )
 }
 
-export default ImportPage
+

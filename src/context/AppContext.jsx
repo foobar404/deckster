@@ -1,9 +1,10 @@
+import { useStorage } from '../utils'
 import { createContext, useState, useEffect } from 'react'
-import { STORAGE_KEYS, saveToStorage, loadFromStorage } from '../utils/storage'
 
 export const AppContext = createContext()
 
 export const AppProvider = ({ children }) => {
+  const { STORAGE_KEYS, saveToStorage, loadFromStorage } = useStorage()
   const [decks, setDecks] = useState([])
   const [activeDeck, setActiveDeck] = useState(null)
   const [isInitialized, setIsInitialized] = useState(false)
@@ -68,7 +69,7 @@ export const AppProvider = ({ children }) => {
   // Enhanced setDecks that handles active deck synchronization
   const handleDecksChange = (newDecks) => {
     setDecks(newDecks)
-    
+
     // If active deck was deleted, clear it
     if (activeDeck && typeof newDecks === 'function') {
       // Handle function updates

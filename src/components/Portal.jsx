@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-const Portal = ({ children, containerId = 'modal-root' }) => {
+export function Portal({ children, containerId = 'modal-root' }) {
   const [container, setContainer] = useState(null)
 
   useEffect(() => {
     // Try to find existing container
     let containerElement = document.getElementById(containerId)
-    
+
     // Create container if it doesn't exist
     if (!containerElement) {
       containerElement = document.createElement('div')
@@ -16,7 +16,7 @@ const Portal = ({ children, containerId = 'modal-root' }) => {
       containerElement.style.zIndex = '9999'
       document.body.appendChild(containerElement)
     }
-    
+
     setContainer(containerElement)
 
     // Cleanup function to remove container when component unmounts
@@ -34,4 +34,4 @@ const Portal = ({ children, containerId = 'modal-root' }) => {
   return createPortal(children, container)
 }
 
-export default Portal
+
