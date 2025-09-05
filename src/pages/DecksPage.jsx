@@ -48,7 +48,19 @@ const useDecksPage = () => {
     const reviewed = deck.cards.filter(card => card.lastReviewed).length
     const mastered = deck.cards.filter(card => card.difficulty >= 3).length
 
-    return { total, reviewed, mastered }
+    // Calculate study cards based on current options
+    let studyCount = total
+    if (studyOptions.onlyMissed) {
+      const missedCards = deck.cards.filter(card => card.difficulty < 2)
+      studyCount = missedCards.length > 0 ? missedCards.length : total
+    }
+    
+    // Apply card limit if set
+    if (studyOptions.cardLimit && studyOptions.cardLimit > 0) {
+      studyCount = Math.min(studyCount, studyOptions.cardLimit)
+    }
+
+    return { total, reviewed, mastered, studyCount }
   }
 
   const updateDeck = (updatedDeck) => {
@@ -130,9 +142,12 @@ export function DecksPage() {
     btnSecondary: 'bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2',
     // ensure the close button is a centered square so the icon is visually centered
     closeButton: 'absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 flex items-center justify-center w-9 h-9',
-    optionGroup: 'mb-4',
+    optionGroup: 'mb-5 sm:mb-6',
     radioGroup: 'flex flex-col gap-2 ml-4',
     optionActions: 'flex gap-3 mt-6',
+    presetButton: 'px-3 py-2 text-sm rounded-lg transition-all duration-200 min-w-[44px] touch-manipulation',
+    presetButtonActive: 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm',
+    presetButtonInactive: 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent',
     deckHeader: 'flex items-center justify-between mb-4',
     deckName: 'text-xl font-semibold text-gray-900 truncate',
     deleteBtn: 'absolute top-3 right-3 p-0 bg-gray-50 text-gray-500 hover:bg-gray-100 rounded-md transition-colors duration-150 opacity-90 hover:opacity-100 shadow-sm flex items-center justify-center w-9 h-9',
@@ -167,8 +182,8 @@ export function DecksPage() {
       {/* Study Options Modal */}
       {showOptions && (
         <Portal>
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" onClick={() => setShowOptions(false)}>
-            <div className="bg-white rounded-xl p-6 max-w-md w-full relative" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 z-50" onClick={() => setShowOptions(false)}>
+            <div className="bg-white rounded-xl p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
               <button
                 className={styles.decks.closeButton}
                 onClick={() => setShowOptions(false)}
@@ -176,7 +191,7 @@ export function DecksPage() {
               >
                 <FaTimes />
               </button>
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Study Options</h3>
+              <h3 className="text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pr-8">Study Options</h3>
 
               <div className={styles.decks.optionGroup}>
                 <label className="flex items-center gap-3 text-gray-700">
@@ -261,6 +276,81 @@ export function DecksPage() {
                   Auto-Read Card Contents
                 </label>
               </div>
+
+              <div className={styles.decks.optionGroup}>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-gray-700 font-medium">Card Limit</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={studyOptions.cardLimit !== null}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setStudyOptions(prev => ({ ...prev, cardLimit: 10 }))
+                          } else {
+                            setStudyOptions(prev => ({ ...prev, cardLimit: null }))
+                          }
+                        }}
+                        className="form-check"
+                      />
+                      <span className="text-sm text-gray-600">
+                        {studyOptions.cardLimit !== null ? 'On' : 'Off'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {studyOptions.cardLimit !== null && (
+                    <div className="space-y-3 pt-2 border-t border-gray-100">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Cards per session:</span>
+                        <span className="font-medium text-blue-600 min-w-[4rem] text-right">
+                          {studyOptions.cardLimit}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <input
+                          type="range"
+                          min="1"
+                          max="100"
+                          value={studyOptions.cardLimit || 10}
+                          onChange={(e) => setStudyOptions(prev => ({ ...prev, cardLimit: parseInt(e.target.value) }))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                          style={{
+                            background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${((studyOptions.cardLimit || 10) / 100) * 100}%, #e5e7eb ${((studyOptions.cardLimit || 10) / 100) * 100}%, #e5e7eb 100%)`
+                          }}
+                        />
+                        <div className="flex justify-between text-xs text-gray-400 px-1">
+                          <span>1</span>
+                          <span>25</span>
+                          <span>50</span>
+                          <span>75</span>
+                          <span>100</span>
+                        </div>
+                      </div>
+
+                      {/* Quick preset buttons for common values */}
+                      <div className="flex gap-2 pt-1">
+                        {[5, 10, 20, 50, 75, 100].map(preset => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setStudyOptions(prev => ({ ...prev, cardLimit: preset }))}
+                            className={`${styles.decks.presetButton} ${
+                              studyOptions.cardLimit === preset 
+                                ? styles.decks.presetButtonActive
+                                : styles.decks.presetButtonInactive
+                            }`}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </Portal>
@@ -284,6 +374,9 @@ export function DecksPage() {
             className={styles.decks.optionsBtn}
             onClick={() => setShowOptions(true)}
             title="Study Options"
+            style={{
+              position: 'relative'
+            }}
           >
             <FaCog />
           </button>
@@ -332,7 +425,7 @@ export function DecksPage() {
 
               <div className={styles.decks.deckStats}>
                 <div className={styles.decks.statRow}>
-                  <span>Cards:</span>
+                  <span>Total Cards:</span>
                   <span>{stats.total}</span>
                 </div>
                 <div className={styles.decks.statRow}>
@@ -343,6 +436,12 @@ export function DecksPage() {
                   <span>Mastered:</span>
                   <span>{stats.mastered}</span>
                 </div>
+                {(studyOptions.cardLimit || studyOptions.onlyMissed) && (
+                  <div className={styles.decks.statRow} style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+                    <span className="font-medium text-blue-600">Study Session:</span>
+                    <span className="font-medium text-blue-600">{stats.studyCount} cards</span>
+                  </div>
+                )}
               </div>
 
               <div className={styles.decks.progressContainer}>

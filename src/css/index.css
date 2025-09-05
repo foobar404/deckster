@@ -233,6 +233,50 @@ input.form-radio[type="radio"] {
   border: none;
 }
 
+/* Modern slider styles */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 6px;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-fast);
+}
+
+.slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-fast);
+}
+
+.slider::-moz-range-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-lg);
+}
+
 
 
 /* Slightly larger tap target on mobile while preserving native look */

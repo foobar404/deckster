@@ -19,7 +19,8 @@ export const AppProvider = ({ children }) => {
     direction: 'front-to-back', // 'front-to-back', 'back-to-front', 'random'
     onlyMissed: false,
     showBothSides: false, // Show both front and back when card flips
-    autoRead: false // Auto-read card contents using TTS
+    autoRead: false, // Auto-read card contents using TTS
+    cardLimit: null // Limit number of cards to study (null = no limit)
   })
 
   // Load data from localStorage on app start
@@ -36,7 +37,8 @@ export const AppProvider = ({ children }) => {
       direction: 'front-to-back',
       onlyMissed: false,
       showBothSides: false,
-      autoRead: false
+      autoRead: false,
+      cardLimit: null
     })
 
     setDecks(savedDecks)

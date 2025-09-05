@@ -19,6 +19,7 @@ const useReviewPage = () => {
   const [showResult, setShowResult] = useState(false)
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
   const [studyCards, setStudyCards] = useState([])
+  const [originalStudyCards, setOriginalStudyCards] = useState([]) // Store the original subset for "Review Again"
   const [dragState, setDragState] = useState({
     isFlipped: false,
     isDragging: false,
@@ -37,6 +38,7 @@ const useReviewPage = () => {
         showResult,
         sessionStats,
         studyCards,
+        originalStudyCards,
         timestamp: Date.now()
       }
 
@@ -44,7 +46,7 @@ const useReviewPage = () => {
     } else {
 
     }
-  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards])
+  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards, originalStudyCards])
 
   // Load review state from localStorage
   const loadReviewState = useCallback(() => {
@@ -62,6 +64,7 @@ const useReviewPage = () => {
         setShowResult(reviewState.showResult)
         setSessionStats(reviewState.sessionStats)
         setStudyCards(reviewState.studyCards)
+        setOriginalStudyCards(reviewState.originalStudyCards || reviewState.studyCards)
         return true
       }
     }
@@ -106,30 +109,77 @@ const useReviewPage = () => {
       }
     }
 
+    // Apply card limit if specified
+    if (options?.cardLimit && options.cardLimit > 0) {
+      return studyCards.slice(0, options.cardLimit)
+    }
+
     return studyCards
+  }, [])
+
+  // Reshuffle existing study cards for "Review Again" functionality
+  const reshuffleStudyCards = useCallback((cards, options) => {
+    if (!cards || cards.length === 0) return cards
+    
+    let shuffledCards = [...cards]
+    
+    // Only shuffle if randomOrder is enabled
+    if (options?.randomOrder) {
+      for (let i = shuffledCards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        ;[shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]]
+      }
+    }
+    
+    return shuffledCards
   }, [])
 
   // Reset the current review session. We set ignoreLoadRef so any load effect
   // triggered by this action won't immediately restore the previous saved state.
-  const resetSession = useCallback(() => {
+  const resetSession = useCallback((forceNewSubset = false) => {
 
     ignoreLoadRef.current = true
     // Clear persisted state
     clearFromStorage('deckster_review_state')
 
     // Reset in-memory state
-    setStudyCards(() => {
+    if (!forceNewSubset && originalStudyCards.length > 0) {
+      // Use existing subset, just reshuffle
+      const shuffledCards = reshuffleStudyCards(originalStudyCards, studyOptions)
+      setStudyCards(shuffledCards)
+    } else {
+      // Create new subset
       const cards = prepareStudyCards(activeDeck, studyOptions)
-
-      return cards
-    })
+      setStudyCards(cards)
+      setOriginalStudyCards(cards) // Store the new subset as original
+    }
+    
     setCurrentCardIndex(0)
     setShowResult(false)
     setSessionStats({ correct: 0, total: 0 })
 
     // Allow loads again after a short tick so other effects can run
     setTimeout(() => { ignoreLoadRef.current = false }, 200)
-  }, [activeDeck, prepareStudyCards, setStudyCards, setCurrentCardIndex, setShowResult, setSessionStats, studyOptions])
+  }, [activeDeck, prepareStudyCards, reshuffleStudyCards, originalStudyCards, studyOptions, clearFromStorage])
+
+  // Initialize study cards when deck changes
+  useEffect(() => {
+    if (activeDeck) {
+      // Try to load saved review state first
+      const stateLoaded = loadReviewState()
+
+      if (!stateLoaded) {
+        // No saved state, start fresh
+        const cards = prepareStudyCards(activeDeck, studyOptions)
+
+        setStudyCards(cards)
+        setOriginalStudyCards(cards) // Store original subset for "Review Again"
+        setCurrentCardIndex(0)
+        setShowResult(false)
+        setSessionStats({ correct: 0, total: 0 })
+      }
+    }
+  }, [activeDeck, prepareStudyCards, loadReviewState, studyOptions])
 
   return {
     navigate,
@@ -185,19 +235,19 @@ export function ReviewPage() {
 
   // Custom styles for ReviewPage
   const customStyles = {
-    container: 'h-full flex flex-col p-4',
+    container: 'h-full flex flex-col p-2 sm:p-4',
     emptyState: 'flex flex-col items-center justify-center min-h-96 p-6 text-center',
     emptyIcon: 'text-5xl text-gray-400 mb-3',
     // Tighten header spacing and ensure it stacks above the card
-    header: 'relative z-20 flex flex-col gap-2 p-3 bg-white border-b border-gray-200 rounded-lg shadow-sm',
+    header: 'relative z-20 flex flex-col gap-2 p-3 bg-white border-b border-gray-200 rounded-lg shadow-sm mb-2',
     headerInner: 'flex items-center gap-4',
     headerText: 'text-center text-sm text-gray-600',
     progressBar: 'w-full bg-gray-200 rounded-full h-2',
     progressFill: 'bg-blue-500 h-2 rounded-full transition-all duration-300',
     // Card visual style available to the page: translucent background + 10px solid border
     card: 'bg-white/30 border-[10px] border-gray-200/50 border-solid rounded-2xl p-4',
-    // Allow the card stack to flex and shrink without producing vertical scroll
-    cardStack: 'flex-1 flex items-center justify-center p-3 min-h-0',
+    // Allow the card stack to flex and shrink without producing vertical scroll, less padding on mobile
+    cardStack: 'flex-1 flex items-center justify-center p-1 sm:p-3 min-h-0',
     // Panel styles used for empty/result states
     panel: 'flex flex-col items-center justify-center p-6 text-center',
     panelLarge: 'flex flex-col items-center justify-center bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg p-8 text-center',
@@ -215,9 +265,8 @@ export function ReviewPage() {
     quadBottomLeftActive: 'border-orange-500 bg-orange-500/40',
     quadBottomRight: 'absolute bottom-0 right-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-green-500/10 transition-colors duration-200',
     quadBottomRightActive: 'border-green-500 bg-green-500/40',
-    // Card wrapper: don't force a full 80vh which can push content offscreen — use flexible height with a sensible max
-    cardWrapper: 'w-full max-w-xl mx-auto h-full max-h-[80vh] flex items-center justify-center relative z-10'
-    ,
+    // Card wrapper: wider on mobile, more constrained on desktop
+    cardWrapper: 'w-full max-w-none sm:max-w-xl lg:max-w-2xl mx-auto h-full max-h-[80vh] flex items-center justify-center relative z-10',
     // Result panel specifics
     resultIcon: 'text-6xl text-yellow-500 mb-4',
     resultTitle: 'text-2xl font-bold text-gray-900 mb-6',
@@ -234,68 +283,6 @@ export function ReviewPage() {
 
   const baseStyles = useStyle()
   const styles = { ...baseStyles, review: customStyles }
-
-  // Prepare study cards based on options
-  const prepareStudyCards = useCallback((deck, options) => {
-    if (!deck || !deck.cards || deck.cards.length === 0) return []
-
-    let cards = [...deck.cards]
-
-    // Filter for missed cards only
-    if (options.onlyMissed) {
-      cards = cards.filter(card => card.difficulty < 2) // Cards with difficulty 0 or 1
-      if (cards.length === 0) {
-        // Don't show toast during callback, just fallback
-        return deck.cards // Fallback to all cards
-      }
-    }
-
-    // Create card objects with direction
-    const studyCards = cards.map(card => {
-      let direction = options.direction
-      if (direction === 'random') {
-        direction = Math.random() < 0.5 ? 'front-to-back' : 'back-to-front'
-      }
-
-      return {
-        ...card,
-        studyDirection: direction,
-        displayFront: direction === 'front-to-back' ? card.front : card.back,
-        displayBack: direction === 'front-to-back' ? card.back : card.front,
-        displayFrontImage: direction === 'front-to-back' ? card.frontImageUrl : card.backImageUrl || card.imageUrl,
-        displayBackImage: direction === 'front-to-back' ? card.backImageUrl || card.imageUrl : card.frontImageUrl
-      }
-    })
-
-    // Shuffle if random order
-    if (options.randomOrder) {
-      for (let i = studyCards.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [studyCards[i], studyCards[j]] = [studyCards[j], studyCards[i]]
-      }
-    }
-
-    return studyCards
-  }, []) // Removed showInfo dependency
-
-  // Initialize study cards when deck changes
-  useEffect(() => {
-    if (activeDeck) {
-      // Try to load saved review state first
-
-      const stateLoaded = loadReviewState()
-
-      if (!stateLoaded) {
-        // No saved state, start fresh
-        const cards = prepareStudyCards(activeDeck, studyOptions)
-
-        setStudyCards(cards)
-        setCurrentCardIndex(0)
-        setShowResult(false)
-        setSessionStats({ correct: 0, total: 0 })
-      }
-    }
-  }, [activeDeck, prepareStudyCards, loadReviewState])
 
   // Save review state whenever it changes
   useEffect(() => {
@@ -412,7 +399,7 @@ export function ReviewPage() {
             </div>
           </div>
           <div>
-            <button className={styles.review.resultButton} onClick={resetSession}>
+            <button className={styles.review.resultButton} onClick={() => resetSession()}>
               Review Again
             </button>
           </div>
@@ -450,7 +437,7 @@ export function ReviewPage() {
           <button
             type="button"
             className={styles.review.resetButton}
-            onClick={(e) => { e.stopPropagation(); resetSession(); }}
+            onClick={(e) => { e.stopPropagation(); resetSession(true); }}
             title="Reset session"
           >
             <FaRedo />
