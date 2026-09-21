@@ -69,7 +69,15 @@ const useImportPage = () => {
         front: front.trim(),
         back: back.trim(),
         difficulty: 0,
-        lastReviewed: null
+        memoryStrength: 0,
+        state: 'new',
+        lastReviewed: null,
+        lastReviewedAt: null,
+        reviewCount: 0,
+        correctStreak: 0,
+        lapseCount: 0,
+        lastResult: null,
+        createdAt: new Date().toISOString()
       }
 
       return card

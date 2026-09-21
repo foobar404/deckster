@@ -290,7 +290,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
                     try {
                         onReview(finalAnswer)
                     } catch (err) {
-                        // swallow
+                        console.error('Card review failed:', err)
                     }
                     // Reset offset immediately after submitting to prepare next card
                     updateDragOffset({ x: 0, y: 0 })
@@ -455,6 +455,54 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
 
     const swipeIndicator = getSwipeIndicator()
 
+    const getMemoryMeta = () => {
+        const strength = typeof card?.memoryStrength === 'number'
+            ? Math.max(0, Math.min(100, card.memoryStrength))
+            : typeof card?.difficulty === 'number'
+                ? Math.max(0, Math.min(100, card.difficulty))
+                : 0
+
+        const lastResultLabel = card?.lastResult === 0
+            ? 'Again'
+            : card?.lastResult === 1
+                ? 'Hard'
+                : card?.lastResult === 2
+                    ? 'Good'
+                    : card?.lastResult === 3
+                        ? 'Easy'
+                        : 'Unrated'
+
+        let label = 'Fresh'
+        let badgeClass = 'bg-slate-100 text-slate-700'
+        let accentClass = 'bg-slate-400'
+
+        if (strength >= 80) {
+            label = 'Strong'
+            badgeClass = 'bg-emerald-100 text-emerald-700'
+            accentClass = 'bg-emerald-500'
+        } else if (strength >= 55) {
+            label = 'Steady'
+            badgeClass = 'bg-blue-100 text-blue-700'
+            accentClass = 'bg-blue-500'
+        } else if (strength >= 25) {
+            label = 'Shaky'
+            badgeClass = 'bg-amber-100 text-amber-700'
+            accentClass = 'bg-amber-500'
+        }
+
+        return {
+            strength,
+            label,
+            badgeClass,
+            accentClass,
+            lastResultLabel,
+            reviews: card?.reviewCount || 0,
+            streak: card?.correctStreak || 0
+        }
+    }
+
+    const memoryMeta = getMemoryMeta()
+
     return {
         isFlipped,
         showBackContent,
@@ -478,7 +526,8 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         handlePointerMove,
         handlePointerUp,
         handlePointerCancel,
-        swipeIndicator
+        swipeIndicator,
+        memoryMeta
     }
 }
 
@@ -496,6 +545,8 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         frontText,
         backText,
         difficultyOptions,
+        swipeIndicator,
+        memoryMeta,
         handleCardClick,
         handleTouchStart,
         handleTouchMove,
@@ -505,8 +556,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         handlePointerDown,
         handlePointerMove,
         handlePointerUp,
-        handlePointerCancel,
-        swipeIndicator
+        handlePointerCancel
     } = useFlashCard(card, onReview, onDragStateChange, studyOptions)
 
     // Custom styles for FlashCard
@@ -543,6 +593,10 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
 
     const baseStyles = useStyle()
     const styles = { ...baseStyles, flashcard: { ...baseStyles.flashcard, ...customStyles } }
+
+    const memoryBarStyle = {
+        width: `${Math.max(6, memoryMeta.strength)}%`,
+    }
 
     return (
         <div
@@ -619,34 +673,72 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                             visibility: showBackContent ? 'visible' : 'hidden'
                         }}>
                             {showBackContent && (
-                                studyOptions?.showBothSides ? (
-                                    // Show both sides when option is enabled
-                                    <div className={styles.flashcard.bothSidesContainer}>
-                                        <div className={styles.flashcard.sideSection}>
-                                            <div className={styles.flashcard.sideLabel}>Front:</div>
-                                            {frontImageUrl && (
-                                                <div className={styles.flashcard.cardImage}>
-                                                    <img
-                                                        src={frontImageUrl}
-                                                        alt="Front visual"
-                                                        draggable={false}
-                                                        onDragStart={(e) => e.preventDefault()}
-                                                        className={styles.flashcard.cardImageImg}
-                                                    />
-                                                </div>
-                                            )}
-                                            {frontText && frontText.trim() ? (
-                                                <div className={styles.flashcard.cardText}>{frontText}</div>
-                                            ) : null}
+                                <>
+                                    <div className="w-full flex items-center justify-between gap-2 mb-3">
+                                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${memoryMeta.badgeClass}`}>
+                                            {memoryMeta.label}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-gray-500">
+                                            {memoryMeta.strength}% memory
+                                        </span>
+                                    </div>
+                                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
+                                        <div
+                                            className={`h-full rounded-full ${memoryMeta.badgeClass.includes('emerald') ? 'bg-emerald-500' : memoryMeta.badgeClass.includes('blue') ? 'bg-blue-500' : memoryMeta.badgeClass.includes('amber') ? 'bg-amber-500' : 'bg-slate-400'}`}
+                                            style={memoryBarStyle}
+                                        />
+                                    </div>
+                                    <div className="w-full flex items-center justify-between text-[10px] text-gray-500 mb-3">
+                                        <span>Recent: {memoryMeta.lastResultLabel}</span>
+                                        <span>{memoryMeta.reviews} reviews</span>
+                                    </div>
+                                    {studyOptions?.showBothSides ? (
+                                        // Show both sides when option is enabled
+                                        <div className={styles.flashcard.bothSidesContainer}>
+                                            <div className={styles.flashcard.sideSection}>
+                                                <div className={styles.flashcard.sideLabel}>Front:</div>
+                                                {frontImageUrl && (
+                                                    <div className={styles.flashcard.cardImage}>
+                                                        <img
+                                                            src={frontImageUrl}
+                                                            alt="Front visual"
+                                                            draggable={false}
+                                                            onDragStart={(e) => e.preventDefault()}
+                                                            className={styles.flashcard.cardImageImg}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {frontText && frontText.trim() ? (
+                                                    <div className={styles.flashcard.cardText}>{frontText}</div>
+                                                ) : null}
+                                            </div>
+                                            <div className={styles.flashcard.sideDivider}></div>
+                                            <div className={styles.flashcard.sideSection}>
+                                                <div className={styles.flashcard.sideLabel}>Back:</div>
+                                                {backImageUrl && (
+                                                    <div className={styles.flashcard.cardImage}>
+                                                        <img
+                                                            src={backImageUrl}
+                                                            alt="Back visual"
+                                                            draggable={false}
+                                                            onDragStart={(e) => e.preventDefault()}
+                                                            className={styles.flashcard.cardImageImg}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {backText && backText.trim() ? (
+                                                    <div className={styles.flashcard.cardText}>{backText}</div>
+                                                ) : null}
+                                            </div>
                                         </div>
-                                        <div className={styles.flashcard.sideDivider}></div>
-                                        <div className={styles.flashcard.sideSection}>
-                                            <div className={styles.flashcard.sideLabel}>Back:</div>
+                                    ) : (
+                                        // Show only back side when option is disabled
+                                        <>
                                             {backImageUrl && (
                                                 <div className={styles.flashcard.cardImage}>
                                                     <img
                                                         src={backImageUrl}
-                                                        alt="Back visual"
+                                                        alt="Card visual"
                                                         draggable={false}
                                                         onDragStart={(e) => e.preventDefault()}
                                                         className={styles.flashcard.cardImageImg}
@@ -656,27 +748,9 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                             {backText && backText.trim() ? (
                                                 <div className={styles.flashcard.cardText}>{backText}</div>
                                             ) : null}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    // Show only back side when option is disabled
-                                    <>
-                                        {backImageUrl && (
-                                            <div className={styles.flashcard.cardImage}>
-                                                <img
-                                                    src={backImageUrl}
-                                                    alt="Card visual"
-                                                    draggable={false}
-                                                    onDragStart={(e) => e.preventDefault()}
-                                                    className={styles.flashcard.cardImageImg}
-                                                />
-                                            </div>
-                                        )}
-                                        {backText && backText.trim() ? (
-                                            <div className={styles.flashcard.cardText}>{backText}</div>
-                                        ) : null}
-                                    </>
-                                )
+                                        </>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

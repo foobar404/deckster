@@ -21,14 +21,34 @@ const useCardEditor = (deck, onSave, onCancel) => {
 
   // Initialize cards with proper structure
   const initializeCards = useCallback(() => {
-    return (deck.cards || []).map(card => ({
-      id: card.id || Date.now() + Math.random(),
-      front: card.front || '',
-      back: card.back || '',
-      difficulty: card.difficulty || 0,
-      lastReviewed: card.lastReviewed || null,
-      ...card // Preserve any other properties
-    }))
+    return (deck.cards || []).map(card => {
+      const strength = typeof card.memoryStrength === 'number'
+        ? card.memoryStrength
+        : typeof card.difficulty === 'number'
+          ? card.difficulty
+          : 0
+
+      const state = card.state || (
+        strength >= 80 ? 'mastered' : strength >= 55 ? 'learning' : 'new'
+      )
+
+      return {
+        id: card.id || Date.now() + Math.random(),
+        front: card.front || '',
+        back: card.back || '',
+        difficulty: strength,
+        memoryStrength: strength,
+        state,
+        lastReviewed: card.lastReviewedAt || card.lastReviewed || null,
+        lastReviewedAt: card.lastReviewedAt || card.lastReviewed || null,
+        reviewCount: card.reviewCount || 0,
+        correctStreak: card.correctStreak || 0,
+        lapseCount: card.lapseCount || 0,
+        lastResult: card.lastResult || null,
+        createdAt: card.createdAt || new Date().toISOString(),
+        ...card // Preserve any other properties
+      }
+    })
   }, [deck.cards])
 
   // State management
@@ -114,7 +134,15 @@ const useCardEditor = (deck, onSave, onCancel) => {
       front: newCard.front.trim(),
       back: newCard.back.trim(),
       difficulty: 0,
-      lastReviewed: null
+      memoryStrength: 0,
+      state: 'new',
+      lastReviewed: null,
+      lastReviewedAt: null,
+      reviewCount: 0,
+      correctStreak: 0,
+      lapseCount: 0,
+      lastResult: null,
+      createdAt: new Date().toISOString()
     }
 
     setCards(prev => [...prev, card])

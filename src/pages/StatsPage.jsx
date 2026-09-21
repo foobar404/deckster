@@ -1,216 +1,151 @@
 import { useStyle } from '../utils'
 import { useContext } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
-import { FaChartBar, FaBullseye, FaFire, FaBook, FaCheckCircle, FaTrophy, FaChartLine } from 'react-icons/fa'
+import { FaExclamationTriangle, FaPlay } from 'react-icons/fa'
 
-/**
- * Custom hook for StatsPage logic and state management
- * @returns {Object} All data and calculations needed by the StatsPage component
- */
-const useStatsPage = () => {
-  const { reviewStats: stats, decks } = useContext(AppContext)
+const getCardStrength = (card) => {
+  if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
+  if (typeof card?.difficulty === 'number') return Math.max(0, Math.min(100, card.difficulty))
+  return 0
+}
 
-  const getTotalCards = () => {
-    return decks.reduce((total, deck) => total + deck.cards.length, 0)
-  }
+const getCardState = (card) => {
+  if (card?.state) return card.state
+  const strength = getCardStrength(card)
+  if (strength >= 80) return 'mastered'
+  if (strength >= 55) return 'learning'
+  return 'new'
+}
 
-  const getReviewedCards = () => {
-    return decks.reduce((total, deck) => {
-      return total + deck.cards.filter(card => card.lastReviewed).length
-    }, 0)
-  }
+const getDaysSinceReview = (card) => {
+  const lastReviewed = card?.lastReviewedAt || card?.lastReviewed
+  if (!lastReviewed) return null
+  return Math.max(0, (Date.now() - new Date(lastReviewed).getTime()) / (1000 * 60 * 60 * 24))
+}
 
-  const getMasteredCards = () => {
-    return decks.reduce((total, deck) => {
-      return total + deck.cards.filter(card => card.difficulty >= 3).length
-    }, 0)
-  }
+const getDeckInsights = (deck) => {
+  const cards = deck.cards || []
+  const counts = cards.reduce((result, card) => {
+    const state = getCardState(card)
+    result[state] += 1
+    if (card.lastReviewedAt || card.lastReviewed) result.reviewed += 1
+    if ((card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2) result.struggling += 1
+    if (getDaysSinceReview(card) >= 7 && state !== 'mastered') result.stale += 1
+    return result
+  }, { new: 0, learning: 0, mastered: 0, struggling: 0, stale: 0, reviewed: 0 })
 
-  const getAccuracy = () => {
-    if (stats.totalReviews === 0) return 0
-    return Math.round((stats.correct / stats.totalReviews) * 100)
-  }
-
-  const getDeckProgress = () => {
-    return decks.map(deck => {
-      const total = deck.cards.length
-      const reviewed = deck.cards.filter(card => card.lastReviewed).length
-      const mastered = deck.cards.filter(card => card.difficulty >= 3).length
-      const progress = total > 0 ? Math.round((reviewed / total) * 100) : 0
-
-      return {
-        name: deck.name,
-        total,
-        reviewed,
-        mastered,
-        progress
-      }
-    })
-  }
-
-  const totalCards = getTotalCards()
-  const reviewedCards = getReviewedCards()
-  const masteredCards = getMasteredCards()
-  const accuracy = getAccuracy()
-  const deckProgress = getDeckProgress()
+  const priority = counts.struggling * 4 + counts.stale * 3 + counts.learning * 2 + counts.new
 
   return {
-    stats,
-    totalCards,
-    reviewedCards,
-    masteredCards,
-    accuracy,
-    deckProgress
+    ...counts,
+    total: cards.length,
+    priority,
+    progress: cards.length ? Math.round((counts.mastered / cards.length) * 100) : 0,
+    reviewedProgress: cards.length ? Math.round((counts.reviewed / cards.length) * 100) : 0
   }
 }
 
-export function StatsPage() {
-  const {
-    stats,
-    totalCards,
-    reviewedCards,
-    masteredCards,
-    accuracy,
-    deckProgress
-  } = useStatsPage()
+const getRecommendation = (insights) => {
+  if (insights.struggling > 0) return `${insights.struggling} struggling card${insights.struggling === 1 ? '' : 's'} need attention`
+  if (insights.stale > 0) return `${insights.stale} card${insights.stale === 1 ? '' : 's'} have gone stale`
+  if (insights.new > 0) return `${insights.new} new card${insights.new === 1 ? '' : 's'} ready to learn`
+  if (insights.learning > 0) return `${insights.learning} learning card${insights.learning === 1 ? '' : 's'} to reinforce`
+  return 'Keep your mastered cards fresh'
+}
 
-  // Custom styles for StatsPage
-  const customStyles = {
-    container: 'p-4 pb-5 md:pb-4',
-    header: 'mb-6',
-    statsGrid: 'grid grid-cols-2 md:grid-cols-3 gap-4 mb-8',
-    statCard: 'p-4 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg flex items-center gap-4',
-    statIcon: 'text-2xl text-blue-500',
-    statValue: 'text-2xl font-bold text-gray-900',
-    statLabel: 'text-sm text-gray-600',
-    emptyState: 'flex flex-col items-center justify-center min-h-96 p-8 text-center'
+export function StatsPage() {
+  const { decks, setActiveDeck } = useContext(AppContext)
+  const navigate = useNavigate()
+  const baseStyles = useStyle()
+  const styles = {
+    ...baseStyles,
+    stats: {
+      container: 'p-4 pb-5 md:pb-4',
+      header: 'mb-6',
+      emptyState: 'flex flex-col items-center justify-center min-h-96 p-8 text-center'
+    }
   }
 
-  const baseStyles = useStyle()
-  const styles = { ...baseStyles, stats: { ...baseStyles.stats, ...customStyles } }
+  const deckInsights = decks
+    .map(deck => ({ deck, insights: getDeckInsights(deck) }))
+    .sort((a, b) => b.insights.priority - a.insights.priority)
+
+  const startStudying = (deck) => {
+    setActiveDeck(deck)
+    navigate('/review')
+  }
 
   return (
     <div className={styles.stats.container}>
       <div className={styles.stats.header}>
-        <h1 className="text-2xl font-bold text-gray-900">Statistics</h1>
-        <p className="text-gray-600">Track your learning progress</p>
+        <h1 className="text-2xl font-bold text-gray-900">Study Insights</h1>
+        <p className="text-sm text-gray-600">Prioritize the decks and cards that need practice most.</p>
       </div>
 
-      <div className={styles.stats.statsGrid}>
-        <div className={styles.stats.statCard}>
-          <div className={styles.stats.statIcon}><FaChartBar /></div>
-          <div>
-            <div className={styles.stats.statValue}>{stats.totalReviews}</div>
-            <div className={styles.stats.statLabel}>Total Reviews</div>
-          </div>
-        </div>
-
-        <div className={styles.stats.statCard}>
-          <div className={styles.stats.statIcon}><FaBullseye /></div>
-          <div>
-            <div className={styles.stats.statValue}>{accuracy}%</div>
-            <div className={styles.stats.statLabel}>Accuracy</div>
-          </div>
-        </div>
-
-        <div className={styles.stats.statCard}>
-          <div className={styles.stats.statIcon}><FaFire /></div>
-          <div>
-            <div className={styles.stats.statValue}>{stats.streakCount}</div>
-            <div className={styles.stats.statLabel}>Current Streak</div>
-          </div>
-        </div>
-
-        <div className={styles.stats.statCard}>
-          <div className={styles.stats.statIcon}><FaBook /></div>
-          <div>
-            <div className={styles.stats.statValue}>{totalCards}</div>
-            <div className={styles.stats.statLabel}>Total Cards</div>
-          </div>
-        </div>
-
-        <div className={styles.stats.statCard}>
-          <div className={styles.stats.statIcon}><FaCheckCircle /></div>
-          <div>
-            <div className={styles.stats.statValue}>{reviewedCards}</div>
-            <div className={styles.stats.statLabel}>Cards Reviewed</div>
-          </div>
-        </div>
-
-        <div className={styles.stats.statCard}>
-          <div className={styles.stats.statIcon}><FaTrophy /></div>
-          <div>
-            <div className={styles.stats.statValue}>{masteredCards}</div>
-            <div className={styles.stats.statLabel}>Cards Mastered</div>
-          </div>
-        </div>
-      </div>
-
-      {deckProgress.length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Deck Progress</h2>
-          <div className="space-y-4">
-            {deckProgress.map((deck, index) => (
-              <div key={index} className="p-4 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-gray-900">{deck.name}</h3>
-                  <div className="text-sm text-gray-600">
-                    <span>{deck.reviewed}/{deck.total} reviewed</span>
-                    <span className="ml-3">{deck.mastered} mastered</span>
-                  </div>
+      {deckInsights.length > 0 ? (
+        <div className="space-y-3">
+          {deckInsights.map(({ deck, insights }) => (
+            <section key={deck.id} className="bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg p-3 sm:p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <h3 className="text-lg font-semibold text-gray-900 truncate">{deck.name}</h3>
+                  <p className="mt-1 text-sm text-orange-600">{getRecommendation(insights)}</p>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-blue-600">{deck.progress}%</div>
-                  <div className="w-16 bg-gray-200 rounded-full h-2 mt-1">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${deck.progress}%` }}
-                    ></div>
-                  </div>
+                <button
+                  type="button"
+                  onClick={() => startStudying(deck)}
+                  className="self-start rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 flex items-center gap-2"
+                >
+                  <FaPlay /> Study
+                </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-lg bg-amber-50 p-2">
+                  <div className="text-lg font-bold text-amber-700">{insights.new}</div>
+                  <div className="text-xs text-amber-700">New</div>
+                </div>
+                <div className="rounded-lg bg-red-50 p-2">
+                  <div className="text-lg font-bold text-red-700">{insights.struggling}</div>
+                  <div className="text-xs text-red-700">Struggling</div>
+                </div>
+                <div className="rounded-lg bg-blue-50 p-2">
+                  <div className="text-lg font-bold text-blue-700">{insights.learning}</div>
+                  <div className="text-xs text-blue-700">Learning</div>
+                </div>
+                <div className="rounded-lg bg-green-50 p-2">
+                  <div className="text-lg font-bold text-green-700">{insights.mastered}</div>
+                  <div className="text-xs text-green-700">Mastered</div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {stats.totalReviews > 0 && (
-        <div className="p-6 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Performance Breakdown</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-20 text-sm text-gray-600">Correct</div>
-              <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
-                <div
-                  className="bg-green-500 h-6 rounded-full transition-all duration-300"
-                  style={{ width: `${(stats.correct / stats.totalReviews) * 100}%` }}
-                ></div>
+              <div className="mt-3">
+                <div className="mb-1 flex justify-between text-xs text-gray-500">
+                  <span>{insights.reviewed}/{insights.total} reviewed at least once</span>
+                  <span>{insights.reviewedProgress}%</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-gray-200">
+                  <div className="h-2 rounded-full bg-blue-500 transition-all" style={{ width: `${insights.reviewedProgress}%` }} />
+                </div>
               </div>
-              <div className="w-12 text-sm font-medium text-gray-900">{stats.correct}</div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-20 text-sm text-gray-600">Incorrect</div>
-              <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
-                <div
-                  className="bg-red-500 h-6 rounded-full transition-all duration-300"
-                  style={{ width: `${(stats.incorrect / stats.totalReviews) * 100}%` }}
-                ></div>
-              </div>
-              <div className="w-12 text-sm font-medium text-gray-900">{stats.incorrect}</div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {stats.totalReviews === 0 && (
+              <div className="mt-4">
+                <div className="mb-1 text-right text-xs text-gray-500">{insights.progress}% mastered</div>
+                <div className="h-2 w-full rounded-full bg-gray-200">
+                  <div className="h-2 rounded-full bg-yellow-400 transition-all" style={{ width: `${insights.progress}%` }} />
+                </div>
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
         <div className={styles.stats.emptyState}>
-          <div className="text-6xl text-gray-400 mb-4"><FaChartLine /></div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">No Data Yet</h2>
-          <p className="text-gray-600">Start reviewing cards to see your statistics!</p>
+          <div className="mb-4 text-6xl text-gray-400"><FaExclamationTriangle /></div>
+          <h2 className="mb-2 text-xl font-semibold text-gray-900">No decks yet</h2>
+          <p className="text-gray-600">Create or import a deck to see useful study recommendations.</p>
         </div>
       )}
     </div>
   )
 }
-
-

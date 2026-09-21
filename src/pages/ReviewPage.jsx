@@ -20,6 +20,8 @@ const useReviewPage = () => {
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
   const [studyCards, setStudyCards] = useState([])
   const [originalStudyCards, setOriginalStudyCards] = useState([]) // Store the original subset for "Review Again"
+  const cramMetricsRef = useRef(new Map())
+  const cramTurnRef = useRef(0)
   const [dragState, setDragState] = useState({
     isFlipped: false,
     isDragging: false,
@@ -31,9 +33,12 @@ const useReviewPage = () => {
 
   // Save review state to localStorage
   const saveReviewState = useCallback(() => {
+    if (studyOptions.mode === 'cram') return
+
     if (activeDeck && studyCards.length > 0) {
       const reviewState = {
         deckId: activeDeck.id,
+        mode: studyOptions.mode,
         currentCardIndex,
         showResult,
         sessionStats,
@@ -46,10 +51,12 @@ const useReviewPage = () => {
     } else {
 
     }
-  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards, originalStudyCards])
+  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards, originalStudyCards, studyOptions.mode])
 
   // Load review state from localStorage
   const loadReviewState = useCallback(() => {
+    if (studyOptions.mode === 'cram') return false
+
     if (ignoreLoadRef.current) {
       return false
     }
@@ -58,6 +65,7 @@ const useReviewPage = () => {
     if (reviewState) {
       // Only restore if it's for the same deck and recent (within 24 hours)
       if (reviewState.deckId === activeDeck?.id &&
+        (reviewState.mode || 'review') === (studyOptions.mode || 'review') &&
         Date.now() - reviewState.timestamp < 24 * 60 * 60 * 1000) {
 
         setCurrentCardIndex(reviewState.currentCardIndex)
@@ -69,21 +77,65 @@ const useReviewPage = () => {
       }
     }
     return false
-  }, [activeDeck])
+  }, [activeDeck, studyOptions.mode])
 
   // Clear review state
   const clearReviewState = useCallback(() => {
     clearFromStorage('deckster_review_state')
   }, [])
 
+  const getCardStrength = useCallback((card) => {
+    if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
+    if (typeof card?.difficulty === 'number') return Math.max(0, Math.min(100, card.difficulty))
+    return 0
+  }, [])
+
+  const getCardState = useCallback((card) => {
+    const strength = getCardStrength(card)
+    if (card?.state) return card.state
+    if (strength >= 80) return 'mastered'
+    if (strength >= 55) return 'learning'
+    return 'new'
+  }, [getCardStrength])
+
+  const getReviewPriority = useCallback((card) => {
+    const strength = getCardStrength(card)
+    const lastReviewedAt = card?.lastReviewedAt || card?.lastReviewed
+    const hoursSinceLastReview = lastReviewedAt
+      ? Math.max(0, (Date.now() - new Date(lastReviewedAt).getTime()) / (1000 * 60 * 60))
+      : 48
+    const lapseBoost = (card?.lapseCount || 0) * 18
+    const streakPenalty = (card?.correctStreak || 0) * 6
+    const stateBoost = getCardState(card) === 'mastered' ? -25 : getCardState(card) === 'learning' ? 8 : 16
+
+    return (100 - strength) * 1.7 + Math.min(hoursSinceLastReview / 4, 24) + lapseBoost + stateBoost - streakPenalty
+  }, [getCardState, getCardStrength])
+
   // Prepare study cards based on options (moved into hook so resetSession can reuse it)
   const prepareStudyCards = useCallback((deck, options) => {
     if (!deck || !deck.cards || deck.cards.length === 0) return []
+
     let cards = [...deck.cards]
 
-    if (options?.onlyMissed) {
-      cards = cards.filter(card => card.difficulty < 2)
-      if (cards.length === 0) return deck.cards
+    const statusFiltersActive = options?.onlyNew || options?.onlyLearning || options?.onlyMastered || options?.onlyMissed
+    if (options?.mode !== 'cram' && statusFiltersActive) {
+      cards = cards.filter(card => (
+        (options.onlyNew && getCardState(card) === 'new') ||
+        (options.onlyMissed && getCardStrength(card) < 60) ||
+        (options.onlyLearning && getCardState(card) === 'learning') ||
+        (options.onlyMastered && getCardState(card) === 'mastered')
+      ))
+    }
+    if (options?.mode !== 'cram' && options?.recentlyWrong) {
+      cards = cards.filter(card => (card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2)
+    }
+
+    if (cards.length === 0) {
+      cards = [...deck.cards]
+    }
+
+    if (options?.weakestFirst) {
+      cards.sort((a, b) => getReviewPriority(b) - getReviewPriority(a))
     }
 
     const studyCards = cards.map(card => {
@@ -102,53 +154,42 @@ const useReviewPage = () => {
       }
     })
 
-    if (options?.randomOrder) {
-      for (let i = studyCards.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        ;[studyCards[i], studyCards[j]] = [studyCards[j], studyCards[i]]
-      }
-    }
-
-    // Apply card limit if specified
-    if (options?.cardLimit && options.cardLimit > 0) {
+    if (options?.mode !== 'cram' && options?.cardLimit && options.cardLimit > 0) {
       return studyCards.slice(0, options.cardLimit)
     }
 
     return studyCards
-  }, [])
+  }, [getCardState, getCardStrength, getReviewPriority])
 
-  // Reshuffle existing study cards for "Review Again" functionality
-  const reshuffleStudyCards = useCallback((cards, options) => {
+  // Re-prioritize existing study cards for "Review Again" functionality
+  const resortStudyCards = useCallback((cards, options) => {
     if (!cards || cards.length === 0) return cards
-    
-    let shuffledCards = [...cards]
-    
-    // Only shuffle if randomOrder is enabled
-    if (options?.randomOrder) {
-      for (let i = shuffledCards.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        ;[shuffledCards[i], shuffledCards[j]] = [shuffledCards[j], shuffledCards[i]]
-      }
+
+    const sortedCards = [...cards]
+
+    if (options?.weakestFirst) {
+      sortedCards.sort((a, b) => getReviewPriority(b) - getReviewPriority(a))
     }
-    
-    return shuffledCards
-  }, [])
+
+    return sortedCards
+  }, [getReviewPriority])
 
   // Reset the current review session. We set ignoreLoadRef so any load effect
   // triggered by this action won't immediately restore the previous saved state.
   const resetSession = useCallback((forceNewSubset = false) => {
 
     ignoreLoadRef.current = true
+    cramMetricsRef.current = new Map()
+    cramTurnRef.current = 0
     // Clear persisted state
     clearFromStorage('deckster_review_state')
 
     // Reset in-memory state
     if (!forceNewSubset && originalStudyCards.length > 0) {
-      // Use existing subset, just reshuffle
-      const shuffledCards = reshuffleStudyCards(originalStudyCards, studyOptions)
-      setStudyCards(shuffledCards)
+      const prioritizedCards = resortStudyCards(originalStudyCards, studyOptions)
+      setStudyCards(prioritizedCards)
     } else {
-      // Create new subset
+      // Create new subset using priority and filter logic
       const cards = prepareStudyCards(activeDeck, studyOptions)
       setStudyCards(cards)
       setOriginalStudyCards(cards) // Store the new subset as original
@@ -160,9 +201,14 @@ const useReviewPage = () => {
 
     // Allow loads again after a short tick so other effects can run
     setTimeout(() => { ignoreLoadRef.current = false }, 200)
-  }, [activeDeck, prepareStudyCards, reshuffleStudyCards, originalStudyCards, studyOptions, clearFromStorage])
+  }, [activeDeck, prepareStudyCards, resortStudyCards, originalStudyCards, studyOptions, clearFromStorage])
 
   // Initialize study cards when deck changes
+  useEffect(() => {
+    cramMetricsRef.current = new Map()
+    cramTurnRef.current = 0
+  }, [activeDeck, studyOptions.mode])
+
   useEffect(() => {
     if (activeDeck) {
       // Try to load saved review state first
@@ -201,6 +247,8 @@ const useReviewPage = () => {
     setStudyCards,
     dragState,
     setDragState,
+    cramMetricsRef,
+    cramTurnRef,
     saveReviewState,
     loadReviewState,
     clearReviewState
@@ -228,6 +276,8 @@ export function ReviewPage() {
     setStudyCards,
     dragState,
     setDragState,
+    cramMetricsRef,
+    cramTurnRef,
     saveReviewState,
     loadReviewState,
     clearReviewState
@@ -300,37 +350,145 @@ export function ReviewPage() {
     }
   }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards])
 
+  const getCardStrength = (card) => {
+    if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
+    if (typeof card?.difficulty === 'number') return Math.max(0, Math.min(100, card.difficulty))
+    return 0
+  }
+
+  const getCardState = (card) => {
+    const strength = getCardStrength(card)
+    if (card?.state) return card.state
+    if (strength >= 80) return 'mastered'
+    if (strength >= 55) return 'learning'
+    return 'new'
+  }
+
+  const updateCardReviewState = (card, rating) => {
+    const adjustmentMap = {
+      0: -30,
+      1: -10,
+      2: 15,
+      3: 35
+    }
+
+    const currentStrength = getCardStrength(card)
+    const nextStrength = Math.max(0, Math.min(100, currentStrength + (adjustmentMap[rating] ?? 0)))
+    const reviewCount = (card.reviewCount || 0) + 1
+    const isCorrect = rating >= 2
+    const correctStreak = isCorrect ? (card.correctStreak || 0) + 1 : 0
+    const lapseCount = isCorrect ? (card.lapseCount || 0) : (card.lapseCount || 0) + 1
+
+    return {
+      ...card,
+      difficulty: nextStrength,
+      memoryStrength: nextStrength,
+      state: nextStrength >= 80 ? 'mastered' : nextStrength >= 55 ? 'learning' : 'new',
+      lastReviewed: new Date().toISOString(),
+      lastReviewedAt: new Date().toISOString(),
+      reviewCount,
+      correctStreak,
+      lapseCount,
+      lastResult: rating,
+      updatedAt: new Date().toISOString()
+    }
+  }
+
+  const getCramCards = (deck, options, previousCardId) => {
+    if (!deck?.cards?.length) return []
+
+    const nowTurn = cramTurnRef.current
+    const metrics = cramMetricsRef.current
+    const candidates = deck.cards.map(card => {
+      const cardMetrics = metrics.get(card.id) || {}
+      const persistentPriority = (100 - getCardStrength(card)) * 1.2
+      const missBoost = (cardMetrics.misses || 0) * 45
+      const ratingBoost = cardMetrics.lastRating === 0 ? 35 : cardMetrics.lastRating === 1 ? 15 : 0
+      const successPenalty = (cardMetrics.correct || 0) * 22
+      const easePenalty = cardMetrics.lastRating === 3 ? 70 : cardMetrics.lastRating === 2 ? 35 : 0
+      const cooldownRemaining = Math.max(0, (cardMetrics.cooldownUntil || 0) - nowTurn)
+
+      return {
+        card,
+        priority: persistentPriority + missBoost + ratingBoost - successPenalty - easePenalty - cooldownRemaining * 25,
+        cooldownRemaining
+      }
+    })
+
+    const available = candidates.filter(item => (
+      item.card.id !== previousCardId && item.cooldownRemaining === 0
+    ))
+    const ranked = (available.length > 0 ? available : candidates.filter(item => item.card.id !== previousCardId))
+      .sort((a, b) => b.priority - a.priority)
+
+    const selected = ranked.length > 0 ? ranked : candidates.sort((a, b) => b.priority - a.priority)
+    return selected.map(({ card }) => {
+      let direction = options?.direction
+      if (direction === 'random') {
+        direction = Math.random() < 0.5 ? 'front-to-back' : 'back-to-front'
+      }
+
+      return {
+        ...card,
+        studyDirection: direction,
+        displayFront: direction === 'front-to-back' ? card.front : card.back,
+        displayBack: direction === 'front-to-back' ? card.back : card.front,
+        displayFrontImage: direction === 'front-to-back' ? card.frontImageUrl : card.backImageUrl || card.imageUrl,
+        displayBackImage: direction === 'front-to-back' ? card.backImageUrl || card.imageUrl : card.frontImageUrl
+      }
+    })
+  }
+
   const handleCardReview = (difficulty) => {
-    if (!activeDeck || !studyCards || studyCards.length === 0) return
+    if (!activeDeck || !studyCards || studyCards.length === 0) {
+      return
+    }
 
     const currentCard = studyCards[currentCardIndex]
+    if (!currentCard) {
+      setCurrentCardIndex(0)
+      return
+    }
 
-    // Update card difficulty and last reviewed date
+    const updatedCard = updateCardReviewState(currentCard, difficulty)
+
+    if (studyOptions.mode === 'cram') {
+      const currentMetrics = cramMetricsRef.current.get(currentCard.id) || {
+        attempts: 0,
+        misses: 0,
+        correct: 0
+      }
+      const isCramCorrect = difficulty >= 2
+      const cooldownByRating = { 0: 0, 1: 2, 2: 6, 3: 12 }
+      cramTurnRef.current += 1
+      cramMetricsRef.current.set(currentCard.id, {
+        ...currentMetrics,
+        attempts: currentMetrics.attempts + 1,
+        misses: currentMetrics.misses + (isCramCorrect ? 0 : 1),
+        correct: currentMetrics.correct + (isCramCorrect ? 1 : 0),
+        lastRating: difficulty,
+        cooldownUntil: cramTurnRef.current + cooldownByRating[difficulty]
+      })
+    }
+
     const updatedDecks = decks.map(deck =>
       deck.id === activeDeck.id
         ? {
           ...deck,
           cards: deck.cards.map(card =>
-            card.id === currentCard.id
-              ? { ...card, difficulty, lastReviewed: new Date().toISOString() }
-              : card
+            card.id === currentCard.id ? updatedCard : card
           )
         }
         : deck
     )
     setDecks(updatedDecks)
 
-    // Don't update activeDeck during review session to avoid triggering useEffect
-    // The activeDeck will be updated when navigating away and back
-
-    // Update session stats
-    const isCorrect = difficulty >= 2 // 'Easy' or 'Again' (0,1) vs 'Good', 'Easy' (2,3)
+    const isCorrect = difficulty >= 2
     setSessionStats(prev => ({
       correct: prev.correct + (isCorrect ? 1 : 0),
       total: prev.total + 1
     }))
 
-    // Update global stats
     setReviewStats(prev => ({
       ...prev,
       totalReviews: prev.totalReviews + 1,
@@ -339,8 +497,21 @@ export function ReviewPage() {
       streakCount: isCorrect ? prev.streakCount + 1 : 0
     }))
 
-    // Move to next card
-    if (currentCardIndex < studyCards.length - 1) {
+    if (studyOptions.mode === 'cram') {
+      const nextDeck = updatedDecks.find(deck => deck.id === activeDeck.id) || {
+        ...activeDeck,
+        cards: activeDeck.cards.map(card => card.id === currentCard.id ? updatedCard : card)
+      }
+      const nextCards = getCramCards(nextDeck, studyOptions, currentCard.id)
+      setStudyCards(nextCards.length > 0 ? nextCards : [{
+        ...updatedCard,
+        studyDirection: studyOptions.direction,
+        displayFront: studyOptions.direction === 'back-to-front' ? updatedCard.back : updatedCard.front,
+        displayBack: studyOptions.direction === 'back-to-front' ? updatedCard.front : updatedCard.back
+      }])
+      setCurrentCardIndex(0)
+      setShowResult(false)
+    } else if (currentCardIndex < studyCards.length - 1) {
       setCurrentCardIndex(prev => prev + 1)
     } else {
       setShowResult(true)
@@ -360,7 +531,30 @@ export function ReviewPage() {
         <p className="w-full text-left text-gray-600 mb-6">Start a study session by selecting a deck from the Decks page.</p>
         <div className={styles.review.panel}>
           <div className={styles.review.emptyIcon}><FaBook /></div>
-          <h2>No Deck Selected</h2>
+          <h2 className="mb-4">Choose a Deck</h2>
+          {decks.length > 0 ? (
+            <div className="w-full max-w-md space-y-2">
+              {decks.map(deck => (
+                <button
+                  key={deck.id}
+                  type="button"
+                  disabled={!deck.cards?.length}
+                  onClick={() => setActiveDeck(deck)}
+                  className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-left transition-colors hover:border-blue-300 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="font-medium text-gray-900">{deck.name}</span>
+                  <span className="text-sm text-gray-500">
+                    {deck.cards?.length || 0} {deck.cards?.length === 1 ? 'card' : 'cards'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-600">No decks available yet.</p>
+          )}
+          <button className={`${styles.review.backButton} mt-5`} onClick={() => navigate('/')}>
+            Manage Decks
+          </button>
         </div>
       </div>
     )
@@ -409,7 +603,9 @@ export function ReviewPage() {
   }
 
   const currentCard = studyCards[currentCardIndex]
-  const progress = ((currentCardIndex + 1) / studyCards.length) * 100
+  const progress = studyOptions.mode === 'cram'
+    ? 100
+    : ((currentCardIndex + 1) / studyCards.length) * 100
 
   return (
     <div className={styles.review.container}>
@@ -444,7 +640,9 @@ export function ReviewPage() {
           </button>
         </div>
         <div className={styles.review.headerText}>
-          {currentCardIndex + 1} of {studyCards.length}
+          {studyOptions.mode === 'cram'
+            ? `Cram mode • ${sessionStats.total} answered`
+            : `${currentCardIndex + 1} of ${studyCards.length}`}
         </div>
       </div>
 

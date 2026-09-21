@@ -15,12 +15,19 @@ export const AppProvider = ({ children }) => {
     streakCount: 0
   })
   const [studyOptions, setStudyOptions] = useState({
-    randomOrder: false,
+    mode: 'review',
     direction: 'front-to-back', // 'front-to-back', 'back-to-front', 'random'
-    onlyMissed: false,
+    onlyMissed: true,
+    weakestFirst: true,
+    onlyNew: true,
+    onlyLearning: true,
+    onlyMastered: true,
+    statusFiltersVersion: 1,
+    recentlyWrong: false,
     showBothSides: false, // Show both front and back when card flips
     autoRead: false, // Auto-read card contents using TTS
-    cardLimit: null // Limit number of cards to study (null = no limit)
+    cardLimit: 50, // Limit number of cards to study (null = no limit)
+    cardLimitVersion: 1
   })
 
   // Load data from localStorage on app start
@@ -33,17 +40,40 @@ export const AppProvider = ({ children }) => {
       streakCount: 0
     })
     const savedStudyOptions = loadFromStorage(STORAGE_KEYS.STUDY_OPTIONS, {
-      randomOrder: false,
+      mode: 'review',
       direction: 'front-to-back',
-      onlyMissed: false,
+      onlyMissed: true,
+      weakestFirst: true,
+      onlyNew: true,
+      onlyLearning: true,
+      onlyMastered: true,
+      statusFiltersVersion: 1,
+      recentlyWrong: false,
       showBothSides: false,
       autoRead: false,
-      cardLimit: null
+      cardLimit: 50,
+      cardLimitVersion: 1
     })
+
+    const normalizedStudyOptions = {
+      ...savedStudyOptions,
+      mode: savedStudyOptions.mode === 'cram' ? 'cram' : 'review',
+      ...(savedStudyOptions.statusFiltersVersion === 1 ? {} : {
+        onlyMissed: true,
+        onlyNew: true,
+        onlyLearning: true,
+        onlyMastered: true,
+        statusFiltersVersion: 1
+      }),
+      ...(savedStudyOptions.cardLimitVersion === 1 ? {} : {
+        cardLimit: 50,
+        cardLimitVersion: 1
+      })
+    }
 
     setDecks(savedDecks)
     setReviewStats(savedStats)
-    setStudyOptions(savedStudyOptions)
+    setStudyOptions(normalizedStudyOptions)
     setIsInitialized(true) // Mark as initialized after loading
   }, [])
 

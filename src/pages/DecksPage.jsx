@@ -43,18 +43,24 @@ const useDecksPage = () => {
     }
   }
 
+  const getCardStrength = (card) => {
+    if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
+    if (typeof card?.difficulty === 'number') return Math.max(0, Math.min(100, card.difficulty))
+    return 0
+  }
+
   const getDeckStats = (deck) => {
     const total = deck.cards.length
-    const reviewed = deck.cards.filter(card => card.lastReviewed).length
-    const mastered = deck.cards.filter(card => card.difficulty >= 3).length
+    const reviewed = deck.cards.filter(card => card.lastReviewed || card.lastReviewedAt).length
+    const mastered = deck.cards.filter(card => getCardStrength(card) >= 80 || card.state === 'mastered').length
 
     // Calculate study cards based on current options
     let studyCount = total
     if (studyOptions.onlyMissed) {
-      const missedCards = deck.cards.filter(card => card.difficulty < 2)
+      const missedCards = deck.cards.filter(card => getCardStrength(card) < 60 && card.state !== 'mastered')
       studyCount = missedCards.length > 0 ? missedCards.length : total
     }
-    
+
     // Apply card limit if set
     if (studyOptions.cardLimit && studyOptions.cardLimit > 0) {
       studyCount = Math.min(studyCount, studyOptions.cardLimit)
@@ -139,6 +145,7 @@ export function DecksPage() {
     emptyState: 'flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[50vh] p-8 text-center w-full',
     optionsBtn: 'p-2 bg-white/90 border border-white/10 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center w-11 h-11',
     btnPrimary: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-3 min-w-[140px] justify-center shadow-md',
+    btnCram: 'bg-amber-400 hover:bg-amber-500 text-white font-medium py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-3 min-w-[140px] justify-center shadow-md',
     btnSecondary: 'bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2',
     // ensure the close button is a centered square so the icon is visually centered
     closeButton: 'absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 flex items-center justify-center w-9 h-9',
@@ -183,7 +190,7 @@ export function DecksPage() {
       {showOptions && (
         <Portal>
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 z-50" onClick={() => setShowOptions(false)}>
-            <div className="bg-white rounded-xl p-4 sm:p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-xl p-4 sm:p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto relative flex flex-col" onClick={(e) => e.stopPropagation()}>
               <button
                 className={styles.decks.closeButton}
                 onClick={() => setShowOptions(false)}
@@ -193,19 +200,30 @@ export function DecksPage() {
               </button>
               <h3 className="text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pr-8">Study Options</h3>
 
-              <div className={styles.decks.optionGroup}>
-                <label className="flex items-center gap-3 text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={studyOptions.randomOrder}
-                    onChange={(e) => setStudyOptions(prev => ({ ...prev, randomOrder: e.target.checked }))}
-                    className="form-check"
-                  />
-                  <FaRandom /> Shuffle Cards
-                </label>
+              <div className={`${styles.decks.optionGroup} order-1`}>
+                <label className="block text-gray-700 font-medium mb-3">Study mode</label>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: 'review', label: 'Review' },
+                    { value: 'cram', label: 'Cram' }
+                  ].map(mode => (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      onClick={() => setStudyOptions(prev => ({ ...prev, mode: mode.value }))}
+                      className={`${styles.decks.presetButton} ${
+                        studyOptions.mode === mode.value
+                          ? styles.decks.presetButtonActive
+                          : styles.decks.presetButtonInactive
+                      }`}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className={styles.decks.optionGroup}>
+              <div className={`${styles.decks.optionGroup} order-4`}>
                 <label className="block text-gray-700 font-medium mb-2">Card Direction:</label>
                 <div className={styles.decks.radioGroup}>
                   <label className="flex items-center gap-3 text-gray-700">
@@ -241,19 +259,52 @@ export function DecksPage() {
                 </div>
               </div>
 
-              <div className={styles.decks.optionGroup}>
-                <label className="flex items-center gap-3 text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={studyOptions.onlyMissed}
-                    onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyMissed: e.target.checked }))}
-                    className="form-check"
-                  />
-                  <FaExclamationTriangle /> Focus on Missed Cards
-                </label>
+              <div className={`${styles.decks.optionGroup} order-3`}>
+                <label className="block text-gray-700 font-medium mb-3">Filter by status</label>
+                <div className="flex flex-wrap gap-2 sm:gap-3">
+                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={studyOptions.onlyNew}
+                      onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyNew: e.target.checked }))}
+                      className="form-check"
+                    />
+                    New
+                  </label>
+
+                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={studyOptions.onlyMissed}
+                      onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyMissed: e.target.checked }))}
+                      className="form-check"
+                    />
+                    Weak
+                  </label>
+
+                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={studyOptions.onlyLearning}
+                      onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyLearning: e.target.checked }))}
+                      className="form-check"
+                    />
+                    Learning
+                  </label>
+
+                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={studyOptions.onlyMastered}
+                      onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyMastered: e.target.checked }))}
+                      className="form-check"
+                    />
+                    Mastered
+                  </label>
+                </div>
               </div>
 
-              <div className={styles.decks.optionGroup}>
+              <div className={`${styles.decks.optionGroup} order-4`}>
                 <label className="flex items-center gap-3 text-gray-700">
                   <input
                     type="checkbox"
@@ -265,7 +316,7 @@ export function DecksPage() {
                 </label>
               </div>
 
-              <div className={styles.decks.optionGroup}>
+              <div className={`${styles.decks.optionGroup} order-5`}>
                 <label className="flex items-center gap-3 text-gray-700">
                   <input
                     type="checkbox"
@@ -277,80 +328,52 @@ export function DecksPage() {
                 </label>
               </div>
 
-              <div className={styles.decks.optionGroup}>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <label className="text-gray-700 font-medium">Card Limit</label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={studyOptions.cardLimit !== null}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setStudyOptions(prev => ({ ...prev, cardLimit: 10 }))
-                          } else {
-                            setStudyOptions(prev => ({ ...prev, cardLimit: null }))
-                          }
-                        }}
-                        className="form-check"
-                      />
-                      <span className="text-sm text-gray-600">
-                        {studyOptions.cardLimit !== null ? 'On' : 'Off'}
-                      </span>
-                    </div>
+              {studyOptions.mode !== 'cram' && <div className={`${styles.decks.optionGroup} order-2`}>
+                <div className="space-y-3">
+                  <label className="block text-gray-700 font-medium">Cards per session</label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {[10, 25, 50, 100].map(preset => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setStudyOptions(prev => ({ ...prev, cardLimit: preset }))}
+                        className={`${styles.decks.presetButton} ${
+                          studyOptions.cardLimit === preset
+                            ? styles.decks.presetButtonActive
+                            : styles.decks.presetButtonInactive
+                        }`}
+                      >
+                        {preset}
+                      </button>
+                    ))}
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={studyOptions.cardLimit ?? ''}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        const limit = value === '' ? null : Math.min(100, Math.max(1, Number(value)))
+                        setStudyOptions(prev => ({ ...prev, cardLimit: limit }))
+                      }}
+                      placeholder="Custom"
+                      aria-label="Custom cards per session"
+                      className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setStudyOptions(prev => ({ ...prev, cardLimit: null }))}
+                      className={`${styles.decks.presetButton} ${
+                        studyOptions.cardLimit === null
+                          ? styles.decks.presetButtonActive
+                          : styles.decks.presetButtonInactive
+                      }`}
+                    >
+                      No limit
+                    </button>
                   </div>
-                  
-                  {studyOptions.cardLimit !== null && (
-                    <div className="space-y-3 pt-2 border-t border-gray-100">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Cards per session:</span>
-                        <span className="font-medium text-blue-600 min-w-[4rem] text-right">
-                          {studyOptions.cardLimit}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <input
-                          type="range"
-                          min="1"
-                          max="100"
-                          value={studyOptions.cardLimit || 10}
-                          onChange={(e) => setStudyOptions(prev => ({ ...prev, cardLimit: parseInt(e.target.value) }))}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                          style={{
-                            background: `linear-gradient(to right, var(--primary) 0%, var(--primary) ${((studyOptions.cardLimit || 10) / 100) * 100}%, #e5e7eb ${((studyOptions.cardLimit || 10) / 100) * 100}%, #e5e7eb 100%)`
-                          }}
-                        />
-                        <div className="flex justify-between text-xs text-gray-400 px-1">
-                          <span>1</span>
-                          <span>25</span>
-                          <span>50</span>
-                          <span>75</span>
-                          <span>100</span>
-                        </div>
-                      </div>
-
-                      {/* Quick preset buttons for common values */}
-                      <div className="flex gap-2 pt-1">
-                        {[5, 10, 20, 50, 75, 100].map(preset => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => setStudyOptions(prev => ({ ...prev, cardLimit: preset }))}
-                            className={`${styles.decks.presetButton} ${
-                              studyOptions.cardLimit === preset 
-                                ? styles.decks.presetButtonActive
-                                : styles.decks.presetButtonInactive
-                            }`}
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
-              </div>
+              </div>}
             </div>
           </div>
         </Portal>
@@ -462,12 +485,12 @@ export function DecksPage() {
                   <FaEdit /> Edit
                 </button>
                 <button
-                  className={styles.decks.btnPrimary}
+                  className={studyOptions.mode === 'cram' ? styles.decks.btnCram : styles.decks.btnPrimary}
                   onClick={() => handleDeckSelect(deck)}
                   disabled={stats.total === 0}
                 >
                   <FaBook />
-                  {stats.total === 0 ? 'No Cards' : 'Study'}
+                  {stats.total === 0 ? 'No Cards' : studyOptions.mode === 'cram' ? 'Cram' : 'Study'}
                 </button>
                 {/* delete button is in the top-right of the card header */}
               </div>

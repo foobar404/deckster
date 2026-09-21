@@ -1,11 +1,12 @@
 // Basic service worker for PWA functionality
 const CACHE_NAME = 'deckster-v1';
+const BASE_PATH = new URL('./', self.location).pathname;
 const urlsToCache = [
-  '/deckster/',
-  '/deckster/index.html',
-  '/deckster/manifest.json',
-  '/deckster/icon.svg',
-  '/deckster/#/decks'
+  BASE_PATH,
+  `${BASE_PATH}index.html`,
+  `${BASE_PATH}manifest.json`,
+  `${BASE_PATH}icon.svg`,
+  `${BASE_PATH}#/decks`
 ];
 
 // Install event - cache resources
@@ -31,7 +32,7 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => {
         // If both cache and network fail, return offline page
-        return caches.match('/deckster/');
+        return caches.match(BASE_PATH);
       })
   );
 });
