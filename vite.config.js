@@ -9,7 +9,10 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
@@ -24,21 +27,15 @@ export default defineConfig({
         start_url: '/deckster/',
         icons: [
           {
-            src: '/icon.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml',
+            src: '/new-icon.png',
+            sizes: '1254x1254',
+            type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/icon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any'
-          },
-          {
-            src: '/icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
+            src: '/new-icon.png',
+            sizes: '1254x1254',
+            type: 'image/png',
             purpose: 'maskable'
           }
         ]

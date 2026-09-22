@@ -10,22 +10,16 @@
   "start_url": "/deckster/#/decks",
   "icons": [
     {
-      "src": "/deckster/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/deckster/icon.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
+      "src": "/deckster/new-icon.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/deckster/icon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any"
+      "src": "/deckster/new-icon.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
