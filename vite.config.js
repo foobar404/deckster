@@ -12,11 +12,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
-<<<<<<< HEAD
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-=======
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
->>>>>>> 816727ed9d0fc32be8b3b65a6de61ac2beb32245
         cleanupOutdatedCaches: true,
         clientsClaim: true,
         skipWaiting: true
@@ -33,33 +29,15 @@ export default defineConfig({
         start_url: `${appBase}#/decks`,
         icons: [
           {
-<<<<<<< HEAD
-            src: `${appBase}icon.svg`,
-            sizes: '192x192',
-            type: 'image/svg+xml',
-            purpose: 'any'
-          },
-          {
-            src: `${appBase}icon.svg`,
-            sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any'
-          },
-          {
-            src: `${appBase}icon.svg`,
-            sizes: 'any',
-            type: 'image/svg+xml',
-=======
-            src: '/new-icon.png',
+            src: `${appBase}new-icon.png`,
             sizes: '1254x1254',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/new-icon.png',
+            src: `${appBase}new-icon.png`,
             sizes: '1254x1254',
             type: 'image/png',
->>>>>>> 816727ed9d0fc32be8b3b65a6de61ac2beb32245
             purpose: 'maskable'
           }
         ]
