@@ -2,7 +2,7 @@ import { Portal } from './Portal';
 import { useToast } from '../context/ToastContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useStyle, useSpeech, useStorage } from '../utils';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaDownload, FaCopy, FaChevronDown } from 'react-icons/fa';
 
 
 /**
@@ -56,13 +56,27 @@ const useCardEditor = (deck, onSave, onCancel) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newCard, setNewCard] = useState({ front: '', back: '' })
   const [deckName, setDeckName] = useState(deck.name || '')
+  const [appearance, setAppearance] = useState({
+    color: '#ffffff',
+    icon: '',
+    textSize: 'medium',
+    textVertical: 'center',
+    textAlign: 'center',
+    imageFit: 'fit',
+    imagePosition: 'top',
+    ...deck.appearance
+  })
+  const [tagsText, setTagsText] = useState((deck.tags || []).join(', '))
+  const getTags = useCallback(() => [...new Set(tagsText.split(',').map(tag => tag.trim()).filter(Boolean))], [tagsText])
 
   // Auto-save with debounce to avoid excessive saves
-  const debouncedSave = useCallback((cardsToSave, nameToSave = deckName) => {
+  const debouncedSave = useCallback((cardsToSave, nameToSave = deckName, appearanceToSave = appearance, tagsToSave = getTags()) => {
     const updatedDeck = {
       ...deck,
       name: nameToSave,
-      cards: cardsToSave
+      cards: cardsToSave,
+      appearance: appearanceToSave,
+      tags: tagsToSave
     }
 
     // Update the deck directly in localStorage to persist changes
@@ -71,7 +85,7 @@ const useCardEditor = (deck, onSave, onCancel) => {
       d.id === deck.id ? updatedDeck : d
     )
     saveToStorage(STORAGE_KEYS.DECKS, updatedDecks)
-  }, [deck, deckName])
+  }, [deck, deckName, appearance, tagsText, getTags])
 
   // Handle modal positioning on mobile
   useEffect(() => {
@@ -124,6 +138,17 @@ const useCardEditor = (deck, onSave, onCancel) => {
 
     return () => clearTimeout(timeoutId)
   }, [deckName, deck.name, cards, debouncedSave])
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (JSON.stringify(appearance) !== JSON.stringify(deck.appearance || {}) ||
+        JSON.stringify(getTags()) !== JSON.stringify(deck.tags || [])) {
+        debouncedSave(cards, deckName, appearance, getTags())
+      }
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [appearance, tagsText, deck.appearance, deck.tags, cards, deckName, debouncedSave, getTags])
 
   // Card management handlers
   const addCard = useCallback(() => {
@@ -191,10 +216,37 @@ const useCardEditor = (deck, onSave, onCancel) => {
     const updatedDeck = {
       ...deck,
       name: deckName,
-      cards: cards
+      cards,
+      appearance,
+      tags: getTags()
     }
     onSave(updatedDeck) // This will trigger navigation back to deck list
-  }, [deck, deckName, cards, onSave])
+  }, [deck, deckName, cards, appearance, getTags, onSave])
+
+  const copyDeckAsText = useCallback(async () => {
+    const text = cards.map(card => `${card.front ?? ''}\t${card.back ?? ''}`).join('\n')
+    try {
+      await navigator.clipboard.writeText(text)
+      showInfo('Deck copied as tab-separated text.')
+    } catch {
+      showWarning('Clipboard access is unavailable.')
+    }
+  }, [cards, showInfo, showWarning])
+
+  const downloadDeckCsv = useCallback(() => {
+    const escapeCsvField = value => `"${String(value ?? '').replace(/"/g, '""')}"`
+    const csv = cards.map(card => `${escapeCsvField(card.front)},${escapeCsvField(card.back)}`).join('\r\n')
+    const fileName = `${(deckName.trim() || 'deck').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')}.csv`
+    const blobUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const downloadLink = document.createElement('a')
+    downloadLink.href = blobUrl
+    downloadLink.download = fileName
+    document.body.appendChild(downloadLink)
+    downloadLink.click()
+    downloadLink.remove()
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+    showInfo('Deck CSV downloaded.')
+  }, [cards, deckName, showInfo])
 
   // Computed values
   const isAddCardDisabled = !newCard.front.trim() || !newCard.back.trim()
@@ -207,6 +259,10 @@ const useCardEditor = (deck, onSave, onCancel) => {
     showAddForm,
     newCard,
     deckName,
+    appearance,
+    setAppearance,
+    tagsText,
+    setTagsText,
 
     // Computed values
     isAddCardDisabled,
@@ -229,17 +285,24 @@ const useCardEditor = (deck, onSave, onCancel) => {
     extractImageUrl,
 
     // Navigation
-    handleSaveAndExit
+    handleSaveAndExit,
+    copyDeckAsText,
+    downloadDeckCsv
   }
 }
 
 export function CardEditor({ deck, onSave, onCancel }) {
+  const [appearanceExpanded, setAppearanceExpanded] = useState(true)
   // Use the custom hook for all logic and state
   const {
     cards,
     showAddForm,
     newCard,
     deckName,
+    appearance,
+    setAppearance,
+    tagsText,
+    setTagsText,
     isAddCardDisabled,
     cardCount,
     hasCards,
@@ -251,18 +314,20 @@ export function CardEditor({ deck, onSave, onCancel }) {
     updateNewCard,
     updateDeckName,
     handleSaveAndExit,
+    copyDeckAsText,
+    downloadDeckCsv,
     extractImageUrl
   } = useCardEditor(deck, onSave, onCancel)
 
   // Custom styles for CardEditor
   const customStyles = {
-    cardEditor: 'p-4 max-w-5xl mx-auto flex flex-col gap-6 md:ml-60 md:p-8 md:gap-8',
+    cardEditor: 'p-4 max-w-5xl mx-auto flex flex-col gap-6 md:p-8 md:gap-8',
     header: 'flex flex-col items-stretch gap-4 md:flex-row md:justify-between md:items-center md:flex-wrap',
     backButton: 'flex items-center gap-2 py-2 px-4 text-sm font-medium text-gray-600 transition-all duration-200 hover:text-blue-600 hover:-translate-x-0.5',
     // allow the header content to shrink inside a flex row (prevents overflow)
     headerContent: 'flex flex-col gap-1 min-w-0 flex-1',
     // make the deck name input responsive: full width but constrained on larger screens
-    nameInput: 'text-2xl md:text-3xl font-bold text-gray-900 bg-white border-2 border-blue-500 rounded-lg px-4 py-3 w-full max-w-full md:max-w-3xl outline-none placeholder:text-gray-500 placeholder:opacity-70',
+    nameInput: 'w-full rounded-lg border border-gray-300 px-3 py-2 text-base font-normal text-gray-900 placeholder:text-gray-400',
     headerDescription: 'text-gray-600 text-base',
     addCardSection: 'flex justify-center py-6',
     addCardSectionBottom: 'flex justify-center py-8 px-6 border-t border-gray-200 mt-6',
@@ -281,7 +346,7 @@ export function CardEditor({ deck, onSave, onCancel }) {
   // make the list a scrollable container so virtualization can measure and manage visible items
   // make the list a scrollable container so virtualization can measure and manage visible items
   // increased height and width on md+ to give the virtual view more room
-  cardsList: 'relative overflow-auto max-h-[85vh] min-h-[60vh] touch-manipulation space-y-6 w-full md:w-[900px] mx-auto pb-32 hide-scrollbar',
+  cardsList: 'relative overflow-auto max-h-[85vh] min-h-[60vh] touch-manipulation space-y-6 w-full max-w-4xl mx-auto pb-32 hide-scrollbar',
   cardItem: 'p-6 bg-white/60 backdrop-blur-md rounded-2xl border border-white/10 shadow-md grid grid-cols-1 gap-4 items-start transition-all duration-200 relative hover:shadow-lg md:grid-cols-[auto,1fr] md:gap-6 md:p-8',
   cardNumber: 'font-bold text-white bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center text-lg mx-auto mb-4 self-center md:mx-0 md:mr-4',
   cardContent: 'grid grid-cols-1 gap-4 w-full md:grid-cols-2 md:gap-6 min-w-0',
@@ -347,21 +412,101 @@ export function CardEditor({ deck, onSave, onCancel }) {
     <div className={styles.cardEditor.cardEditor}>
       <div className={styles.cardEditor.header}>
         <button className={`${styles.cardEditor.backButton} ${styles.button.secondary}`} onClick={handleSaveAndExit}>
-          <FaArrowLeft /> Back to Decks
+          <FaArrowLeft /> 
         </button>
         <div className={styles.cardEditor.headerContent}>
-          <div>
+          <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={styles.button.secondary} onClick={copyDeckAsText}>
+            <FaCopy /> Copy as text
+          </button>
+          <button type="button" className={styles.button.secondary} onClick={downloadDeckCsv}>
+            <FaDownload /> Download CSV
+          </button>
+        </div>
+      </div>
+
+      <section className="rounded-xl border border-gray-200 bg-white/90 p-4 shadow-sm md:p-6">
+        <button
+          type="button"
+          className="mb-4 flex w-full items-center justify-between text-left"
+          onClick={() => setAppearanceExpanded(expanded => !expanded)}
+          aria-expanded={appearanceExpanded}
+          aria-controls="deck-appearance-options"
+        >
+          <h2 className="text-lg font-semibold text-gray-900">Deck Appearance</h2>
+          <FaChevronDown className={`transition-transform ${appearanceExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+        {appearanceExpanded && <div id="deck-appearance-options" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 sm:col-span-2 lg:col-span-3">
+            Deck name
             <input
               type="text"
               value={deckName}
-              onChange={(e) => updateDeckName(e.target.value)}
+              onChange={e => updateDeckName(e.target.value)}
               className={styles.cardEditor.nameInput}
               placeholder="Deck name..."
             />
-          </div>
-          <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
-        </div>
-      </div>
+          </label>
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-gray-700">Deck icon</legend>
+            <input value={appearance.icon} onChange={e => setAppearance(prev => ({ ...prev, icon: e.target.value }))} placeholder="Choose an emoji" aria-label="Deck emoji icon" className="w-full rounded-lg border border-gray-300 px-3 py-2" />
+            <span className="mt-1 block text-xs font-normal text-gray-500">Press Win + . while focused to open the emoji picker.</span>
+          </fieldset>
+          <fieldset>
+            <legend className="mb-2 text-sm font-medium text-gray-700">Card text size</legend>
+            <select value={appearance.textSize || 'medium'} onChange={e => setAppearance(prev => ({ ...prev, textSize: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2">
+              <option value="extraSmall">Extra small</option><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="extraLarge">Extra large</option>
+            </select>
+          </fieldset>
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700">
+            Text alignment
+            <select value={appearance.textAlign} onChange={e => setAppearance(prev => ({ ...prev, textAlign: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2">
+              <option value="left">Left</option><option value="center">Center</option><option value="right">Right</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700">
+            Text position
+            <select value={appearance.textVertical} onChange={e => setAppearance(prev => ({ ...prev, textVertical: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2">
+              <option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700">
+            Image sizing
+            <select value={appearance.imageFit} onChange={e => setAppearance(prev => ({ ...prev, imageFit: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2">
+              <option value="fit">Fit whole image</option><option value="fill">Fill image area</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700">
+            Image position
+            <select value={appearance.imagePosition} onChange={e => setAppearance(prev => ({ ...prev, imagePosition: e.target.value }))} className="rounded-lg border border-gray-300 px-3 py-2">
+              <option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 sm:col-span-2 lg:col-span-3">
+            Tags (comma separated)
+            <input value={tagsText} onChange={e => setTagsText(e.target.value)} placeholder="e.g. biology, exam 1" className="rounded-lg border border-gray-300 px-3 py-2" />
+          </label>
+          <fieldset className="sm:col-span-2 lg:col-span-3">
+            <legend className="mb-2 text-sm font-medium text-gray-700">Deck color</legend>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                ['#ffffff', 'White'], ['#0B1026', 'Midnight navy'], ['#1A1F47', 'Navy'], ['#2D3EB3', 'Royal indigo'], ['#3F51B5', 'Indigo'],
+                ['#5C6BC0', 'Periwinkle'], ['#7986CB', 'Soft indigo'], ['#9FA8DA', 'Lavender blue'], ['#B3E5FC', 'Light blue'],
+                ['#4DD0E1', 'Cyan'], ['#26C6DA', 'Turquoise'], ['#00BFA5', 'Teal'], ['#00C853', 'Green'],
+                ['#69F0AE', 'Mint'], ['#B2FF59', 'Lime'], ['#EEFF41', 'Lemon'], ['#FFD54F', 'Amber'],
+                ['#FFB74D', 'Orange'], ['#FF8A65', 'Coral'], ['#F44336', 'Red'], ['#D32F2F', 'Dark red'],
+                ['#8D1B1B', 'Wine'], ['#6D4037', 'Brown'], ['#8D6E63', 'Warm gray'], ['#D45A78', 'Rose'], ['#AB47BC', 'Purple']
+              ].map(([color, label]) => (
+                <button key={color} type="button" title={label} aria-label={`${label} deck color`} aria-pressed={appearance.color === color} onClick={() => setAppearance(prev => ({ ...prev, color }))} className={`relative flex h-7 w-7 items-center justify-center rounded-full border-2 transition-transform ${appearance.color === color ? 'z-10 scale-110 border-white ring-2 ring-gray-900' : 'border-gray-300 hover:scale-110'}`} style={{ backgroundColor: color }}>
+                  {appearance.color === color && <span className="text-sm font-bold leading-none text-white" style={{ textShadow: '0 1px 3px #000, 1px 0 2px #000, -1px 0 2px #000' }}>✓</span>}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        </div>}
+      </section>
 
       <div className={styles.cardEditor.addCardSection}>
         <button
@@ -429,15 +574,15 @@ export function CardEditor({ deck, onSave, onCancel }) {
                 </div>
               </div>
               <div className={styles.cardEditor.formActions}>
-                <button className={styles.button.secondary} onClick={closeAddForm}>
-                  Cancel
-                </button>
                 <button
                   className={styles.button.primary}
                   onClick={addCard}
                   disabled={isAddCardDisabled}
                 >
                   Add Card
+                </button>
+                <button className={`${styles.button.secondary} justify-center`} onClick={closeAddForm}>
+                  Cancel
                 </button>
               </div>
             </div>

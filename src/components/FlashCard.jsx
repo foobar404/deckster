@@ -531,7 +531,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     }
 }
 
-export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {} }) {
+export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}, appearance = {} }) {
     const {
         isFlipped,
         showBackContent,
@@ -559,6 +559,38 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         handlePointerCancel
     } = useFlashCard(card, onReview, onDragStateChange, studyOptions)
 
+    const textSizes = { extraSmall: '0.875rem', small: '1.125rem', medium: '1.5rem', large: '1.875rem', extraLarge: '2.25rem' }
+    const cardColor = appearance.color || '#ffffff'
+    const cardTextColor = '#111827'
+    const horizontalAlignment = { left: 'flex-start', center: 'center', right: 'flex-end' }
+    const verticalAlignment = { top: 'flex-start', center: 'center', bottom: 'flex-end' }
+    const isHorizontalImage = appearance.imagePosition === 'left' || appearance.imagePosition === 'right'
+    const getContentLayoutStyle = (hasImage) => ({
+        display: 'flex',
+        flexDirection: hasImage && isHorizontalImage ? 'row' : 'column',
+        justifyContent: isHorizontalImage ? horizontalAlignment[appearance.textAlign] || 'center' : verticalAlignment[appearance.textVertical] || 'center',
+        alignItems: isHorizontalImage ? verticalAlignment[appearance.textVertical] || 'center' : horizontalAlignment[appearance.textAlign] || 'center',
+        textAlign: appearance.textAlign || 'center',
+        minWidth: 0
+    })
+    const getImageStyle = (hasImage) => ({
+        width: hasImage && isHorizontalImage ? '42%' : '100%',
+        height: hasImage && isHorizontalImage ? '100%' : '45%',
+        maxHeight: '12rem',
+        order: appearance.imagePosition === 'bottom' || appearance.imagePosition === 'right' ? 1 : 0,
+        flex: '0 1 45%',
+        minWidth: 0
+    })
+    const getTextStyle = (hasImage) => ({
+        fontSize: textSizes[appearance.textSize] || textSizes.medium,
+        textAlign: appearance.textAlign || 'center',
+        order: appearance.imagePosition === 'bottom' || appearance.imagePosition === 'right' ? 0 : 1,
+        flex: hasImage ? '1 1 auto' : '0 1 auto',
+        minWidth: 0,
+        color: cardTextColor
+    })
+    const cardFaceStyle = { backgroundColor: '#ffffff', color: cardTextColor, borderColor: cardColor }
+
     // Custom styles for FlashCard
     const customStyles = {
         // Ensure the card sits above the quadrant backgrounds
@@ -569,8 +601,8 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         cardInner: 'relative w-full h-full transition-transform duration-300 ease-out transform-3d',
         // Give front and back clear background color and a visible solid border
         // Use opaque white for card faces so the backface doesn't show through during 3D flips
-        cardFront: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[6px] border-gray-200/60 rounded-2xl shadow-lg overflow-hidden',
-        cardBack: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[6px] border-gray-200/60 rounded-2xl shadow-lg overflow-hidden transform-rotateY-180',
+        cardFront: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl shadow-lg overflow-hidden',
+        cardBack: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl shadow-lg overflow-hidden transform-rotateY-180',
         // stronger blur and rounded corners so background image softly diffuses behind the card
         cardBackground: 'absolute inset-0 bg-center bg-cover filter blur-sm rounded-2xl',
         // Richer gradient overlay to add depth and a subtle vignette without blocking interactions
@@ -627,7 +659,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
                     }}
                 >
-                    <div className={styles.flashcard.cardFront}>
+                    <div className={styles.flashcard.cardFront} style={cardFaceStyle}>
                         {frontImageUrl && (
                             <>
                                 <div
@@ -639,24 +671,25 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                 <div className={styles.flashcard.cardGradientOverlay}></div>
                             </>
                         )}
-                        <div className={styles.flashcard.cardContent}>
+                        <div className={styles.flashcard.cardContent} style={getContentLayoutStyle(Boolean(frontImageUrl))}>
                             {frontImageUrl && (
-                                <div className={styles.flashcard.cardImage}>
+                                <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
                                     <img
                                         src={frontImageUrl}
                                         alt="Card visual"
                                         draggable={false}
                                         onDragStart={(e) => e.preventDefault()}
                                         className={styles.flashcard.cardImageImg}
+                                        style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
                                     />
                                 </div>
                             )}
                             {frontText && frontText.trim() ? (
-                                <div className={styles.flashcard.cardText}>{frontText}</div>
+                                <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))}>{frontText}</div>
                             ) : null}
                         </div>
                     </div>
-                    <div className={styles.flashcard.cardBack}>
+                    <div className={styles.flashcard.cardBack} style={cardFaceStyle}>
                         {showBackContent && backImageUrl && (
                             <>
                                 <div
@@ -692,64 +725,73 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                         <span>Recent: {memoryMeta.lastResultLabel}</span>
                                         <span>{memoryMeta.reviews} reviews</span>
                                     </div>
+                                    <div className="flex min-h-0 w-full flex-1" style={getContentLayoutStyle(Boolean(backImageUrl) && !studyOptions?.showBothSides)}>
                                     {studyOptions?.showBothSides ? (
                                         // Show both sides when option is enabled
                                         <div className={styles.flashcard.bothSidesContainer}>
                                             <div className={styles.flashcard.sideSection}>
                                                 <div className={styles.flashcard.sideLabel}>Front:</div>
+                                                <div className="flex min-h-0 w-full flex-1 items-center gap-2" style={getContentLayoutStyle(Boolean(frontImageUrl))}>
                                                 {frontImageUrl && (
-                                                    <div className={styles.flashcard.cardImage}>
+                                                    <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
                                                         <img
                                                             src={frontImageUrl}
                                                             alt="Front visual"
                                                             draggable={false}
                                                             onDragStart={(e) => e.preventDefault()}
                                                             className={styles.flashcard.cardImageImg}
+                                                            style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
                                                         />
                                                     </div>
                                                 )}
                                                 {frontText && frontText.trim() ? (
-                                                    <div className={styles.flashcard.cardText}>{frontText}</div>
+                                                    <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))}>{frontText}</div>
                                                 ) : null}
+                                                </div>
                                             </div>
                                             <div className={styles.flashcard.sideDivider}></div>
                                             <div className={styles.flashcard.sideSection}>
                                                 <div className={styles.flashcard.sideLabel}>Back:</div>
+                                                <div className="flex min-h-0 w-full flex-1 items-center gap-2" style={getContentLayoutStyle(Boolean(backImageUrl))}>
                                                 {backImageUrl && (
-                                                    <div className={styles.flashcard.cardImage}>
+                                                    <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
                                                         <img
                                                             src={backImageUrl}
                                                             alt="Back visual"
                                                             draggable={false}
                                                             onDragStart={(e) => e.preventDefault()}
                                                             className={styles.flashcard.cardImageImg}
+                                                            style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
                                                         />
                                                     </div>
                                                 )}
                                                 {backText && backText.trim() ? (
-                                                    <div className={styles.flashcard.cardText}>{backText}</div>
+                                                    <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))}>{backText}</div>
                                                 ) : null}
+                                                </div>
                                             </div>
                                         </div>
                                     ) : (
                                         // Show only back side when option is disabled
                                         <>
                                             {backImageUrl && (
-                                                <div className={styles.flashcard.cardImage}>
+                                                <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
                                                     <img
                                                         src={backImageUrl}
                                                         alt="Card visual"
                                                         draggable={false}
                                                         onDragStart={(e) => e.preventDefault()}
                                                         className={styles.flashcard.cardImageImg}
+                                                        style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
                                                     />
                                                 </div>
                                             )}
                                             {backText && backText.trim() ? (
-                                                <div className={styles.flashcard.cardText}>{backText}</div>
+                                                <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))}>{backText}</div>
                                             ) : null}
                                         </>
                                     )}
+                                    </div>
                                 </>
                             )}
                         </div>

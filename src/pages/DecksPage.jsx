@@ -5,7 +5,7 @@ import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { Portal } from '../components/Portal'
 import { CardEditor } from '../components/CardEditor'
-import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaRandom, FaExclamationTriangle, FaTimes } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaChevronDown, FaChevronUp } from 'react-icons/fa'
 
 /**
  * Custom hook for DecksPage logic and state management
@@ -19,6 +19,8 @@ const useDecksPage = () => {
   const [newDeckName, setNewDeckName] = useState('')
   const [editingDeck, setEditingDeck] = useState(null)
   const [showOptions, setShowOptions] = useState(false)
+  const [selectedTag, setSelectedTag] = useState('all')
+  const [showTagFilter, setShowTagFilter] = useState(false)
 
   const createDeck = () => {
     if (!newDeckName.trim()) return
@@ -37,7 +39,7 @@ const useDecksPage = () => {
 
   const deleteDeck = (deckId) => {
     const deckToDelete = decks.find(deck => deck.id === deckId)
-    if (deckToDelete) {
+    if (deckToDelete && window.confirm(`Delete "${deckToDelete.name}" and all its cards? This cannot be undone.`)) {
       setDecks(prev => prev.filter(deck => deck.id !== deckId))
       showWarning(`Deleted deck "${deckToDelete.name}"`)
     }
@@ -98,6 +100,10 @@ const useDecksPage = () => {
     setNewDeckName,
     editingDeck,
     setEditingDeck,
+    selectedTag,
+    setSelectedTag,
+    showTagFilter,
+    setShowTagFilter,
     showOptions,
     setShowOptions,
     createDeck,
@@ -109,6 +115,7 @@ const useDecksPage = () => {
 }
 
 export function DecksPage() {
+  const [collapsedDeckIds, setCollapsedDeckIds] = useState(() => new Set())
   const {
     navigate,
     decks,
@@ -124,6 +131,10 @@ export function DecksPage() {
     setNewDeckName,
     editingDeck,
     setEditingDeck,
+    selectedTag,
+    setSelectedTag,
+    showTagFilter,
+    setShowTagFilter,
     showOptions,
     setShowOptions,
     createDeck,
@@ -133,15 +144,22 @@ export function DecksPage() {
     handleDeckSelect
   } = useDecksPage()
 
+  const availableTags = [...new Set(decks.flatMap(deck => deck.tags || []))]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  const visibleDecks = decks
+    .filter(deck => selectedTag === 'all' || (deck.tags || []).includes(selectedTag))
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+
   // Custom styles for DecksPage
   const customStyles = {
-    container: 'min-h-screen p-4 pb-20 md:pb-4',
+    container: 'min-h-screen p-4 pb-20 md:pb-4 md:max-w-6xl md:mx-auto',
     header: 'grid grid-cols-1 md:grid-cols-3 items-center mb-6 gap-3',
     headerActions: 'flex items-center gap-3 justify-end',
     createForm: 'mb-6 p-4 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg',
     formActions: 'flex gap-3 mt-4',
-    decksGrid: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4',
-    deckCard: 'relative p-6 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200',
+    decksGrid: 'grid grid-cols-1 items-start md:grid-cols-2 lg:grid-cols-3 gap-4',
+    deckCard: 'relative self-start p-6 bg-white/90 backdrop-blur-lg border-8 border-solid rounded-xl shadow-lg hover:shadow-xl transition-all duration-200',
     emptyState: 'flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[50vh] p-8 text-center w-full',
     optionsBtn: 'p-2 bg-white/90 border border-white/10 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center w-11 h-11',
     btnPrimary: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-3 min-w-[140px] justify-center shadow-md',
@@ -157,7 +175,7 @@ export function DecksPage() {
     presetButtonInactive: 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent',
     deckHeader: 'flex items-center justify-between mb-4',
     deckName: 'text-xl font-semibold text-gray-900 truncate',
-    deleteBtn: 'absolute top-3 right-3 p-0 bg-gray-50 text-gray-500 hover:bg-gray-100 rounded-md transition-colors duration-150 opacity-90 hover:opacity-100 shadow-sm flex items-center justify-center w-9 h-9',
+    deleteBtn: 'p-0 bg-white/60 text-gray-500 hover:bg-white hover:text-red-600 rounded-md transition-colors duration-150 flex items-center justify-center w-9 h-9',
     deckStats: 'mb-4 space-y-2',
     statRow: 'flex justify-between text-sm text-gray-600',
     progressContainer: 'mb-4',
@@ -316,18 +334,6 @@ export function DecksPage() {
                 </label>
               </div>
 
-              <div className={`${styles.decks.optionGroup} order-5`}>
-                <label className="flex items-center gap-3 text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={studyOptions.autoRead}
-                    onChange={(e) => setStudyOptions(prev => ({ ...prev, autoRead: e.target.checked }))}
-                    className="form-check"
-                  />
-                  Auto-Read Card Contents
-                </label>
-              </div>
-
               {studyOptions.mode !== 'cram' && <div className={`${styles.decks.optionGroup} order-2`}>
                 <div className="space-y-3">
                   <label className="block text-gray-700 font-medium">Cards per session</label>
@@ -429,24 +435,96 @@ export function DecksPage() {
         </div>
       )}
 
+      <div className="relative mb-4">
+        <button
+          type="button"
+          onClick={() => setShowTagFilter(open => !open)}
+          aria-expanded={showTagFilter}
+          aria-haspopup="true"
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <FaFilter />
+          {selectedTag === 'all' ? 'Filter by tag' : selectedTag}
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{selectedTag === 'all' ? availableTags.length : 1}</span>
+        </button>
+        {showTagFilter && (
+          <div className="absolute left-0 top-full z-30 mt-2 min-w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
+            <button
+              type="button"
+              onClick={() => { setSelectedTag('all'); setShowTagFilter(false) }}
+              className={`block w-full rounded-md px-3 py-2 text-left text-sm ${selectedTag === 'all' ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+            >
+              All decks
+            </button>
+            {availableTags.length > 0 ? availableTags.map(tag => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => { setSelectedTag(tag); setShowTagFilter(false) }}
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm ${selectedTag === tag ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+              >
+                {tag}
+              </button>
+            )) : (
+              <p className="px-3 py-2 text-sm text-gray-500">No tags defined yet. Add tags in a deck’s Edit page.</p>
+            )}
+          </div>
+        )}
+        {selectedTag !== 'all' && (
+          <span className="ml-3 text-sm text-gray-500">Showing decks tagged “{selectedTag}”</span>
+        )}
+      </div>
+
       <div className={styles.decks.decksGrid}>
-        {decks.map(deck => {
+        {visibleDecks.map(deck => {
           const stats = getDeckStats(deck)
           const progress = stats.total > 0 ? (stats.reviewed / stats.total) * 100 : 0
+          const isCollapsed = collapsedDeckIds.has(deck.id)
+          const deckColor = deck.appearance?.color || '#ffffff'
+          const deckTextColor = '#111827'
 
           return (
-            <div key={deck.id} className={styles.decks.deckCard}>
-              <div className={styles.decks.deckHeader}>
-                <h3 className={styles.decks.deckName}>{deck.name}</h3>
-                <button
-                  className={styles.decks.deleteBtn}
-                  onClick={() => deleteDeck(deck.id)}
-                >
-                  <FaTrash />
-                </button>
+            <div key={deck.id} className={`${styles.decks.deckCard} ${isCollapsed ? 'p-3' : ''}`} style={{ borderColor: deckColor, color: deckTextColor }}>
+              <div className={`${styles.decks.deckHeader} ${isCollapsed ? 'mb-0' : ''}`}>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/75 text-3xl shadow-sm" aria-hidden="true">{deck.appearance?.icon || '📚'}</span>
+                  <h3 className={styles.decks.deckName} style={{ color: deckTextColor }}>{deck.name}</h3>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-white/70 hover:text-blue-600"
+                    onClick={() => setCollapsedDeckIds(prev => {
+                      const next = new Set(prev)
+                      if (next.has(deck.id)) next.delete(deck.id)
+                      else next.add(deck.id)
+                      return next
+                    })}
+                    aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${deck.name}`}
+                    aria-expanded={!isCollapsed}
+                    title={isCollapsed ? 'Expand deck' : 'Collapse deck'}
+                  >
+                    {isCollapsed ? <FaChevronDown /> : <FaChevronUp />}
+                  </button>
+                  <button
+                    className={styles.decks.deleteBtn}
+                    onClick={() => deleteDeck(deck.id)}
+                    aria-label={`Delete ${deck.name}`}
+                    title="Delete deck"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
 
-              <div className={styles.decks.deckStats}>
+              {!isCollapsed && <>
+              {(deck.tags || []).length > 0 && (
+                <div className="mb-3 flex flex-wrap gap-1.5">
+                  {deck.tags.map(tag => <span key={tag} className="rounded-full bg-white/70 px-2 py-0.5 text-xs text-gray-600">{tag}</span>)}
+                </div>
+              )}
+
+                <div className={styles.decks.deckStats}>
                 <div className={styles.decks.statRow}>
                   <span>Total Cards:</span>
                   <span>{stats.total}</span>
@@ -461,8 +539,8 @@ export function DecksPage() {
                 </div>
                 {(studyOptions.cardLimit || studyOptions.onlyMissed) && (
                   <div className={styles.decks.statRow} style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                    <span className="font-medium text-blue-600">Study Session:</span>
-                    <span className="font-medium text-blue-600">{stats.studyCount} cards</span>
+                    <span className="font-medium" style={{ color: deckTextColor }}>Study Session:</span>
+                    <span className="font-medium" style={{ color: deckTextColor }}>{stats.studyCount} cards</span>
                   </div>
                 )}
               </div>
@@ -474,7 +552,7 @@ export function DecksPage() {
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>
-                <span className={styles.decks.progressText}>{Math.round(progress)}% complete</span>
+                <span className={styles.decks.progressText} style={{ color: deckTextColor }}>{Math.round(progress)}% complete</span>
               </div>
 
               <div className={styles.decks.deckActions}>
@@ -494,6 +572,7 @@ export function DecksPage() {
                 </button>
                 {/* delete button is in the top-right of the card header */}
               </div>
+              </>}
             </div>
           )
         })}
@@ -505,6 +584,9 @@ export function DecksPage() {
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">No Decks Yet</h2>
           <p className="text-gray-500">Create your first deck to start studying!</p>
         </div>
+      )}
+      {decks.length > 0 && visibleDecks.length === 0 && (
+        <p className="py-10 text-center text-sm text-gray-500">No decks match this tag.</p>
       )}
     </div>
   )

@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext'
 import { useStyle, useStorage } from '../utils'
 import { FlashCard } from '../components/FlashCard'
 import { useState, useEffect, useCallback, useContext, useRef } from 'react'
-import { FaBook, FaTrophy, FaExclamationTriangle, FaRedo } from 'react-icons/fa'
+import { FaBook, FaTrophy, FaExclamationTriangle, FaRedo, FaFlagCheckered } from 'react-icons/fa'
 
 /**
  * Custom hook for ReviewPage logic and state management
@@ -18,10 +18,15 @@ const useReviewPage = () => {
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
   const [showResult, setShowResult] = useState(false)
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 })
+  const [sessionStartedAt, setSessionStartedAt] = useState(() => Date.now())
+  const [ratingCounts, setRatingCounts] = useState({ 0: 0, 1: 0, 2: 0, 3: 0 })
+  const [isFocusedReview, setIsFocusedReview] = useState(false)
   const [studyCards, setStudyCards] = useState([])
+  const [eligibleStudyCards, setEligibleStudyCards] = useState([])
   const [originalStudyCards, setOriginalStudyCards] = useState([]) // Store the original subset for "Review Again"
   const cramMetricsRef = useRef(new Map())
   const cramTurnRef = useRef(0)
+  const finishedEarlyRef = useRef(false)
   const [dragState, setDragState] = useState({
     isFlipped: false,
     isDragging: false,
@@ -33,34 +38,41 @@ const useReviewPage = () => {
 
   // Save review state to localStorage
   const saveReviewState = useCallback(() => {
-    if (studyOptions.mode === 'cram') return
-
-    if (activeDeck && studyCards.length > 0) {
+    if (activeDeck && studyCards.length > 0 && !finishedEarlyRef.current) {
       const reviewState = {
         deckId: activeDeck.id,
         mode: studyOptions.mode,
         currentCardIndex,
         showResult,
         sessionStats,
+        sessionStartedAt,
+        ratingCounts,
+        isFocusedReview,
         studyCards,
+        eligibleStudyCards,
         originalStudyCards,
         timestamp: Date.now()
       }
 
-      saveToStorage('deckster_review_state', reviewState)
-    } else {
-
+      if (studyOptions.mode === 'cram') {
+        saveToStorage('deckster_cram_state', {
+          ...reviewState,
+          cramTurn: cramTurnRef.current,
+          cramMetrics: [...cramMetricsRef.current.entries()]
+        })
+      } else {
+        saveToStorage('deckster_review_state', reviewState)
+      }
     }
-  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards, originalStudyCards, studyOptions.mode])
+  }, [activeDeck, currentCardIndex, showResult, sessionStats, sessionStartedAt, ratingCounts, isFocusedReview, studyCards, eligibleStudyCards, originalStudyCards, studyOptions.mode, saveToStorage])
 
   // Load review state from localStorage
   const loadReviewState = useCallback(() => {
-    if (studyOptions.mode === 'cram') return false
-
     if (ignoreLoadRef.current) {
       return false
     }
-    const reviewState = loadFromStorage('deckster_review_state')
+    const isCramMode = studyOptions.mode === 'cram'
+    const reviewState = loadFromStorage(isCramMode ? 'deckster_cram_state' : 'deckster_review_state')
 
     if (reviewState) {
       // Only restore if it's for the same deck and recent (within 24 hours)
@@ -68,21 +80,30 @@ const useReviewPage = () => {
         (reviewState.mode || 'review') === (studyOptions.mode || 'review') &&
         Date.now() - reviewState.timestamp < 24 * 60 * 60 * 1000) {
 
+        if (isCramMode) {
+          cramTurnRef.current = reviewState.cramTurn || 0
+          cramMetricsRef.current = new Map(reviewState.cramMetrics || [])
+        }
         setCurrentCardIndex(reviewState.currentCardIndex)
         setShowResult(reviewState.showResult)
         setSessionStats(reviewState.sessionStats)
+        setSessionStartedAt(reviewState.sessionStartedAt || Date.now())
+        setRatingCounts(reviewState.ratingCounts || { 0: 0, 1: 0, 2: 0, 3: 0 })
+        setIsFocusedReview(reviewState.isFocusedReview || false)
         setStudyCards(reviewState.studyCards)
+        setEligibleStudyCards(reviewState.eligibleStudyCards || reviewState.originalStudyCards || reviewState.studyCards)
         setOriginalStudyCards(reviewState.originalStudyCards || reviewState.studyCards)
         return true
       }
     }
     return false
-  }, [activeDeck, studyOptions.mode])
+  }, [activeDeck, studyOptions.mode, loadFromStorage])
 
   // Clear review state
   const clearReviewState = useCallback(() => {
     clearFromStorage('deckster_review_state')
-  }, [])
+    clearFromStorage('deckster_cram_state')
+  }, [clearFromStorage])
 
   const getCardStrength = useCallback((card) => {
     if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
@@ -115,23 +136,28 @@ const useReviewPage = () => {
   const prepareStudyCards = useCallback((deck, options) => {
     if (!deck || !deck.cards || deck.cards.length === 0) return []
 
-    let cards = [...deck.cards]
+    const isFocusedReview = Array.isArray(options?.cardIds)
+    let cards = isFocusedReview
+      ? deck.cards.filter(card => options.cardIds.includes(card.id))
+      : [...deck.cards]
 
-    const statusFiltersActive = options?.onlyNew || options?.onlyLearning || options?.onlyMastered || options?.onlyMissed
-    if (options?.mode !== 'cram' && statusFiltersActive) {
-      cards = cards.filter(card => (
-        (options.onlyNew && getCardState(card) === 'new') ||
-        (options.onlyMissed && getCardStrength(card) < 60) ||
-        (options.onlyLearning && getCardState(card) === 'learning') ||
-        (options.onlyMastered && getCardState(card) === 'mastered')
-      ))
-    }
-    if (options?.mode !== 'cram' && options?.recentlyWrong) {
-      cards = cards.filter(card => (card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2)
-    }
+    if (!isFocusedReview) {
+      const statusFiltersActive = options?.onlyNew || options?.onlyLearning || options?.onlyMastered || options?.onlyMissed
+      if (options?.mode !== 'cram' && statusFiltersActive) {
+        cards = cards.filter(card => (
+          (options.onlyNew && getCardState(card) === 'new') ||
+          (options.onlyMissed && getCardStrength(card) < 60) ||
+          (options.onlyLearning && getCardState(card) === 'learning') ||
+          (options.onlyMastered && getCardState(card) === 'mastered')
+        ))
+      }
+      if (options?.mode !== 'cram' && options?.recentlyWrong) {
+        cards = cards.filter(card => (card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2)
+      }
 
-    if (cards.length === 0) {
-      cards = [...deck.cards]
+      if (cards.length === 0) {
+        cards = [...deck.cards]
+      }
     }
 
     if (options?.weakestFirst) {
@@ -154,7 +180,7 @@ const useReviewPage = () => {
       }
     })
 
-    if (options?.mode !== 'cram' && options?.cardLimit && options.cardLimit > 0) {
+    if (!isFocusedReview && options?.mode !== 'cram' && options?.cardLimit && options.cardLimit > 0) {
       return studyCards.slice(0, options.cardLimit)
     }
 
@@ -179,29 +205,61 @@ const useReviewPage = () => {
   const resetSession = useCallback((forceNewSubset = false) => {
 
     ignoreLoadRef.current = true
+    finishedEarlyRef.current = false
     cramMetricsRef.current = new Map()
     cramTurnRef.current = 0
     // Clear persisted state
     clearFromStorage('deckster_review_state')
+    clearFromStorage('deckster_cram_state')
 
     // Reset in-memory state
     if (!forceNewSubset && originalStudyCards.length > 0) {
       const prioritizedCards = resortStudyCards(originalStudyCards, studyOptions)
       setStudyCards(prioritizedCards)
     } else {
-      // Create new subset using priority and filter logic
-      const cards = prepareStudyCards(activeDeck, studyOptions)
+      const eligibleCards = prepareStudyCards(activeDeck, { ...studyOptions, cardLimit: null })
+      const cards = studyOptions.mode !== 'cram' && studyOptions.cardLimit
+        ? eligibleCards.slice(0, studyOptions.cardLimit)
+        : eligibleCards
       setStudyCards(cards)
+      setEligibleStudyCards(eligibleCards)
       setOriginalStudyCards(cards) // Store the new subset as original
     }
     
     setCurrentCardIndex(0)
     setShowResult(false)
     setSessionStats({ correct: 0, total: 0 })
+    setSessionStartedAt(Date.now())
+    setRatingCounts({ 0: 0, 1: 0, 2: 0, 3: 0 })
+    setIsFocusedReview(false)
 
     // Allow loads again after a short tick so other effects can run
     setTimeout(() => { ignoreLoadRef.current = false }, 200)
   }, [activeDeck, prepareStudyCards, resortStudyCards, originalStudyCards, studyOptions, clearFromStorage])
+
+  const finishSession = useCallback(() => {
+    finishedEarlyRef.current = true
+    clearReviewState()
+    setShowResult(true)
+  }, [clearReviewState])
+
+  const continueSession = useCallback(() => {
+    const answeredCards = studyCards.slice(0, sessionStats.total)
+    const answeredIds = new Set(answeredCards.map(card => card.id))
+    const remainingCards = eligibleStudyCards.filter(card => !answeredIds.has(card.id))
+
+    if (remainingCards.length === 0) return
+
+    const continuedCards = [...answeredCards, ...remainingCards]
+    clearReviewState()
+    finishedEarlyRef.current = false
+    setStudyCards(continuedCards)
+    setEligibleStudyCards(continuedCards)
+    setOriginalStudyCards(continuedCards)
+    setIsFocusedReview(false)
+    setCurrentCardIndex(answeredCards.length)
+    setShowResult(false)
+  }, [clearReviewState, eligibleStudyCards, sessionStats.total, studyCards])
 
   // Initialize study cards when deck changes
   useEffect(() => {
@@ -217,12 +275,17 @@ const useReviewPage = () => {
       if (!stateLoaded) {
         // No saved state, start fresh
         const cards = prepareStudyCards(activeDeck, studyOptions)
+        const eligibleCards = prepareStudyCards(activeDeck, { ...studyOptions, cardLimit: null })
 
         setStudyCards(cards)
+        setEligibleStudyCards(eligibleCards)
         setOriginalStudyCards(cards) // Store original subset for "Review Again"
         setCurrentCardIndex(0)
         setShowResult(false)
         setSessionStats({ correct: 0, total: 0 })
+        setSessionStartedAt(Date.now())
+        setRatingCounts({ 0: 0, 1: 0, 2: 0, 3: 0 })
+        setIsFocusedReview(false)
       }
     }
   }, [activeDeck, prepareStudyCards, loadReviewState, studyOptions])
@@ -237,18 +300,26 @@ const useReviewPage = () => {
     studyOptions,
     showInfo,
     resetSession,
+    finishSession,
+    continueSession,
     currentCardIndex,
     setCurrentCardIndex,
     showResult,
     setShowResult,
     sessionStats,
     setSessionStats,
+    sessionStartedAt,
+    ratingCounts,
+    setRatingCounts,
+    isFocusedReview,
     studyCards,
+    eligibleStudyCards,
     setStudyCards,
     dragState,
     setDragState,
     cramMetricsRef,
     cramTurnRef,
+    finishedEarlyRef,
     saveReviewState,
     loadReviewState,
     clearReviewState
@@ -266,26 +337,33 @@ export function ReviewPage() {
     studyOptions,
     showInfo,
     resetSession,
+    finishSession,
+    continueSession,
     currentCardIndex,
     setCurrentCardIndex,
     showResult,
     setShowResult,
     sessionStats,
     setSessionStats,
+    sessionStartedAt,
+    ratingCounts,
+    setRatingCounts,
+    isFocusedReview,
     studyCards,
+    eligibleStudyCards,
     setStudyCards,
     dragState,
     setDragState,
     cramMetricsRef,
     cramTurnRef,
+    finishedEarlyRef,
     saveReviewState,
-    loadReviewState,
-    clearReviewState
+    loadReviewState
   } = useReviewPage()
 
   // Custom styles for ReviewPage
   const customStyles = {
-    container: 'h-full flex flex-col p-2 sm:p-4',
+    container: 'h-full flex flex-col p-2 sm:p-4 md:max-w-3xl md:mx-auto md:w-full',
     emptyState: 'flex flex-col items-center justify-center min-h-96 p-6 text-center',
     emptyIcon: 'text-5xl text-gray-400 mb-3',
     // Tighten header spacing and ensure it stacks above the card
@@ -343,12 +421,12 @@ export function ReviewPage() {
   useEffect(() => {
     return () => {
       // Save current state before unmounting
-      if (activeDeck && studyCards.length > 0 && !showResult) {
+      if (activeDeck && studyCards.length > 0 && !showResult && !finishedEarlyRef.current) {
         // Use the hook-provided saver to persist review state
         saveReviewState()
       }
     }
-  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards])
+  }, [activeDeck, currentCardIndex, showResult, sessionStats, studyCards, saveReviewState])
 
   const getCardStrength = (card) => {
     if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
@@ -378,19 +456,28 @@ export function ReviewPage() {
     const isCorrect = rating >= 2
     const correctStreak = isCorrect ? (card.correctStreak || 0) + 1 : 0
     const lapseCount = isCorrect ? (card.lapseCount || 0) : (card.lapseCount || 0) + 1
+    const reviewedAt = new Date().toISOString()
+    const reviewHistory = Array.isArray(card.reviewHistory) ? card.reviewHistory : []
 
     return {
       ...card,
       difficulty: nextStrength,
       memoryStrength: nextStrength,
       state: nextStrength >= 80 ? 'mastered' : nextStrength >= 55 ? 'learning' : 'new',
-      lastReviewed: new Date().toISOString(),
-      lastReviewedAt: new Date().toISOString(),
+      lastReviewed: reviewedAt,
+      lastReviewedAt: reviewedAt,
       reviewCount,
       correctStreak,
       lapseCount,
       lastResult: rating,
-      updatedAt: new Date().toISOString()
+      reviewHistory: [...reviewHistory, {
+        review: reviewCount,
+        rating,
+        mode: studyOptions.mode === 'cram' ? 'cram' : 'study',
+        reviewedAt,
+        strength: nextStrength
+      }],
+      updatedAt: reviewedAt
     }
   }
 
@@ -450,9 +537,12 @@ export function ReviewPage() {
       return
     }
 
-    const updatedCard = updateCardReviewState(currentCard, difficulty)
+    const latestDeck = decks.find(deck => deck.id === activeDeck.id) || activeDeck
+    const latestCard = latestDeck.cards.find(card => card.id === currentCard.id) || currentCard
+    const updatedCard = updateCardReviewState(latestCard, difficulty)
 
-    if (studyOptions.mode === 'cram') {
+    setRatingCounts(prev => ({ ...prev, [difficulty]: prev[difficulty] + 1 }))
+    if (studyOptions.mode === 'cram' && !isFocusedReview) {
       const currentMetrics = cramMetricsRef.current.get(currentCard.id) || {
         attempts: 0,
         misses: 0,
@@ -497,7 +587,7 @@ export function ReviewPage() {
       streakCount: isCorrect ? prev.streakCount + 1 : 0
     }))
 
-    if (studyOptions.mode === 'cram') {
+    if (studyOptions.mode === 'cram' && !isFocusedReview) {
       const nextDeck = updatedDecks.find(deck => deck.id === activeDeck.id) || {
         ...activeDeck,
         cards: activeDeck.cards.map(card => card.id === currentCard.id ? updatedCard : card)
@@ -534,7 +624,7 @@ export function ReviewPage() {
           <h2 className="mb-4">Choose a Deck</h2>
           {decks.length > 0 ? (
             <div className="w-full max-w-md space-y-2">
-              {decks.map(deck => (
+              {decks.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(deck => (
                 <button
                   key={deck.id}
                   type="button"
@@ -576,26 +666,58 @@ export function ReviewPage() {
   }
 
   if (showResult) {
-    const accuracy = Math.round((sessionStats.correct / sessionStats.total) * 100)
+    const accuracy = sessionStats.total ? Math.round((sessionStats.correct / sessionStats.total) * 100) : 0
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - sessionStartedAt) / 1000))
+    const elapsedDuration = elapsedSeconds >= 3600
+      ? `${Math.floor(elapsedSeconds / 3600)}h ${Math.floor((elapsedSeconds % 3600) / 60)}m`
+      : elapsedSeconds >= 60
+        ? `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`
+        : `${elapsedSeconds}s`
+    const ratingSummary = [
+      { rating: 0, label: 'Again', color: 'text-red-600', background: 'bg-red-50' },
+      { rating: 1, label: 'Hard', color: 'text-orange-600', background: 'bg-orange-50' },
+      { rating: 2, label: 'Good', color: 'text-emerald-700', background: 'bg-emerald-50' },
+      { rating: 3, label: 'Easy', color: 'text-blue-700', background: 'bg-blue-50' }
+    ]
     return (
       <div className={styles.review.container}>
-        <div className={styles.review.panelLarge}>
+        <div className={`${styles.review.panelLarge} w-full max-w-2xl gap-5`}>
           <div className={styles.review.resultIcon}><FaTrophy /></div>
-          <h2 className={styles.review.resultTitle}>Session Complete!</h2>
-          <div className={styles.review.resultRow}>
-            <div className={styles.review.resultStat}>
+          <h2 className={`${styles.review.resultTitle} mb-0`}>Session Complete!</h2>
+          <div className="grid w-full grid-cols-3 gap-3">
+            <div className="rounded-lg bg-gray-50 p-3 text-center">
               <span className={styles.review.resultNumber}>{sessionStats.total}</span>
               <span className={styles.review.resultLabel}>Cards Reviewed</span>
             </div>
-            <div className={styles.review.resultStat}>
+            <div className="rounded-lg bg-gray-50 p-3 text-center">
               <span className={styles.review.resultNumberAccent}>{accuracy}%</span>
               <span className={styles.review.resultLabel}>Accuracy</span>
             </div>
+            <div className="rounded-lg bg-gray-50 p-3 text-center">
+              <span className="block text-3xl font-bold text-gray-800">{elapsedDuration}</span>
+              <span className={styles.review.resultLabel}>Time</span>
+            </div>
           </div>
-          <div>
+          <section className="w-full">
+            <h3 className="mb-2 text-left text-sm font-semibold text-gray-700">Rating breakdown</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {ratingSummary.map(({ rating, label, color, background }) => (
+                <div key={rating} className={`rounded-lg px-2 py-3 text-center ${background}`}>
+                  <span className={`block text-xl font-bold ${color}`}>{ratingCounts[rating]}</span>
+                  <span className="text-xs text-gray-600">{label}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+          <div className="flex flex-wrap justify-center gap-3">
             <button className={styles.review.resultButton} onClick={() => resetSession()}>
               Review Again
             </button>
+            {studyOptions.mode !== 'cram' && sessionStats.total < eligibleStudyCards.length && (
+              <button className={styles.review.resultButton} onClick={continueSession}>
+                Continue
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -635,8 +757,18 @@ export function ReviewPage() {
             className={styles.review.resetButton}
             onClick={(e) => { e.stopPropagation(); resetSession(true); }}
             title="Reset session"
+            aria-label="Reset session"
           >
             <FaRedo />
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-center rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            onClick={(e) => { e.stopPropagation(); finishSession(); }}
+            title="Finish study session"
+            aria-label="Finish study session"
+          >
+            <FaFlagCheckered />
           </button>
         </div>
         <div className={styles.review.headerText}>
@@ -661,6 +793,7 @@ export function ReviewPage() {
             onReview={handleCardReview}
             onDragStateChange={handleDragStateChange}
             studyOptions={studyOptions}
+            appearance={activeDeck.appearance}
           />
         </div>
       </div>

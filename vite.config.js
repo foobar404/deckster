@@ -2,16 +2,21 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const appBase = process.env.NODE_ENV === 'production' ? '/deckster/' : '/'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
         name: 'Deckster - Flashcard App',
         short_name: 'Deckster',
@@ -20,23 +25,23 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        scope: '/',
-        start_url: '/deckster/',
+        scope: appBase,
+        start_url: `${appBase}#/decks`,
         icons: [
           {
-            src: '/icon.svg',
+            src: `${appBase}icon.svg`,
             sizes: '192x192',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/icon.svg',
+            src: `${appBase}icon.svg`,
             sizes: '512x512',
             type: 'image/svg+xml',
             purpose: 'any'
           },
           {
-            src: '/icon.svg',
+            src: `${appBase}icon.svg`,
             sizes: 'any',
             type: 'image/svg+xml',
             purpose: 'maskable'
@@ -45,7 +50,7 @@ export default defineConfig({
       }
     })
   ],
-  base: process.env.NODE_ENV === 'production' ? '/deckster/' : '/',
+  base: appBase,
   server: {
     port: 5175, // bumped port number
     host: '0.0.0.0', // Allow external connections

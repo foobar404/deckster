@@ -1,8 +1,8 @@
 import { useStyle } from '../utils'
-import { useContext } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useContext, useState } from 'react'
 import { AppContext } from '../context/AppContext'
-import { FaExclamationTriangle, FaPlay } from 'react-icons/fa'
+import { CardStats } from '../components/CardStats'
+import { FaExclamationTriangle, FaLayerGroup } from 'react-icons/fa'
 
 const getCardStrength = (card) => {
   if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
@@ -28,9 +28,10 @@ const getDeckInsights = (deck) => {
   const cards = deck.cards || []
   const counts = cards.reduce((result, card) => {
     const state = getCardState(card)
-    result[state] += 1
+    const isStruggling = (card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2
+    // Each card belongs to exactly one bucket so the four counts always add up to the deck total
+    result[isStruggling ? 'struggling' : state] += 1
     if (card.lastReviewedAt || card.lastReviewed) result.reviewed += 1
-    if ((card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2) result.struggling += 1
     if (getDaysSinceReview(card) >= 7 && state !== 'mastered') result.stale += 1
     return result
   }, { new: 0, learning: 0, mastered: 0, struggling: 0, stale: 0, reviewed: 0 })
@@ -55,13 +56,13 @@ const getRecommendation = (insights) => {
 }
 
 export function StatsPage() {
-  const { decks, setActiveDeck } = useContext(AppContext)
-  const navigate = useNavigate()
+  const { decks } = useContext(AppContext)
+  const [selectedDeck, setSelectedDeck] = useState(null)
   const baseStyles = useStyle()
   const styles = {
     ...baseStyles,
     stats: {
-      container: 'p-4 pb-5 md:pb-4',
+      container: 'p-4 pb-5 md:pb-4 md:max-w-4xl md:mx-auto',
       header: 'mb-6',
       emptyState: 'flex flex-col items-center justify-center min-h-96 p-8 text-center'
     }
@@ -69,11 +70,15 @@ export function StatsPage() {
 
   const deckInsights = decks
     .map(deck => ({ deck, insights: getDeckInsights(deck) }))
-    .sort((a, b) => b.insights.priority - a.insights.priority)
+    .sort((a, b) => a.deck.name.localeCompare(b.deck.name, undefined, { sensitivity: 'base' }))
 
-  const startStudying = (deck) => {
-    setActiveDeck(deck)
-    navigate('/review')
+  if (selectedDeck) {
+    return (
+      <CardStats
+        deck={decks.find(deck => deck.id === selectedDeck.id) || selectedDeck}
+        onBack={() => setSelectedDeck(null)}
+      />
+    )
   }
 
   return (
@@ -94,46 +99,36 @@ export function StatsPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => startStudying(deck)}
+                  onClick={() => setSelectedDeck(deck)}
                   className="self-start rounded-lg bg-blue-500 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 flex items-center gap-2"
                 >
-                  <FaPlay /> Study
+                  <FaLayerGroup /> View Cards
                 </button>
               </div>
 
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <div className="rounded-lg bg-amber-50 p-2">
-                  <div className="text-lg font-bold text-amber-700">{insights.new}</div>
-                  <div className="text-xs text-amber-700">New</div>
-                </div>
-                <div className="rounded-lg bg-red-50 p-2">
-                  <div className="text-lg font-bold text-red-700">{insights.struggling}</div>
-                  <div className="text-xs text-red-700">Struggling</div>
-                </div>
-                <div className="rounded-lg bg-blue-50 p-2">
-                  <div className="text-lg font-bold text-blue-700">{insights.learning}</div>
-                  <div className="text-xs text-blue-700">Learning</div>
-                </div>
-                <div className="rounded-lg bg-green-50 p-2">
-                  <div className="text-lg font-bold text-green-700">{insights.mastered}</div>
-                  <div className="text-xs text-green-700">Mastered</div>
-                </div>
-              </div>
-
-              <div className="mt-3">
-                <div className="mb-1 flex justify-between text-xs text-gray-500">
-                  <span>{insights.reviewed}/{insights.total} reviewed at least once</span>
-                  <span>{insights.reviewedProgress}%</span>
-                </div>
-                <div className="h-2 w-full rounded-full bg-gray-200">
-                  <div className="h-2 rounded-full bg-blue-500 transition-all" style={{ width: `${insights.reviewedProgress}%` }} />
-                </div>
-              </div>
-
               <div className="mt-4">
-                <div className="mb-1 text-right text-xs text-gray-500">{insights.progress}% mastered</div>
-                <div className="h-2 w-full rounded-full bg-gray-200">
-                  <div className="h-2 rounded-full bg-yellow-400 transition-all" style={{ width: `${insights.progress}%` }} />
+                <div className="relative h-3 w-full rounded-full bg-gray-200 overflow-hidden">
+                  {/* rendered largest count first so smaller layers stay visible on top */}
+                  {[
+                    { key: 'new', label: 'New', count: insights.new, color: 'bg-gray-400' },
+                    { key: 'struggling', label: 'Struggling', count: insights.struggling, color: 'bg-orange-400' },
+                    { key: 'learning', label: 'Learning', count: insights.learning, color: 'bg-blue-500' },
+                    { key: 'mastered', label: 'Mastered', count: insights.mastered, color: 'bg-green-500' }
+                  ]
+                    .sort((a, b) => b.count - a.count)
+                    .map(layer => layer.count > 0 && (
+                      <div
+                        key={layer.key}
+                        className={`absolute inset-y-0 left-0 rounded-full ${layer.color}`}
+                        style={{ width: `${(layer.count / insights.total) * 100}%` }}
+                      />
+                    ))}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-gray-400" />New {insights.new}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-orange-400" />Struggling {insights.struggling}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-blue-500" />Learning {insights.learning}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" />Mastered {insights.mastered}</span>
                 </div>
               </div>
             </section>
