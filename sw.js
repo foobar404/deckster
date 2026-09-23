@@ -1,1 +1,25 @@
-if(!self.define){let e,i={};const n=(n,s)=>(n=new URL(n+".js",s).href,i[n]||new Promise(i=>{if("document"in self){const e=document.createElement("script");e.src=n,e.onload=i,document.head.appendChild(e)}else e=n,importScripts(n),i()}).then(()=>{let e=i[n];if(!e)throw new Error(`Module ${n} didn’t register its module`);return e}));self.define=(s,r)=>{const c=e||("document"in self?document.currentScript.src:"")||location.href;if(i[c])return;let o={};const t=e=>n(e,c),f={module:{uri:c},exports:o,require:t};i[c]=Promise.all(s.map(e=>f[e]||t(e))).then(e=>(r(...e),o))}}define(["./workbox-5ffe50d4"],function(e){"use strict";self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"assets/index-C2xbyALx.js",revision:null},{url:"assets/index-DwZwLcLy.css",revision:null},{url:"icon-192.png",revision:"4d338860afc5cb3660476cf83a6cac90"},{url:"icon.svg",revision:"f9f06099dfae1ce8f5d6749d346c2e03"},{url:"index.html",revision:"d25048cb8fc1de5e1812fe74a68791f0"},{url:"manifest.webmanifest",revision:"37c2eb091dd0bc70de3a4b0c89f85697"},{url:"new-icon.png",revision:"d1ff9a2e20d377e50725353600894128"},{url:"registerSW.js",revision:"c7dbb6947964c504e3c6f2f7c64b39e8"},{url:"manifest.webmanifest",revision:"37c2eb091dd0bc70de3a4b0c89f85697"}],{}),e.cleanupOutdatedCaches(),e.registerRoute(new e.NavigationRoute(e.createHandlerBoundToURL("index.html")))});
+
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+});
+self.addEventListener('activate', (e) => {
+  self.registration.unregister()
+    .then(() => self.clients.matchAll())
+    .then((clients) => {
+      clients.forEach((client) => {
+        if (client instanceof WindowClient)
+          client.navigate(client.url);
+      });
+      return Promise.resolve();
+    })
+    .then(() => {
+      self.caches.keys().then((cacheNames) => {
+        Promise.all(
+          cacheNames.map((cacheName) => {
+            return self.caches.delete(cacheName);
+          }),
+        );
+      })
+    });
+});
+    
