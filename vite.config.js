@@ -9,6 +9,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      selfDestroying: true,
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
