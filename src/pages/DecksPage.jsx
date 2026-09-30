@@ -1,11 +1,19 @@
 import { useStyle } from '../utils'
 import { useNavigate } from 'react-router-dom'
-import { useState, useContext } from 'react'
+import { useState, useEffect, useContext } from 'react'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { Portal } from '../components/Portal'
 import { CardEditor } from '../components/CardEditor'
-import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaChevronDown, FaChevronUp } from 'react-icons/fa'
+import { DeckStatusSummary } from '../components/DeckStatusSummary'
+import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaSort, FaChevronDown, FaChevronUp } from 'react-icons/fa'
+
+const deckSortOptions = [
+  { value: 'name-asc', label: 'A-Z', description: 'Name, A to Z' },
+  { value: 'name-desc', label: 'Z-A', description: 'Name, Z to A' },
+  { value: 'newest', label: 'New', description: 'Newest first' },
+  { value: 'oldest', label: 'Old', description: 'Oldest first' }
+]
 
 /**
  * Custom hook for DecksPage logic and state management
@@ -19,8 +27,21 @@ const useDecksPage = () => {
   const [newDeckName, setNewDeckName] = useState('')
   const [editingDeck, setEditingDeck] = useState(null)
   const [showOptions, setShowOptions] = useState(false)
-  const [selectedTag, setSelectedTag] = useState('all')
+  const [selectedTag, setSelectedTag] = useState(() => {
+    try {
+      return localStorage.getItem('flashcards_selected_deck_tag') || 'all'
+    } catch {
+      return 'all'
+    }
+  })
   const [showTagFilter, setShowTagFilter] = useState(false)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('flashcards_selected_deck_tag', selectedTag)
+    } catch {
+    }
+  }, [selectedTag])
 
   const createDeck = () => {
     if (!newDeckName.trim()) return
@@ -53,8 +74,6 @@ const useDecksPage = () => {
 
   const getDeckStats = (deck) => {
     const total = deck.cards.length
-    const reviewed = deck.cards.filter(card => card.lastReviewed || card.lastReviewedAt).length
-    const mastered = deck.cards.filter(card => getCardStrength(card) >= 80 || card.state === 'mastered').length
 
     // Calculate study cards based on current options
     let studyCount = total
@@ -68,7 +87,7 @@ const useDecksPage = () => {
       studyCount = Math.min(studyCount, studyOptions.cardLimit)
     }
 
-    return { total, reviewed, mastered, studyCount }
+    return { total, studyCount }
   }
 
   const updateDeck = (updatedDeck) => {
@@ -115,7 +134,22 @@ const useDecksPage = () => {
 }
 
 export function DecksPage() {
-  const [collapsedDeckIds, setCollapsedDeckIds] = useState(() => new Set())
+  const [collapsedDeckIds, setCollapsedDeckIds] = useState(() => {
+    try {
+      const savedIds = JSON.parse(localStorage.getItem('flashcards_collapsed_deck_ids') || '[]')
+      return new Set(Array.isArray(savedIds) ? savedIds : [])
+    } catch {
+      return new Set()
+    }
+  })
+  const [sortMode, setSortMode] = useState(() => {
+    try {
+      const savedSortMode = localStorage.getItem('flashcards_deck_sort_mode')
+      return deckSortOptions.some(option => option.value === savedSortMode) ? savedSortMode : 'name-asc'
+    } catch {
+      return 'name-asc'
+    }
+  })
   const {
     navigate,
     decks,
@@ -144,12 +178,39 @@ export function DecksPage() {
     handleDeckSelect
   } = useDecksPage()
 
+  useEffect(() => {
+    try {
+      localStorage.setItem('flashcards_collapsed_deck_ids', JSON.stringify([...collapsedDeckIds]))
+    } catch {
+    }
+  }, [collapsedDeckIds])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('flashcards_deck_sort_mode', sortMode)
+    } catch {
+    }
+  }, [sortMode])
+
   const availableTags = [...new Set(decks.flatMap(deck => deck.tags || []))]
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
   const visibleDecks = decks
     .filter(deck => selectedTag === 'all' || (deck.tags || []).includes(selectedTag))
     .slice()
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+    .sort((a, b) => {
+      if (sortMode === 'name-asc' || sortMode === 'name-desc') {
+        const direction = sortMode === 'name-asc' ? 1 : -1
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) * direction
+      }
+
+      const getCreationTime = deck => {
+        const time = deck.createdAt ? new Date(deck.createdAt).getTime() : Number(deck.id)
+        return Number.isFinite(time) ? time : 0
+      }
+      const direction = sortMode === 'newest' ? 1 : -1
+      return (getCreationTime(b) - getCreationTime(a)) * direction
+    })
+  const currentSortOption = deckSortOptions.find(option => option.value === sortMode)
 
   // Custom styles for DecksPage
   const customStyles = {
@@ -178,10 +239,6 @@ export function DecksPage() {
     deleteBtn: 'p-0 bg-white/60 text-gray-500 hover:bg-white hover:text-red-600 rounded-md transition-colors duration-150 flex items-center justify-center w-9 h-9',
     deckStats: 'mb-4 space-y-2',
     statRow: 'flex justify-between text-sm text-gray-600',
-    progressContainer: 'mb-4',
-    progressBar: 'w-full bg-gray-200 rounded-full h-2 mb-2',
-    progressFill: 'bg-blue-500 h-2 rounded-full transition-all duration-300',
-    progressText: 'text-sm text-gray-600',
     deckActions: 'flex gap-3 justify-center mt-4',
     emptyIcon: 'text-6xl text-gray-400 mb-4'
   }
@@ -193,6 +250,7 @@ export function DecksPage() {
     return (
       <CardEditor
         deck={editingDeck}
+        onDraftSave={updateDeck}
         onSave={(updatedDeck) => {
           updateDeck(updatedDeck)
           setEditingDeck(null) // Go back to deck list
@@ -242,6 +300,30 @@ export function DecksPage() {
               </div>
 
               <div className={`${styles.decks.optionGroup} order-4`}>
+                {studyOptions.mode !== 'cram' && (
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-medium mb-2">Card order:</label>
+                    <div className={styles.decks.radioGroup}>
+                      {[
+                        { value: 'forward', label: 'Forward' },
+                        { value: 'reverse', label: 'Reverse' },
+                        { value: 'random', label: 'Random' }
+                      ].map(order => (
+                        <label key={order.value} className="flex items-center gap-3 text-gray-700">
+                          <input
+                            type="radio"
+                            name="card-order"
+                            value={order.value}
+                            checked={studyOptions.cardOrder === order.value}
+                            onChange={(e) => setStudyOptions(prev => ({ ...prev, cardOrder: e.target.value }))}
+                            className="form-radio"
+                          />
+                          {order.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <label className="block text-gray-700 font-medium mb-2">Card Direction:</label>
                 <div className={styles.decks.radioGroup}>
                   <label className="flex items-center gap-3 text-gray-700">
@@ -435,7 +517,20 @@ export function DecksPage() {
         </div>
       )}
 
-      <div className="relative mb-4">
+      <div className="relative mb-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            const currentIndex = deckSortOptions.findIndex(option => option.value === sortMode)
+            setSortMode(deckSortOptions[(currentIndex + 1) % deckSortOptions.length].value)
+          }}
+          aria-label={`Sort decks: ${currentSortOption.description}. Click to change sort order.`}
+          title={`Sort: ${currentSortOption.description}`}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <FaSort />
+          {currentSortOption.label}
+        </button>
         <button
           type="button"
           onClick={() => setShowTagFilter(open => !open)}
@@ -478,10 +573,9 @@ export function DecksPage() {
       <div className={styles.decks.decksGrid}>
         {visibleDecks.map(deck => {
           const stats = getDeckStats(deck)
-          const progress = stats.total > 0 ? (stats.reviewed / stats.total) * 100 : 0
           const isCollapsed = collapsedDeckIds.has(deck.id)
           const deckColor = deck.appearance?.color || '#ffffff'
-          const deckTextColor = '#111827'
+          const deckTextColor = 'var(--theme-text)'
 
           return (
             <div key={deck.id} className={`${styles.decks.deckCard} ${isCollapsed ? 'p-3' : ''}`} style={{ borderColor: deckColor, color: deckTextColor }}>
@@ -525,34 +619,13 @@ export function DecksPage() {
               )}
 
                 <div className={styles.decks.deckStats}>
-                <div className={styles.decks.statRow}>
-                  <span>Total Cards:</span>
-                  <span>{stats.total}</span>
-                </div>
-                <div className={styles.decks.statRow}>
-                  <span>Reviewed:</span>
-                  <span>{stats.reviewed}</span>
-                </div>
-                <div className={styles.decks.statRow}>
-                  <span>Mastered:</span>
-                  <span>{stats.mastered}</span>
-                </div>
-                {(studyOptions.cardLimit || studyOptions.onlyMissed) && (
-                  <div className={styles.decks.statRow} style={{ borderTop: '1px solid #e5e7eb', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
+                <DeckStatusSummary cards={deck.cards} />
+                {studyOptions.mode !== 'cram' && (studyOptions.cardLimit || studyOptions.onlyMissed) && (
+                  <div className={styles.decks.statRow} style={{ borderTop: '1px solid var(--theme-border)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
                     <span className="font-medium" style={{ color: deckTextColor }}>Study Session:</span>
                     <span className="font-medium" style={{ color: deckTextColor }}>{stats.studyCount} cards</span>
                   </div>
                 )}
-              </div>
-
-              <div className={styles.decks.progressContainer}>
-                <div className={styles.decks.progressBar}>
-                  <div
-                    className={styles.decks.progressFill}
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-                <span className={styles.decks.progressText} style={{ color: deckTextColor }}>{Math.round(progress)}% complete</span>
               </div>
 
               <div className={styles.decks.deckActions}>

@@ -5,6 +5,15 @@ import { useToast } from '../context/ToastContext'
 import { useState, useEffect, useContext, useRef } from 'react'
 import { FaFileUpload } from 'react-icons/fa'
 
+const deckColorOptions = [
+  ['#ffffff', 'White'], ['#0B1026', 'Midnight navy'], ['#1A1F47', 'Navy'], ['#2D3EB3', 'Royal indigo'], ['#3F51B5', 'Indigo'],
+  ['#5C6BC0', 'Periwinkle'], ['#7986CB', 'Soft indigo'], ['#9FA8DA', 'Lavender blue'], ['#B3E5FC', 'Light blue'],
+  ['#4DD0E1', 'Cyan'], ['#26C6DA', 'Turquoise'], ['#00BFA5', 'Teal'], ['#00C853', 'Green'],
+  ['#69F0AE', 'Mint'], ['#B2FF59', 'Lime'], ['#EEFF41', 'Lemon'], ['#FFD54F', 'Amber'],
+  ['#FFB74D', 'Orange'], ['#FF8A65', 'Coral'], ['#F44336', 'Red'], ['#D32F2F', 'Dark red'],
+  ['#8D1B1B', 'Wine'], ['#6D4037', 'Brown'], ['#8D6E63', 'Warm gray'], ['#D45A78', 'Rose'], ['#AB47BC', 'Purple']
+]
+
 /**
  * Custom hook for ImportPage logic and state management
  * @returns {Object} All state and handlers needed by the ImportPage component
@@ -14,6 +23,7 @@ const useImportPage = () => {
   const { showError, showInfo } = useToast()
   const [importText, setImportText] = useState('')
   const [deckName, setDeckName] = useState('')
+  const [generatedDeckSettings, setGeneratedDeckSettings] = useState(null)
   const [preview, setPreview] = useState(null)
   const [activeTab, setActiveTab] = useState('text')
   const [apiKey, setApiKey] = useState(() => {
@@ -65,6 +75,14 @@ const useImportPage = () => {
         const availableModels = Array.isArray(result.data)
           ? result.data.filter((entry) => entry.id && entry.name)
           : []
+        const lunaModel = {
+          id: 'openai/gpt-6-luna',
+          name: 'OpenAI: GPT-6 Luna',
+          pricing: { prompt: '0.0000001', completion: '0.0000005' },
+        }
+        if (!availableModels.some((entry) => entry.id === lunaModel.id)) {
+          availableModels.push(lunaModel)
+        }
         if (!availableModels.length) {
           throw new Error('OpenRouter returned no compatible text models.')
         }
@@ -138,11 +156,11 @@ const useImportPage = () => {
         messages: [
           {
             role: 'system',
-            content: 'Create accurate, useful flashcards. Return only a JSON object with a "cards" array. Each array item must have string fields "front" and "back". Do not include markdown or any text outside the JSON.'
+            content: `Create accurate, useful flashcards and suitable deck settings. Return only a JSON object with "deckName", "icon", "color", and "cards". "deckName" must be a concise suggested name, "icon" must be one emoji, and "color" must be one of these exact hex values: ${deckColorOptions.map(([color, label]) => `${label} ${color}`).join(', ')}. Each card must have string fields "front" and "back". Do not include markdown or any text outside the JSON.`
           },
           {
             role: 'user',
-            content: `Create exactly ${requestedCount} flashcards following the topic, language, and other instructions below. If no language is specified, use English.\n\n${cleanTopic}\n\nKeep each side concise and self-contained. Do not number the cards.`
+            content: `Create exactly ${requestedCount} flashcards following the topic, language, and other instructions below. Also suggest a concise deck name, one fitting emoji icon, and the best matching color from the allowed options. If no language is specified, use English.\n\n${cleanTopic}\n\nKeep each side concise and self-contained. Do not number the cards.`
           }
         ]
       }
@@ -155,6 +173,9 @@ const useImportPage = () => {
             schema: {
               type: 'object',
               properties: {
+                deckName: { type: 'string' },
+                icon: { type: 'string' },
+                color: { type: 'string', enum: deckColorOptions.map(([color]) => color) },
                 cards: {
                   type: 'array',
                   items: {
@@ -170,7 +191,7 @@ const useImportPage = () => {
                   maxItems: requestedCount
                 }
               },
-              required: ['cards'],
+              required: ['deckName', 'icon', 'color', 'cards'],
               additionalProperties: false
             }
           }
@@ -208,6 +229,12 @@ const useImportPage = () => {
       if (!Array.isArray(generatedCards) || generatedCards.length !== requestedCount) {
         throw new Error(`Expected ${requestedCount} cards, but the model returned ${Array.isArray(generatedCards) ? generatedCards.length : 'an invalid response'}. Try again or use a different model.`)
       }
+      const suggestedName = typeof parsed.deckName === 'string' ? parsed.deckName.trim() : ''
+      const suggestedIcon = typeof parsed.icon === 'string' ? parsed.icon.trim() : ''
+      const allowedColors = deckColorOptions.map(([color]) => color)
+      if (!suggestedName || !suggestedIcon || !allowedColors.includes(parsed.color)) {
+        throw new Error('The model did not return valid deck settings. Try again or choose a model with good JSON support.')
+      }
 
       const cards = generatedCards.map((card, index) => {
         const front = typeof card.front === 'string' ? card.front.trim() : ''
@@ -232,6 +259,8 @@ const useImportPage = () => {
         }
       })
 
+      setDeckName(suggestedName)
+      setGeneratedDeckSettings({ icon: suggestedIcon, color: parsed.color })
       setPreview(cards)
       showInfo(`Generated ${cards.length} cards. Review them before importing.`)
     } catch (error) {
@@ -313,6 +342,7 @@ const useImportPage = () => {
 
   // Auto-generate preview when import text changes
   useEffect(() => {
+    setGeneratedDeckSettings(null)
     if (importText.trim()) {
       const cards = parseCards(importText)
       setPreview(cards)
@@ -351,7 +381,8 @@ const useImportPage = () => {
       const newDeck = {
         id: baseId + 9999, // ensure different id than card ids
         name: targetName,
-        cards: cardsToAdd
+        cards: cardsToAdd,
+        ...(generatedDeckSettings && activeTab === 'ai' ? { appearance: generatedDeckSettings } : {})
       }
 
       setDecks(prev => {

@@ -1,8 +1,8 @@
 import { Portal } from './Portal';
 import { useToast } from '../context/ToastContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useStyle, useSpeech, useStorage } from '../utils';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaDownload, FaCopy, FaChevronDown } from 'react-icons/fa';
+import { useStyle, useSpeech, useStorage, getCardStrength, getCardState, getImprovement, getRatingCounts, STATE_META, formatLastReviewed } from '../utils';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaDownload, FaCopy, FaCog, FaTimes } from 'react-icons/fa';
 
 
 /**
@@ -14,10 +14,15 @@ import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaDownload, FaCopy, FaCh
  * @param {Function} onCancel - Callback when cancel is triggered
  * @returns {Object} All state and handlers needed by the CardEditor component
  */
-const useCardEditor = (deck, onSave, onCancel) => {
+const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
   const { showWarning, showInfo } = useToast()
   const { extractImageUrl } = useSpeech()
   const { saveToStorage, STORAGE_KEYS } = useStorage()
+  const onDraftSaveRef = useRef(onDraftSave)
+
+  useEffect(() => {
+    onDraftSaveRef.current = onDraftSave
+  }, [onDraftSave])
 
   // Initialize cards with proper structure
   const initializeCards = useCallback(() => {
@@ -76,7 +81,8 @@ const useCardEditor = (deck, onSave, onCancel) => {
       name: nameToSave,
       cards: cardsToSave,
       appearance: appearanceToSave,
-      tags: tagsToSave
+      tags: tagsToSave,
+      updatedAt: Date.now()
     }
 
     // Update the deck directly in localStorage to persist changes
@@ -85,6 +91,7 @@ const useCardEditor = (deck, onSave, onCancel) => {
       d.id === deck.id ? updatedDeck : d
     )
     saveToStorage(STORAGE_KEYS.DECKS, updatedDecks)
+    onDraftSaveRef.current?.(updatedDeck)
   }, [deck, deckName, appearance, tagsText, getTags])
 
   // Handle modal positioning on mobile
@@ -291,8 +298,8 @@ const useCardEditor = (deck, onSave, onCancel) => {
   }
 }
 
-export function CardEditor({ deck, onSave, onCancel }) {
-  const [appearanceExpanded, setAppearanceExpanded] = useState(true)
+export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
+  const [showDeckSettings, setShowDeckSettings] = useState(false)
   // Use the custom hook for all logic and state
   const {
     cards,
@@ -317,7 +324,7 @@ export function CardEditor({ deck, onSave, onCancel }) {
     copyDeckAsText,
     downloadDeckCsv,
     extractImageUrl
-  } = useCardEditor(deck, onSave, onCancel)
+  } = useCardEditor(deck, onSave, onCancel, onDraftSave)
 
   // Custom styles for CardEditor
   const customStyles = {
@@ -343,17 +350,14 @@ export function CardEditor({ deck, onSave, onCancel }) {
   imagePreviewThumb: 'w-10 h-10 object-cover rounded-lg border border-gray-200 flex-shrink-0',
   imagePreviewText: 'flex items-center gap-2',
     formActions: 'flex flex-col gap-2 justify-center pt-6 border-t border-gray-200 md:flex-row md:gap-4',
-  // make the list a scrollable container so virtualization can measure and manage visible items
-  // make the list a scrollable container so virtualization can measure and manage visible items
-  // increased height and width on md+ to give the virtual view more room
-  cardsList: 'relative overflow-auto max-h-[85vh] min-h-[60vh] touch-manipulation space-y-6 w-full max-w-4xl mx-auto pb-32 hide-scrollbar',
-  cardItem: 'p-6 bg-white/60 backdrop-blur-md rounded-2xl border border-white/10 shadow-md grid grid-cols-1 gap-4 items-start transition-all duration-200 relative hover:shadow-lg md:grid-cols-[auto,1fr] md:gap-6 md:p-8',
-  cardNumber: 'font-bold text-white bg-blue-500 rounded-full w-10 h-10 flex items-center justify-center text-lg mx-auto mb-4 self-center md:mx-0 md:mr-4',
-  cardContent: 'grid grid-cols-1 gap-4 w-full md:grid-cols-2 md:gap-6 min-w-0',
+  cardsList: 'space-y-6 w-full max-w-4xl mx-auto pb-6',
+  cardItem: 'relative flex flex-col gap-3 rounded-xl border border-white/20 bg-white/90 p-4 shadow-lg backdrop-blur-lg transition-shadow duration-200 hover:shadow-xl',
+  cardNumber: 'inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600',
+  cardContent: 'grid min-w-0 w-full grid-cols-1 gap-3 md:grid-cols-2 md:gap-4',
   cardSide: 'flex flex-col gap-2 min-w-0',
-  cardSideLabel: 'font-semibold text-gray-700 text-sm uppercase tracking-wide',
-  cardSideTextarea: 'p-4 border border-gray-200 rounded-lg bg-white text-gray-900 text-base resize-vertical min-h-24 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 hover:border-blue-300',
-  deleteCardBtn: 'text-lg p-2 rounded-md bg-white/60 text-red-600 hover:bg-red-50 transition-all duration-200 flex items-center justify-center min-w-10 min-h-10 absolute top-3 right-3 md:top-4 md:right-4',
+  cardSideLabel: 'text-xs font-medium text-gray-500',
+  cardSideTextarea: 'min-h-24 resize-y rounded-lg border border-gray-200 bg-gray-50/70 p-3 text-base text-gray-900 transition-colors focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 hover:border-gray-300',
+  deleteCardBtn: 'flex h-9 w-9 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition-colors hover:bg-red-50 hover:text-red-600',
     emptyState: 'text-center py-16 mx-auto max-w-96 flex flex-col items-center justify-center',
     emptyIcon: 'text-6xl mb-6 text-blue-600 opacity-70',
     emptyTitle: 'text-2xl mb-4 text-gray-900 font-semibold',
@@ -363,51 +367,6 @@ export function CardEditor({ deck, onSave, onCancel }) {
   const baseStyles = useStyle()
   const styles = { ...baseStyles, cardEditor: customStyles }
 
-  // --- Virtualization setup ---
-  // Assumption: card items have approximately fixed height. Using a fixed ITEM_HEIGHT simplifies virtualization without extra dependencies.
-  const listRef = useRef(null)
-  const [scrollTop, setScrollTop] = useState(0)
-  const [containerHeight, setContainerHeight] = useState(600)
-  // ITEM_HEIGHT includes the card height plus the vertical gap created by `space-y-6` (~24px)
-  const ITEM_HEIGHT = 384 // px - tuned for card layout (adjustable)
-  const OVERSCAN = 3
-
-  useEffect(() => {
-    const el = listRef.current
-    if (!el) return
-
-    const handleResize = () => {
-      setContainerHeight(el.clientHeight || 600)
-    }
-
-    const onScroll = (e) => setScrollTop(e.target.scrollTop)
-
-    // Use ResizeObserver when available to track container size changes
-    let ro
-    try {
-      ro = new ResizeObserver(handleResize)
-      ro.observe(el)
-    } catch (err) {
-      window.addEventListener('resize', handleResize)
-    }
-
-    el.addEventListener('scroll', onScroll)
-    handleResize()
-
-    return () => {
-      el.removeEventListener('scroll', onScroll)
-      if (ro) ro.disconnect()
-      else window.removeEventListener('resize', handleResize)
-    }
-  }, [listRef.current, cards.length])
-
-  const totalHeight = cards.length * ITEM_HEIGHT
-  const visibleCount = Math.max(1, Math.ceil(containerHeight / ITEM_HEIGHT))
-  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN)
-  const endIndex = Math.min(cards.length, startIndex + visibleCount + OVERSCAN * 2)
-  const visibleCards = cards.slice(startIndex, endIndex)
-  // --- end virtualization ---
-
   return (
     <div className={styles.cardEditor.cardEditor}>
       <div className={styles.cardEditor.header}>
@@ -415,9 +374,13 @@ export function CardEditor({ deck, onSave, onCancel }) {
           <FaArrowLeft /> 
         </button>
         <div className={styles.cardEditor.headerContent}>
+          <h1 className="truncate text-lg font-semibold text-gray-900">{deckName}</h1>
           <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button type="button" className={styles.button.secondary} onClick={() => setShowDeckSettings(true)}>
+            <FaCog /> Deck Settings
+          </button>
           <button type="button" className={styles.button.secondary} onClick={copyDeckAsText}>
             <FaCopy /> Copy as text
           </button>
@@ -427,19 +390,27 @@ export function CardEditor({ deck, onSave, onCancel }) {
         </div>
       </div>
 
-      <section className="rounded-xl border border-gray-200 bg-white/90 p-4 shadow-sm md:p-6">
-        <button
-          type="button"
-          className="mb-4 flex w-full items-center justify-between text-left"
-          onClick={() => setAppearanceExpanded(expanded => !expanded)}
-          aria-expanded={appearanceExpanded}
-          aria-controls="deck-appearance-options"
-        >
-          <h2 className="text-lg font-semibold text-gray-900">Deck Appearance</h2>
-          <FaChevronDown className={`transition-transform ${appearanceExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
-        </button>
-        {appearanceExpanded && <div id="deck-appearance-options" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 sm:col-span-2 lg:col-span-3">
+      {showDeckSettings && (
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3" onClick={() => setShowDeckSettings(false)}>
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="deck-settings-title"
+              className="relative flex max-h-[85vh] w-full max-w-2xl flex-col overflow-y-auto rounded-xl bg-white p-4 shadow-xl sm:p-6"
+              onClick={event => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800"
+                onClick={() => setShowDeckSettings(false)}
+                aria-label="Close deck settings"
+              >
+                <FaTimes />
+              </button>
+              <h2 id="deck-settings-title" className="mb-5 pr-10 text-xl font-semibold text-gray-900">Deck Settings</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 sm:col-span-2">
             Deck name
             <input
               type="text"
@@ -484,11 +455,11 @@ export function CardEditor({ deck, onSave, onCancel }) {
               <option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option>
             </select>
           </label>
-          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 sm:col-span-2 lg:col-span-3">
+          <label className="flex flex-col gap-2 text-sm font-medium text-gray-700 sm:col-span-2">
             Tags (comma separated)
             <input value={tagsText} onChange={e => setTagsText(e.target.value)} placeholder="e.g. biology, exam 1" className="rounded-lg border border-gray-300 px-3 py-2" />
           </label>
-          <fieldset className="sm:col-span-2 lg:col-span-3">
+          <fieldset className="sm:col-span-2">
             <legend className="mb-2 text-sm font-medium text-gray-700">Deck color</legend>
             <div className="flex flex-wrap gap-1.5">
               {[
@@ -505,8 +476,16 @@ export function CardEditor({ deck, onSave, onCancel }) {
               ))}
             </div>
           </fieldset>
-        </div>}
-      </section>
+              </div>
+              <div className="mt-6 flex justify-end border-t border-gray-200 pt-4">
+                <button type="button" className={styles.button.primary} onClick={() => setShowDeckSettings(false)}>
+                  Done
+                </button>
+              </div>
+            </section>
+          </div>
+        </Portal>
+      )}
 
       <div className={styles.cardEditor.addCardSection}>
         <button
@@ -590,13 +569,33 @@ export function CardEditor({ deck, onSave, onCancel }) {
         </Portal>
       )}
 
-      <div ref={listRef} className={styles.cardEditor.cardsList}>
-        <div style={{ height: startIndex * ITEM_HEIGHT }} />
-        {visibleCards.map((card, idx) => {
-          const actualIndex = startIndex + idx
+      <div className={styles.cardEditor.cardsList}>
+        {cards.map((card, actualIndex) => {
+          const state = getCardState(card)
+          const meta = STATE_META[state] || STATE_META.new
+          const strength = getCardStrength(card)
+          const improvement = getImprovement(card)
+          const ratingCounts = getRatingCounts(card)
           return (
-            <div key={card.id} className={styles.cardEditor.cardItem} style={{ transform: `translateY(0)` }}>
-              <div className={styles.cardEditor.cardNumber}>#{actualIndex + 1}</div>
+            <div key={card.id} className={styles.cardEditor.cardItem}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className={styles.cardEditor.cardNumber}>Card {actualIndex + 1}</span>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${meta.badge}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                    {meta.label}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.cardEditor.deleteCardBtn}
+                  onClick={() => deleteCard(card.id)}
+                  aria-label={`Delete card ${actualIndex + 1}`}
+                  title="Delete card"
+                >
+                  <FaTrash />
+                </button>
+              </div>
               <div className={styles.cardEditor.cardContent}>
                 <div className={styles.cardEditor.cardSide}>
                   <label className={styles.cardEditor.cardSideLabel}>Front</label>
@@ -647,16 +646,32 @@ export function CardEditor({ deck, onSave, onCancel }) {
                   )}
                 </div>
               </div>
-              <button
-                className={styles.cardEditor.deleteCardBtn}
-                onClick={() => deleteCard(card.id)}
-              >
-                <FaTrash />
-              </button>
+              <div>
+                <div className="mb-1 flex justify-between text-xs text-gray-500">
+                  <span>Memory strength</span>
+                  <span>{strength}%{improvement > 0 ? ` (+${improvement})` : ''}</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div className={`h-full rounded-full ${meta.bar}`} style={{ width: `${strength}%` }} />
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                {[
+                  { label: 'Again', color: 'text-red-600' },
+                  { label: 'Hard', color: 'text-orange-600' },
+                  { label: 'Good', color: 'text-emerald-700' },
+                  { label: 'Easy', color: 'text-blue-700' }
+                ].map(({ label, color }, rating) => (
+                  <div key={label} className="rounded-lg bg-gray-50 p-2">
+                    <div className={`text-sm font-bold ${color}`}>{ratingCounts[rating]}</div>
+                    <div className="text-[11px] text-gray-500">{label}</div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400">{formatLastReviewed(card)}</p>
             </div>
           )
         })}
-        <div style={{ height: Math.max(0, (cards.length - endIndex) * ITEM_HEIGHT) }} />
       </div>
 
   {/* Add card button moved to top; bottom button removed to reduce visual noise */}

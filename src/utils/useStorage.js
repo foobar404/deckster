@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect } from 'react'
 
 export const STORAGE_KEYS = {
     DECKS: 'flashcards_decks',
+    DELETED_DECKS: 'flashcards_deleted_decks',
     STATS: 'flashcards_stats',
-    STUDY_OPTIONS: 'flashcards_study_options'
+    STUDY_OPTIONS: 'flashcards_study_options',
+    THEME: 'flashcards_theme'
 }
 
 export const useStorage = () => {

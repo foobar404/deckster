@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
-import { useStyle, useStorage } from '../utils'
+import { useStyle, useStorage, getCardState as resolveCardState } from '../utils'
 import { FlashCard } from '../components/FlashCard'
 import { useState, useEffect, useCallback, useContext, useRef } from 'react'
 import { FaBook, FaTrophy, FaExclamationTriangle, FaRedo, FaFlagCheckered } from 'react-icons/fa'
@@ -111,13 +111,7 @@ const useReviewPage = () => {
     return 0
   }, [])
 
-  const getCardState = useCallback((card) => {
-    const strength = getCardStrength(card)
-    if (card?.state) return card.state
-    if (strength >= 80) return 'mastered'
-    if (strength >= 55) return 'learning'
-    return 'new'
-  }, [getCardStrength])
+  const getCardState = useCallback(resolveCardState, [])
 
   const getReviewPriority = useCallback((card) => {
     const strength = getCardStrength(card)
@@ -160,8 +154,21 @@ const useReviewPage = () => {
       }
     }
 
-    if (options?.weakestFirst) {
+    if (options?.mode === 'cram' && options?.weakestFirst) {
       cards.sort((a, b) => getReviewPriority(b) - getReviewPriority(a))
+    }
+
+    if (options?.mode !== 'cram') {
+      if (options?.cardOrder === 'reverse') {
+        cards.reverse()
+      } else if (options?.cardOrder === 'random') {
+        for (let index = cards.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1))
+          const currentCard = cards[index]
+          cards[index] = cards[randomIndex]
+          cards[randomIndex] = currentCard
+        }
+      }
     }
 
     const studyCards = cards.map(card => {
@@ -193,7 +200,7 @@ const useReviewPage = () => {
 
     const sortedCards = [...cards]
 
-    if (options?.weakestFirst) {
+    if (options?.mode === 'cram' && options?.weakestFirst) {
       sortedCards.sort((a, b) => getReviewPriority(b) - getReviewPriority(a))
     }
 
@@ -364,12 +371,13 @@ export function ReviewPage() {
   // Custom styles for ReviewPage
   const customStyles = {
     container: 'h-full flex flex-col p-2 sm:p-4 md:max-w-3xl md:mx-auto md:w-full',
+    studyContainer: 'h-full flex flex-col px-2 pb-2 pt-2 sm:px-4 sm:pb-4 sm:pt-2 md:max-w-3xl md:mx-auto md:w-full',
     emptyState: 'flex flex-col items-center justify-center min-h-96 p-6 text-center',
     emptyIcon: 'text-5xl text-gray-400 mb-3',
     // Tighten header spacing and ensure it stacks above the card
-    header: 'relative z-20 flex flex-col gap-2 p-3 bg-white border-b border-gray-200 rounded-lg shadow-sm mb-2',
-    headerInner: 'flex items-center gap-4',
-    headerText: 'text-center text-sm text-gray-600',
+    header: 'relative z-20 flex flex-col gap-1 p-1 bg-white border-b border-gray-200 rounded-lg shadow-sm mb-1',
+    headerInner: 'flex items-center gap-2',
+    headerText: 'shrink-0 whitespace-nowrap text-xs text-gray-600',
     progressBar: 'w-full bg-gray-200 rounded-full h-2',
     progressFill: 'bg-blue-500 h-2 rounded-full transition-all duration-300',
     // Card visual style available to the page: translucent background + 10px solid border
@@ -380,19 +388,19 @@ export function ReviewPage() {
     panel: 'flex flex-col items-center justify-center p-6 text-center',
     panelLarge: 'flex flex-col items-center justify-center bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg p-8 text-center',
     // Buttons
-    resetButton: 'p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors duration-200 flex justify-center items-center',
+    resetButton: 'flex h-9 w-9 items-center justify-center rounded-lg p-1 text-xl text-amber-600 transition-colors duration-200 hover:bg-amber-50 hover:text-amber-700',
     backButton: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200',
     resultButton: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200',
     // Quadrant overlays
     quadContainer: 'fixed inset-0 pointer-events-none z-0',
-    quadTopLeft: 'absolute top-0 left-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-red-500/10 transition-colors duration-200',
-    quadTopLeftActive: 'border-red-500 bg-red-500/40',
-    quadTopRight: 'absolute top-0 right-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-indigo-500/10 transition-colors duration-200',
-    quadTopRightActive: 'border-indigo-500 bg-indigo-500/40',
-    quadBottomLeft: 'absolute bottom-0 left-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-orange-500/10 transition-colors duration-200',
-    quadBottomLeftActive: 'border-orange-500 bg-orange-500/40',
-    quadBottomRight: 'absolute bottom-0 right-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-green-500/10 transition-colors duration-200',
-    quadBottomRightActive: 'border-green-500 bg-green-500/40',
+    quadTopLeft: 'absolute top-0 left-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-gray-400/10 transition-colors duration-200',
+    quadTopLeftActive: 'border-gray-400 bg-gray-400/40',
+    quadTopRight: 'absolute top-0 right-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-green-500/10 transition-colors duration-200',
+    quadTopRightActive: 'border-green-500 bg-green-500/40',
+    quadBottomLeft: 'absolute bottom-0 left-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-orange-400/10 transition-colors duration-200',
+    quadBottomLeftActive: 'border-orange-400 bg-orange-400/40',
+    quadBottomRight: 'absolute bottom-0 right-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-blue-500/10 transition-colors duration-200',
+    quadBottomRightActive: 'border-blue-500 bg-blue-500/40',
     // Card wrapper: wider on mobile, more constrained on desktop
     cardWrapper: 'w-full max-w-none sm:max-w-xl lg:max-w-2xl mx-auto h-full max-h-[80vh] flex items-center justify-center relative z-10',
     // Result panel specifics
@@ -434,14 +442,6 @@ export function ReviewPage() {
     return 0
   }
 
-  const getCardState = (card) => {
-    const strength = getCardStrength(card)
-    if (card?.state) return card.state
-    if (strength >= 80) return 'mastered'
-    if (strength >= 55) return 'learning'
-    return 'new'
-  }
-
   const updateCardReviewState = (card, rating) => {
     const adjustmentMap = {
       0: -30,
@@ -463,7 +463,7 @@ export function ReviewPage() {
       ...card,
       difficulty: nextStrength,
       memoryStrength: nextStrength,
-      state: nextStrength >= 80 ? 'mastered' : nextStrength >= 55 ? 'learning' : 'new',
+      state: rating < 2 ? 'struggling' : nextStrength >= 80 ? 'mastered' : 'learning',
       lastReviewed: reviewedAt,
       lastReviewedAt: reviewedAt,
       reviewCount,
@@ -623,7 +623,7 @@ export function ReviewPage() {
           <div className={styles.review.emptyIcon}><FaBook /></div>
           <h2 className="mb-4">Choose a Deck</h2>
           {decks.length > 0 ? (
-            <div className="w-full max-w-md space-y-2">
+            <div className="w-full max-w-md space-y-2 pb-40">
               {decks.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(deck => (
                 <button
                   key={deck.id}
@@ -640,11 +640,13 @@ export function ReviewPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-600">No decks available yet.</p>
+            <>
+              <p className="text-gray-600">No decks available yet.</p>
+              <button className={`${styles.review.backButton} mt-5`} onClick={() => navigate('/')}>
+                Manage Decks
+              </button>
+            </>
           )}
-          <button className={`${styles.review.backButton} mt-5`} onClick={() => navigate('/')}>
-            Manage Decks
-          </button>
         </div>
       </div>
     )
@@ -674,10 +676,10 @@ export function ReviewPage() {
         ? `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`
         : `${elapsedSeconds}s`
     const ratingSummary = [
-      { rating: 0, label: 'Again', color: 'text-red-600', background: 'bg-red-50' },
-      { rating: 1, label: 'Hard', color: 'text-orange-600', background: 'bg-orange-50' },
-      { rating: 2, label: 'Good', color: 'text-emerald-700', background: 'bg-emerald-50' },
-      { rating: 3, label: 'Easy', color: 'text-blue-700', background: 'bg-blue-50' }
+      { rating: 0, label: 'Again' },
+      { rating: 1, label: 'Hard' },
+      { rating: 2, label: 'Good' },
+      { rating: 3, label: 'Easy' }
     ]
     return (
       <div className={styles.review.container}>
@@ -701,9 +703,9 @@ export function ReviewPage() {
           <section className="w-full">
             <h3 className="mb-2 text-left text-sm font-semibold text-gray-700">Rating breakdown</h3>
             <div className="grid grid-cols-4 gap-2">
-              {ratingSummary.map(({ rating, label, color, background }) => (
-                <div key={rating} className={`rounded-lg px-2 py-3 text-center ${background}`}>
-                  <span className={`block text-xl font-bold ${color}`}>{ratingCounts[rating]}</span>
+              {ratingSummary.map(({ rating, label }) => (
+                <div key={rating} className="rounded-lg bg-blue-50 px-2 py-3 text-center">
+                  <span className="block text-xl font-bold text-blue-600">{ratingCounts[rating]}</span>
                   <span className="text-xs text-gray-600">{label}</span>
                 </div>
               ))}
@@ -730,22 +732,27 @@ export function ReviewPage() {
     : ((currentCardIndex + 1) / studyCards.length) * 100
 
   return (
-    <div className={styles.review.container}>
+    <div className={styles.review.studyContainer}>
       {/* Quadrant indicators when card is flipped */}
       {dragState.isFlipped && (
         // Place quadrant overlays behind the card so they are visible through translucent card backgrounds
         <div className={styles.review.quadContainer}>
           {/* All quadrants show a faint color by default; dragging intensifies border/opacity */}
-          <div className={`${styles.review.quadTopLeft} ${dragState.isDragging && dragState.dragOffset.x < -30 && dragState.dragOffset.y < -30 ? styles.review.quadTopLeftActive : ''}`} />
-          <div className={`${styles.review.quadTopRight} ${dragState.isDragging && dragState.dragOffset.x > 30 && dragState.dragOffset.y < -30 ? styles.review.quadTopRightActive : ''}`} />
-          <div className={`${styles.review.quadBottomLeft} ${dragState.isDragging && dragState.dragOffset.x < -30 && dragState.dragOffset.y > 30 ? styles.review.quadBottomLeftActive : ''}`} />
-          <div className={`${styles.review.quadBottomRight} ${dragState.isDragging && dragState.dragOffset.x > 30 && dragState.dragOffset.y > 30 ? styles.review.quadBottomRightActive : ''}`} />
+          <div className={`${styles.review.quadTopLeft} ${dragState.isDragging && dragState.selectedAnswer === 0 ? styles.review.quadTopLeftActive : ''}`} />
+          <div className={`${styles.review.quadTopRight} ${dragState.isDragging && dragState.selectedAnswer === 3 ? styles.review.quadTopRightActive : ''}`} />
+          <div className={`${styles.review.quadBottomLeft} ${dragState.isDragging && dragState.selectedAnswer === 1 ? styles.review.quadBottomLeftActive : ''}`} />
+          <div className={`${styles.review.quadBottomRight} ${dragState.isDragging && dragState.selectedAnswer === 2 ? styles.review.quadBottomRightActive : ''}`} />
         </div>
       )}
 
       <div className={styles.review.header}>
         <div className={styles.review.headerInner}>
-          <div className={styles.review.progressBar}>
+          <div className={styles.review.headerText}>
+            {studyOptions.mode === 'cram'
+              ? `${sessionStats.total} answered`
+              : `${currentCardIndex + 1}/${studyCards.length}`}
+          </div>
+          <div className={`${styles.review.progressBar} min-w-0 flex-1`}>
             <div
               className={styles.review.progressFill}
               style={{ width: `${progress}%` }}
@@ -759,22 +766,17 @@ export function ReviewPage() {
             title="Reset session"
             aria-label="Reset session"
           >
-            <FaRedo />
+            <FaRedo className="text-xl" />
           </button>
           <button
             type="button"
-            className="flex items-center justify-center rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+            className="flex h-9 w-9 items-center justify-center rounded-lg p-1 text-xl text-emerald-600 transition-colors hover:bg-emerald-50 hover:text-emerald-700"
             onClick={(e) => { e.stopPropagation(); finishSession(); }}
             title="Finish study session"
             aria-label="Finish study session"
           >
-            <FaFlagCheckered />
+            <FaFlagCheckered className="text-xl" />
           </button>
-        </div>
-        <div className={styles.review.headerText}>
-          {studyOptions.mode === 'cram'
-            ? `Cram mode • ${sessionStats.total} answered`
-            : `${currentCardIndex + 1} of ${studyCards.length}`}
         </div>
       </div>
 

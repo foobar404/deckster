@@ -108,8 +108,6 @@ function Toast({ toast }) {
     return baseStyles
   }
 
-  console.log(styles.toast.closeButton)
-
   return (
     <div className={getToastStyles()}>
       <div className={styles.toast.icon}>

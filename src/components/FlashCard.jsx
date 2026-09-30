@@ -23,11 +23,33 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     const prevMove = useRef({ x: 0, y: 0, t: 0 })
     const lastMove = useRef({ x: 0, y: 0, t: 0 })
     const rafRef = useRef(null)
+    const dragFrameRef = useRef(null)
+    const pendingDragOffsetRef = useRef(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
 
     const updateDragOffset = (offset) => {
+        if (dragFrameRef.current !== null) {
+            cancelAnimationFrame(dragFrameRef.current)
+            dragFrameRef.current = null
+        }
+        pendingDragOffsetRef.current = null
         dragOffsetRef.current = { x: offset.x, y: offset.y }
         setDragOffset({ x: offset.x, y: offset.y })
+    }
+
+    const scheduleDragOffset = (offset) => {
+        const nextOffset = { x: offset.x, y: offset.y }
+        dragOffsetRef.current = nextOffset
+        pendingDragOffsetRef.current = nextOffset
+        if (dragFrameRef.current !== null) return
+
+        dragFrameRef.current = requestAnimationFrame(() => {
+            dragFrameRef.current = null
+            if (pendingDragOffsetRef.current) {
+                setDragOffset(pendingDragOffsetRef.current)
+                pendingDragOffsetRef.current = null
+            }
+        })
     }
 
     const animateTo = (target, duration = 30, cb) => {
@@ -91,10 +113,10 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     }, [frontImageUrl, backImageUrl])
 
     const difficultyOptions = [
-        { id: 0, label: 'Again', color: '#ef4444', icon: <FaTimes /> },
-        { id: 1, label: 'Hard', color: '#f59e0b', icon: <FaFrown /> },
-        { id: 2, label: 'Good', color: '#10b981', icon: <FaCheck /> },
-        { id: 3, label: 'Easy', color: '#6366f1', icon: <FaRocket /> }
+        { id: 0, label: 'Again', color: '#9ca3af', icon: <FaTimes /> },
+        { id: 1, label: 'Hard', color: '#fb923c', icon: <FaFrown /> },
+        { id: 2, label: 'Good', color: '#3b82f6', icon: <FaCheck /> },
+        { id: 3, label: 'Easy', color: '#22c55e', icon: <FaRocket /> }
     ]
 
     const handleCardClick = (e) => {
@@ -179,55 +201,10 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         }
     }, [isFlipped, card, studyOptions?.autoRead, isSpeechSupported, stopSpeech, cleanTextForSpeech, detectLanguage, speakText])
 
-    const handleTouchStart = (e) => {
-        const touch = e.touches[0]
-        startPos.current = { x: touch.clientX, y: touch.clientY }
-        hasDragged.current = false
-
-        // Enable dragging when card is flipped (showing answer)
-        if (isFlipped) {
-            setIsDragging(true)
-        }
-        // Prevent page gestures while interacting with the card
-        if (e.cancelable) e.preventDefault()
-        const now = performance.now()
-        prevMove.current = { x: startPos.current.x, y: startPos.current.y, t: now }
-        lastMove.current = { x: startPos.current.x, y: startPos.current.y, t: now }
-    }
-
-    const handleTouchMove = (e) => {
-        const touch = e.touches[0]
-        const deltaX = touch.clientX - startPos.current.x
-        const deltaY = touch.clientY - startPos.current.y
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-
-        // Only allow dragging when card is flipped
-        if (!isFlipped) {
-            return
-        }
-
-        // Start dragging if moved more than 5px (reduced threshold for faster response)
-        if (distance > 5) {
-            hasDragged.current = true
-            if (!isDragging) {
-                setIsDragging(true)
-            }
-        }
-
-        if (isDragging) {
-            // preventDefault when actively dragging so browser won't interpret as scroll/pull-to-refresh
-            if (e.cancelable) e.preventDefault()
-            updateDragOffset({ x: deltaX, y: deltaY })
-            const now = performance.now()
-            prevMove.current = lastMove.current
-            lastMove.current = { x: touch.clientX, y: touch.clientY, t: now }
-        }
-    }
-
     const handleTouchCancel = (e) => {
         // Reset dragging state if touch is cancelled
         setIsDragging(false)
-        setDragOffset({ x: 0, y: 0 })
+        updateDragOffset({ x: 0, y: 0 })
         hasDragged.current = false
     }
 
@@ -252,7 +229,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
 
         // If card is not flipped, flip is handled by click event
         if (!isFlipped) {
-            setDragOffset({ x: 0, y: 0 })
+            updateDragOffset({ x: 0, y: 0 })
             return
         }
 
@@ -326,7 +303,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             hasDragged.current = true
         }
 
-        setDragOffset({ x: deltaX, y: deltaY })
+        scheduleDragOffset({ x: deltaX, y: deltaY })
     }
 
     // Pointer event handlers unify mouse/touch and improve reliability with pointer capture
@@ -338,9 +315,15 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         if (e.pointerType === 'touch') {
             startPos.current = { x: e.clientX, y: e.clientY }
             hasDragged.current = false
+            const now = performance.now()
+            prevMove.current = { x: e.clientX, y: e.clientY, t: now }
+            lastMove.current = { x: e.clientX, y: e.clientY, t: now }
             if (isFlipped) setIsDragging(true)
             if (e.cancelable) e.preventDefault()
         } else {
+            const now = performance.now()
+            prevMove.current = { x: e.clientX, y: e.clientY, t: now }
+            lastMove.current = { x: e.clientX, y: e.clientY, t: now }
             handleMouseStart(e)
         }
     }
@@ -351,6 +334,9 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             const deltaX = e.clientX - startPos.current.x
             const deltaY = e.clientY - startPos.current.y
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+            const now = performance.now()
+            prevMove.current = lastMove.current
+            lastMove.current = { x: e.clientX, y: e.clientY, t: now }
 
             if (distance > 5) {
                 hasDragged.current = true
@@ -359,9 +345,12 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
 
             if (isDragging) {
                 if (e.cancelable) e.preventDefault()
-                setDragOffset({ x: deltaX, y: deltaY })
+                scheduleDragOffset({ x: deltaX, y: deltaY })
             }
         } else {
+            const now = performance.now()
+            prevMove.current = lastMove.current
+            lastMove.current = { x: e.clientX, y: e.clientY, t: now }
             handleMouseMove(e)
         }
     }
@@ -383,21 +372,14 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         handleTouchCancel(e)
     }
 
-    useEffect(() => {
-        if (isDragging) {
-            document.addEventListener('mousemove', handleMouseMove)
-            document.addEventListener('mouseup', handleMouseEnd)
-            return () => {
-                document.removeEventListener('mousemove', handleMouseMove)
-                document.removeEventListener('mouseup', handleMouseEnd)
-            }
-        }
-    }, [isDragging, selectedAnswer]);
-
     // Reset card state when card changes
     useEffect(() => {
         setIsFlipped(false)
         setShowBackContent(false)
+        if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current)
+        dragFrameRef.current = null
+        pendingDragOffsetRef.current = null
+        dragOffsetRef.current = { x: 0, y: 0 }
         setDragOffset({ x: 0, y: 0 })
         setIsDragging(false)
         setSelectedAnswer(null)
@@ -420,15 +402,21 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
                 cancelAnimationFrame(rafRef.current)
                 rafRef.current = null
             }
+            if (dragFrameRef.current !== null) {
+                cancelAnimationFrame(dragFrameRef.current)
+                dragFrameRef.current = null
+            }
         }
     }, [card.id])
 
     useEffect(() => {
-        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20) setSelectedAnswer(0);
-        if (isDragging && dragOffset.x < -20 && dragOffset.y > 20) setSelectedAnswer(1);
-        if (isDragging && dragOffset.x > 20 && dragOffset.y > 20) setSelectedAnswer(2);
-        if (isDragging && dragOffset.x > 20 && dragOffset.y < -20) setSelectedAnswer(3);
-    }, [dragOffset]);
+        let answer = null
+        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20) answer = 0
+        else if (isDragging && dragOffset.x < -20 && dragOffset.y > 20) answer = 1
+        else if (isDragging && dragOffset.x > 20 && dragOffset.y > 20) answer = 2
+        else if (isDragging && dragOffset.x > 20 && dragOffset.y < -20) answer = 3
+        setSelectedAnswer(answer)
+    }, [dragOffset, isDragging]);
 
     // Notify parent of drag state changes
     useEffect(() => {
@@ -440,17 +428,22 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
                 selectedAnswer
             })
         }
-    }, [isFlipped, isDragging, dragOffset, selectedAnswer]); // Removed onDragStateChange from dependencies
+    }, [isFlipped, isDragging, selectedAnswer, onDragStateChange]);
 
     const getSwipeIndicator = () => {
-        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20)
-            return { ...difficultyOptions[0], gradient: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.4))', borderColor: 'rgba(239, 68, 68, 0.8)' };
-        if (isDragging && dragOffset.x < -20 && dragOffset.y > 20)
-            return { ...difficultyOptions[1], gradient: 'linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.4))', borderColor: 'rgba(245, 158, 11, 0.8)' };
-        if (isDragging && dragOffset.x > 20 && dragOffset.y > 20)
-            return { ...difficultyOptions[2], gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.4))', borderColor: 'rgba(16, 185, 129, 0.8)' };
-        if (isDragging && dragOffset.x > 20 && dragOffset.y < -20)
-            return { ...difficultyOptions[3], gradient: 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.4))', borderColor: 'rgba(99, 102, 241, 0.8)' };
+        let answer = null
+        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20) answer = 0
+        else if (isDragging && dragOffset.x < -20 && dragOffset.y > 20) answer = 1
+        else if (isDragging && dragOffset.x > 20 && dragOffset.y > 20) answer = 2
+        else if (isDragging && dragOffset.x > 20 && dragOffset.y < -20) answer = 3
+        if (answer === null) return null
+
+        const option = difficultyOptions[answer]
+        return {
+            ...option,
+            gradient: `linear-gradient(135deg, ${option.color}33, ${option.color}66)`,
+            borderColor: `${option.color}cc`
+        }
     }
 
     const swipeIndicator = getSwipeIndicator()
@@ -517,8 +510,6 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         backText,
         difficultyOptions,
         handleCardClick,
-        handleTouchStart,
-        handleTouchMove,
         handleTouchEnd,
         handleTouchCancel,
         handleMouseStart,
@@ -548,8 +539,6 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         swipeIndicator,
         memoryMeta,
         handleCardClick,
-        handleTouchStart,
-        handleTouchMove,
         handleTouchEnd,
         handleTouchCancel,
         handleMouseStart,
@@ -589,7 +578,11 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         minWidth: 0,
         color: cardTextColor
     })
-    const cardFaceStyle = { backgroundColor: '#ffffff', color: cardTextColor, borderColor: cardColor }
+    const cardFaceStyle = {
+        backgroundColor: swipeIndicator ? `${swipeIndicator.color}18` : '#ffffff',
+        color: cardTextColor,
+        borderColor: swipeIndicator?.color || cardColor
+    }
 
     // Custom styles for FlashCard
     const customStyles = {
@@ -639,11 +632,6 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                 touchAction: 'none' /* prevent browser pull-to-refresh / scroll while interacting with card */
             }}
             onClick={handleCardClick}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchCancel}
-            onMouseDown={handleMouseStart}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -659,7 +647,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
                     }}
                 >
-                    <div className={styles.flashcard.cardFront} style={cardFaceStyle}>
+                    <div className={`${styles.flashcard.cardFront} study-card-surface`} style={cardFaceStyle}>
                         {frontImageUrl && (
                             <>
                                 <div
@@ -689,7 +677,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                             ) : null}
                         </div>
                     </div>
-                    <div className={styles.flashcard.cardBack} style={cardFaceStyle}>
+                    <div className={`${styles.flashcard.cardBack} study-card-surface`} style={cardFaceStyle}>
                         {showBackContent && backImageUrl && (
                             <>
                                 <div

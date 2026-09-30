@@ -5,6 +5,7 @@
   --primary: #6366f1;
   --primary-light: #8b5cf6;
   --primary-dark: #4338ca;
+  --theme-primary-contrast: #ffffff;
   --accent: #06b6d4;
   --accent-warm: #f59e0b;
   --success: #10b981;
@@ -156,7 +157,7 @@ body {
 *:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 /* Modern Form Elements */
@@ -635,4 +636,371 @@ input[type="reset"] {
 .transform-rotateY-180 {
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
+}
+
+:root[data-theme="light"] {
+  --theme-bg: #f8fafc;
+  --theme-app-background: linear-gradient(135deg, #f8fafc, #eff6ff 55%, #f0fdfa);
+  --theme-surface: #ffffff;
+  --theme-surface-muted: #f1f5f9;
+  --theme-text: #0f172a;
+  --theme-text-soft: #475569;
+  --theme-border: #dbe3ed;
+  --theme-primary: #2563eb;
+  --theme-primary-hover: #1d4ed8;
+  --theme-primary-soft: #eff6ff;
+  --gradient-primary: linear-gradient(135deg, #2563eb, #0891b2, #0f766e);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --theme-bg: #0f172a;
+  --theme-app-background: linear-gradient(135deg, #111827, #0f172a 60%, #172554);
+  --theme-surface: #1e293b;
+  --theme-surface-muted: #273449;
+  --theme-text: #f1f5f9;
+  --theme-text-soft: #cbd5e1;
+  --theme-border: #334155;
+  --theme-primary: #60a5fa;
+  --theme-primary-hover: #3b82f6;
+  --theme-primary-soft: #172554;
+  --gradient-primary: linear-gradient(135deg, #7dd3fc, #38bdf8, #34d399);
+}
+
+:root[data-theme="ocean"] {
+  color-scheme: dark;
+  --theme-bg: #082f49;
+  --theme-app-background: linear-gradient(135deg, #082f49, #0c4a6e 58%, #164e63);
+  --theme-surface: #0e3a55;
+  --theme-surface-muted: #164e63;
+  --theme-text: #ecfeff;
+  --theme-text-soft: #bae6fd;
+  --theme-border: #155e75;
+  --theme-primary: #22d3ee;
+  --theme-primary-hover: #06b6d4;
+  --theme-primary-soft: #164e63;
+  --gradient-primary: linear-gradient(135deg, #67e8f9, #38bdf8, #2dd4bf);
+}
+
+:root[data-theme="forest"] {
+  color-scheme: dark;
+  --theme-bg: #10251c;
+  --theme-app-background: linear-gradient(135deg, #10251c, #173326 58%, #1c3325);
+  --theme-surface: #173326;
+  --theme-surface-muted: #234332;
+  --theme-text: #f0fdf4;
+  --theme-text-soft: #bbf7d0;
+  --theme-border: #2f5940;
+  --theme-primary: #4ade80;
+  --theme-primary-hover: #22c55e;
+  --theme-primary-soft: #234332;
+  --gradient-primary: linear-gradient(135deg, #86efac, #4ade80, #a3e635);
+}
+
+:root[data-theme="sunset"] {
+  --theme-bg: #fff7ed;
+  --theme-app-background: linear-gradient(135deg, #fff7ed, #ffedd5 55%, #fff1f2);
+  --theme-surface: #fffdfa;
+  --theme-surface-muted: #ffedd5;
+  --theme-text: #431407;
+  --theme-text-soft: #7c2d12;
+  --theme-border: #fed7aa;
+  --theme-primary: #ea580c;
+  --theme-primary-hover: #c2410c;
+  --theme-primary-soft: #ffedd5;
+  --gradient-primary: linear-gradient(135deg, #ea580c, #e11d48, #b45309);
+}
+
+:root[data-theme="rose"] {
+  --theme-bg: #fff1f2;
+  --theme-app-background: linear-gradient(135deg, #fff1f2, #ffe4e6 55%, #fff7ed);
+  --theme-surface: #fffafa;
+  --theme-surface-muted: #ffe4e6;
+  --theme-text: #4c0519;
+  --theme-text-soft: #881337;
+  --theme-border: #fecdd3;
+  --theme-primary: #e11d48;
+  --theme-primary-hover: #be123c;
+  --theme-primary-soft: #ffe4e6;
+  --gradient-primary: linear-gradient(135deg, #e11d48, #db2777, #f97316);
+}
+
+:root[data-theme="lavender"] {
+  --theme-bg: #f5f3ff;
+  --theme-app-background: linear-gradient(135deg, #f5f3ff, #ede9fe 55%, #fdf2f8);
+  --theme-surface: #fdfcff;
+  --theme-surface-muted: #ede9fe;
+  --theme-text: #2e1065;
+  --theme-text-soft: #5b21b6;
+  --theme-border: #ddd6fe;
+  --theme-primary: #7c3aed;
+  --theme-primary-hover: #6d28d9;
+  --theme-primary-soft: #ede9fe;
+  --gradient-primary: linear-gradient(135deg, #7c3aed, #c026d3, #2563eb);
+}
+
+:root[data-theme="slate"] {
+  color-scheme: dark;
+  --theme-bg: #111827;
+  --theme-app-background: linear-gradient(135deg, #111827, #1f2937 58%, #263445);
+  --theme-surface: #1f2937;
+  --theme-surface-muted: #2d3a4d;
+  --theme-text: #f8fafc;
+  --theme-text-soft: #cbd5e1;
+  --theme-border: #475569;
+  --theme-primary: #cbd5e1;
+  --theme-primary-hover: #e2e8f0;
+  --theme-primary-soft: #334155;
+  --gradient-primary: linear-gradient(135deg, #cbd5e1, #7dd3fc, #a7f3d0);
+}
+
+:root[data-theme="graphite"] {
+  color-scheme: dark;
+  --theme-bg: #14171a;
+  --theme-app-background: linear-gradient(135deg, #14171a, #20262b 58%, #2d3034);
+  --theme-surface: #202428;
+  --theme-surface-muted: #2b3035;
+  --theme-text: #f3f4f6;
+  --theme-text-soft: #cbd5e1;
+  --theme-border: #41484f;
+  --theme-primary: #fbbf24;
+  --theme-primary-hover: #f59e0b;
+  --theme-primary-soft: #39311e;
+  --gradient-primary: linear-gradient(135deg, #fde68a, #fbbf24, #fb7185);
+}
+
+:root[data-theme="plum"] {
+  color-scheme: dark;
+  --theme-bg: #21152c;
+  --theme-app-background: linear-gradient(135deg, #21152c, #30203f 58%, #3b1f38);
+  --theme-surface: #2b1d37;
+  --theme-surface-muted: #392745;
+  --theme-text: #fdf4ff;
+  --theme-text-soft: #e9d5ff;
+  --theme-border: #533766;
+  --theme-primary: #f0abfc;
+  --theme-primary-hover: #e879f9;
+  --theme-primary-soft: #43294f;
+  --gradient-primary: linear-gradient(135deg, #f0abfc, #fb7185, #c4b5fd);
+}
+
+:root[data-theme="mint"] {
+  --theme-bg: #ecfdf5;
+  --theme-app-background: linear-gradient(135deg, #ecfdf5, #d1fae5 55%, #f0fdfa);
+  --theme-surface: #f8fffb;
+  --theme-surface-muted: #d1fae5;
+  --theme-text: #022c22;
+  --theme-text-soft: #065f46;
+  --theme-border: #a7f3d0;
+  --theme-primary: #047857;
+  --theme-primary-hover: #065f46;
+  --theme-primary-soft: #d1fae5;
+  --gradient-primary: linear-gradient(135deg, #047857, #0d9488, #2563eb);
+}
+
+:root[data-theme="amber"] {
+  --theme-bg: #fffbeb;
+  --theme-app-background: linear-gradient(135deg, #fffbeb, #fef3c7 55%, #fff7ed);
+  --theme-surface: #fffefa;
+  --theme-surface-muted: #fef3c7;
+  --theme-text: #451a03;
+  --theme-text-soft: #78350f;
+  --theme-border: #fde68a;
+  --theme-primary: #b45309;
+  --theme-primary-hover: #92400e;
+  --theme-primary-soft: #fef3c7;
+  --gradient-primary: linear-gradient(135deg, #b45309, #ea580c, #0f766e);
+}
+
+:root[data-theme="dark"] { --theme-primary-contrast: #0f172a; }
+:root[data-theme="ocean"] { --theme-primary-contrast: #083344; }
+:root[data-theme="forest"] { --theme-primary-contrast: #052e16; }
+:root[data-theme="sunset"] { --theme-primary-contrast: #431407; }
+:root[data-theme="slate"] { --theme-primary-contrast: #111827; }
+:root[data-theme="graphite"] { --theme-primary-contrast: #292524; }
+:root[data-theme="plum"] { --theme-primary-contrast: #3b0764; }
+
+:root[data-theme] {
+  --background: var(--theme-bg);
+  --background-secondary: var(--theme-surface-muted);
+  --surface: var(--theme-surface);
+  --surface-elevated: var(--theme-surface);
+  --surface-glass: var(--theme-surface);
+  --text-primary: var(--theme-text);
+  --text-secondary: var(--theme-text-soft);
+  --text-muted: var(--theme-text-soft);
+  --border: var(--theme-border);
+  --border-strong: var(--theme-border);
+  --primary: var(--theme-primary);
+  --primary-light: var(--theme-primary-hover);
+  --primary-dark: var(--theme-primary-hover);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"],
+:root[data-theme="ocean"],
+:root[data-theme="forest"],
+:root[data-theme="slate"],
+:root[data-theme="graphite"],
+:root[data-theme="plum"] {
+  color-scheme: dark;
+}
+
+:root[data-theme] body {
+  background: var(--theme-bg);
+  background-image: none;
+  color: var(--theme-text);
+}
+
+:root[data-theme] #root > div.bg-gradient-to-br {
+  background: var(--theme-app-background) !important;
+}
+
+:root[data-theme] #root > div.bg-gradient-to-br::before {
+  opacity: 0.18;
+}
+
+:root[data-theme="dark"] #root > div.bg-gradient-to-br::before,
+:root[data-theme="ocean"] #root > div.bg-gradient-to-br::before,
+:root[data-theme="forest"] #root > div.bg-gradient-to-br::before,
+:root[data-theme="slate"] #root > div.bg-gradient-to-br::before,
+:root[data-theme="graphite"] #root > div.bg-gradient-to-br::before,
+:root[data-theme="plum"] #root > div.bg-gradient-to-br::before {
+  opacity: 0.08;
+}
+
+:root[data-theme] .bg-white:not([style*="background-color"]) {
+  background-color: var(--theme-surface) !important;
+}
+
+:root[data-theme] .bg-white\/5:not([style*="background-color"]) {
+  background-color: color-mix(in srgb, var(--theme-surface) 5%, transparent) !important;
+}
+
+:root[data-theme] .bg-white\/30:not([style*="background-color"]) {
+  background-color: color-mix(in srgb, var(--theme-surface) 30%, transparent) !important;
+}
+
+:root[data-theme] .bg-white\/60:not([style*="background-color"]) {
+  background-color: color-mix(in srgb, var(--theme-surface) 60%, transparent) !important;
+}
+
+:root[data-theme] .bg-white\/80:not([style*="background-color"]) {
+  background-color: color-mix(in srgb, var(--theme-surface) 80%, transparent) !important;
+}
+
+:root[data-theme] .bg-white\/85:not([style*="background-color"]) {
+  background-color: color-mix(in srgb, var(--theme-surface) 85%, transparent) !important;
+}
+
+:root[data-theme] .bg-white\/90:not([style*="background-color"]) {
+  background-color: color-mix(in srgb, var(--theme-surface) 90%, transparent) !important;
+}
+
+:root[data-theme] .bg-white\/95:not([style*="background-color"]) {
+  background-color: color-mix(in srgb, var(--theme-surface) 95%, transparent) !important;
+}
+
+:root[data-theme] .bg-gray-50,
+:root[data-theme] .bg-gray-100,
+:root[data-theme] .bg-gray-200,
+:root[data-theme] .bg-gray-300 {
+  background-color: var(--theme-surface-muted) !important;
+}
+
+:root[data-theme] .bg-gray-50\/70 {
+  background-color: color-mix(in srgb, var(--theme-surface-muted) 70%, transparent) !important;
+}
+
+:root[data-theme] .bg-blue-50 {
+  background-color: var(--theme-primary-soft) !important;
+}
+
+:root[data-theme] .bg-blue-500 {
+  background-color: var(--theme-primary) !important;
+  color: var(--theme-primary-contrast) !important;
+}
+
+:root[data-theme] .hover\:bg-blue-600:hover {
+  background-color: var(--theme-primary-hover) !important;
+}
+
+:root[data-theme] .text-gray-900,
+:root[data-theme] .text-gray-800,
+:root[data-theme] .text-gray-700 {
+  color: var(--theme-text) !important;
+}
+
+:root[data-theme] .text-gray-600,
+:root[data-theme] .text-gray-500,
+:root[data-theme] .text-gray-400 {
+  color: var(--theme-text-soft) !important;
+}
+
+:root[data-theme] .text-blue-600,
+:root[data-theme] .text-blue-700,
+:root[data-theme] .hover\:text-blue-600:hover {
+  color: var(--theme-primary) !important;
+}
+
+:root[data-theme] .border-gray-100,
+:root[data-theme] .border-gray-200,
+:root[data-theme] .border-gray-300,
+:root[data-theme] .border-blue-500 {
+  border-color: var(--theme-border) !important;
+}
+
+:root[data-theme] .hover\:bg-gray-50:hover,
+:root[data-theme] .hover\:bg-gray-100:hover,
+:root[data-theme] .hover\:bg-gray-200:hover,
+:root[data-theme] .hover\:bg-gray-300:hover {
+  background-color: var(--theme-surface-muted) !important;
+}
+
+:root[data-theme] .bg-teal-100 {
+  background-color: var(--theme-primary-soft) !important;
+}
+
+:root[data-theme] .text-teal-900 {
+  color: var(--theme-primary) !important;
+}
+
+:root[data-theme] .border-blue-500 {
+  border-color: var(--theme-primary) !important;
+}
+
+:root[data-theme] .border-white\/10,
+:root[data-theme] .border-white\/20 {
+  border-color: color-mix(in srgb, var(--theme-border) 55%, transparent) !important;
+}
+
+:root[data-theme] .focus-visible\:ring-teal-500:focus-visible {
+  --tw-ring-color: var(--theme-primary) !important;
+}
+
+.deck-status-new { --deck-status-color: #9ca3af; --deck-status-soft: #f3f4f6; --deck-status-text: #374151; }
+.deck-status-struggling { --deck-status-color: #fb923c; --deck-status-soft: #ffedd5; --deck-status-text: #c2410c; }
+.deck-status-learning { --deck-status-color: #3b82f6; --deck-status-soft: #dbeafe; --deck-status-text: #1d4ed8; }
+.deck-status-mastered { --deck-status-color: #22c55e; --deck-status-soft: #dcfce7; --deck-status-text: #15803d; }
+
+.deck-status-dot,
+.deck-status-bar {
+  background-color: var(--deck-status-color) !important;
+}
+
+.deck-status-badge {
+  background-color: var(--deck-status-soft) !important;
+  color: var(--deck-status-text) !important;
+}
+
+:root[data-theme] .study-card-surface .text-gray-900,
+:root[data-theme] .study-card-surface .text-gray-800,
+:root[data-theme] .study-card-surface .text-gray-700 {
+  color: #111827 !important;
+}
+
+:root[data-theme] .study-card-surface .text-gray-600,
+:root[data-theme] .study-card-surface .text-gray-500,
+:root[data-theme] .study-card-surface .text-gray-400 {
+  color: #475569 !important;
 }
