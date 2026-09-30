@@ -3,13 +3,13 @@ import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: 'AIzaSyBWab0Y4Tz3xRGi8bsAVdp1003VzW6zTR4',
+  authDomain: 'deckster-4a788.firebaseapp.com',
+  projectId: 'deckster-4a788',
+  appId: '1:856522530056:web:6e37e4e0a6714c7aec20bd',
+  storageBucket: 'deckster-4a788.firebasestorage.app',
+  messagingSenderId: '856522530056',
+  measurementId: 'G-V9FST0VTS0'
 }
 
 export const firebaseConfigured = Boolean(
