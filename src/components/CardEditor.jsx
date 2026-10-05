@@ -2,7 +2,7 @@ import { Portal } from './Portal';
 import { useToast } from '../context/ToastContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useStyle, useSpeech, useStorage, getCardStrength, getCardState, getImprovement, getRatingCounts, STATE_META, formatLastReviewed } from '../utils';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaDownload, FaCopy, FaCog, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaCog, FaTimes } from 'react-icons/fa';
 
 
 /**
@@ -15,7 +15,7 @@ import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaDownload, FaCopy, FaCo
  * @returns {Object} All state and handlers needed by the CardEditor component
  */
 const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
-  const { showWarning, showInfo } = useToast()
+  const { showWarning } = useToast()
   const { extractImageUrl } = useSpeech()
   const { saveToStorage, STORAGE_KEYS } = useStorage()
   const onDraftSaveRef = useRef(onDraftSave)
@@ -230,31 +230,6 @@ const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
     onSave(updatedDeck) // This will trigger navigation back to deck list
   }, [deck, deckName, cards, appearance, getTags, onSave])
 
-  const copyDeckAsText = useCallback(async () => {
-    const text = cards.map(card => `${card.front ?? ''}\t${card.back ?? ''}`).join('\n')
-    try {
-      await navigator.clipboard.writeText(text)
-      showInfo('Deck copied as tab-separated text.')
-    } catch {
-      showWarning('Clipboard access is unavailable.')
-    }
-  }, [cards, showInfo, showWarning])
-
-  const downloadDeckCsv = useCallback(() => {
-    const escapeCsvField = value => `"${String(value ?? '').replace(/"/g, '""')}"`
-    const csv = cards.map(card => `${escapeCsvField(card.front)},${escapeCsvField(card.back)}`).join('\r\n')
-    const fileName = `${(deckName.trim() || 'deck').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')}.csv`
-    const blobUrl = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const downloadLink = document.createElement('a')
-    downloadLink.href = blobUrl
-    downloadLink.download = fileName
-    document.body.appendChild(downloadLink)
-    downloadLink.click()
-    downloadLink.remove()
-    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
-    showInfo('Deck CSV downloaded.')
-  }, [cards, deckName, showInfo])
-
   // Computed values
   const isAddCardDisabled = !newCard.front.trim() || !newCard.back.trim()
   const cardCount = cards.length
@@ -292,14 +267,13 @@ const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
     extractImageUrl,
 
     // Navigation
-    handleSaveAndExit,
-    copyDeckAsText,
-    downloadDeckCsv
+    handleSaveAndExit
   }
 }
 
 export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
   const [showDeckSettings, setShowDeckSettings] = useState(false)
+  const [cardStatusFilter, setCardStatusFilter] = useState('all')
   // Use the custom hook for all logic and state
   const {
     cards,
@@ -321,8 +295,6 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
     updateNewCard,
     updateDeckName,
     handleSaveAndExit,
-    copyDeckAsText,
-    downloadDeckCsv,
     extractImageUrl
   } = useCardEditor(deck, onSave, onCancel, onDraftSave)
 
@@ -330,7 +302,7 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
   const customStyles = {
     cardEditor: 'p-4 max-w-5xl mx-auto flex flex-col gap-6 md:p-8 md:gap-8',
     header: 'flex flex-col items-stretch gap-4 md:flex-row md:justify-between md:items-center md:flex-wrap',
-    backButton: 'flex items-center gap-2 py-2 px-4 text-sm font-medium text-gray-600 transition-all duration-200 hover:text-blue-600 hover:-translate-x-0.5',
+    backButton: 'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-200 text-gray-700 transition-colors duration-200 hover:bg-gray-300 hover:text-blue-600',
     // allow the header content to shrink inside a flex row (prevents overflow)
     headerContent: 'flex flex-col gap-1 min-w-0 flex-1',
     // make the deck name input responsive: full width but constrained on larger screens
@@ -366,26 +338,41 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
 
   const baseStyles = useStyle()
   const styles = { ...baseStyles, cardEditor: customStyles }
+  const cardStatusFilters = [
+    { id: 'all', label: 'All', state: null },
+    { id: 'new', label: 'New', state: 'new' },
+    { id: 'weak', label: 'Weak', state: 'struggling' },
+    { id: 'learning', label: 'Learning', state: 'learning' },
+    { id: 'mastered', label: 'Mastered', state: 'mastered' }
+  ]
+  const cardStatusCounts = cards.reduce((counts, card) => {
+    const state = getCardState(card)
+    counts.all += 1
+    counts[state === 'struggling' ? 'weak' : state] += 1
+    return counts
+  }, { all: 0, new: 0, weak: 0, learning: 0, mastered: 0 })
+  const visibleCards = cards
+    .map((card, actualIndex) => ({ card, actualIndex }))
+    .filter(({ card }) => {
+      const filter = cardStatusFilters.find(({ id }) => id === cardStatusFilter)
+      return !filter?.state || getCardState(card) === filter.state
+    })
 
   return (
     <div className={styles.cardEditor.cardEditor}>
       <div className={styles.cardEditor.header}>
-        <button className={`${styles.cardEditor.backButton} ${styles.button.secondary}`} onClick={handleSaveAndExit}>
-          <FaArrowLeft /> 
-        </button>
-        <div className={styles.cardEditor.headerContent}>
-          <h1 className="truncate text-lg font-semibold text-gray-900">{deckName}</h1>
-          <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
+        <div className="flex min-w-0 items-center gap-3">
+          <button type="button" aria-label="Back to decks" className={styles.cardEditor.backButton} onClick={handleSaveAndExit}>
+            <FaArrowLeft />
+          </button>
+          <div className={styles.cardEditor.headerContent}>
+            <h1 className="truncate text-lg font-semibold text-gray-900">{deckName}</h1>
+            <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={styles.button.secondary} onClick={() => setShowDeckSettings(true)}>
             <FaCog /> Deck Settings
-          </button>
-          <button type="button" className={styles.button.secondary} onClick={copyDeckAsText}>
-            <FaCopy /> Copy as text
-          </button>
-          <button type="button" className={styles.button.secondary} onClick={downloadDeckCsv}>
-            <FaDownload /> Download CSV
           </button>
         </div>
       </div>
@@ -569,8 +556,27 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
         </Portal>
       )}
 
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter cards by status">
+        {cardStatusFilters.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={cardStatusFilter === id}
+            onClick={() => setCardStatusFilter(id)}
+            className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${cardStatusFilter === id
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+          >
+            {label}
+            <span className={`text-xs ${cardStatusFilter === id ? 'text-blue-100' : 'text-gray-500'}`}>
+              {cardStatusCounts[id]}
+            </span>
+          </button>
+        ))}
+      </div>
+
       <div className={styles.cardEditor.cardsList}>
-        {cards.map((card, actualIndex) => {
+        {visibleCards.map(({ card, actualIndex }) => {
           const state = getCardState(card)
           const meta = STATE_META[state] || STATE_META.new
           const strength = getCardStrength(card)
@@ -672,6 +678,11 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
             </div>
           )
         })}
+        {cards.length > 0 && visibleCards.length === 0 && (
+          <p className="py-8 text-center text-sm text-gray-500">
+            No {cardStatusFilter} cards in this deck.
+          </p>
+        )}
       </div>
 
   {/* Add card button moved to top; bottom button removed to reduce visual noise */}

@@ -21,13 +21,16 @@ const useNavigation = () => {
 
   const navItems = [
     { id: 'decks', icon: BiFolderOpen, label: 'Decks', path: '/decks' },
-    { id: 'review', icon: BiBookReader, label: 'Review', path: '/review' },
+    { id: 'review', icon: BiBookReader, label: 'Study', path: '/review' },
     { id: 'import', icon: BiImport, label: 'Import', path: '/import' },
     { id: 'settings', icon: BiCog, label: 'Settings', path: '/settings' }
   ]
 
   const handleNavigation = (path) => {
-    navigate(path)
+    navigate(path, {
+      replace: location.pathname === path,
+      state: { navRoot: Date.now() }
+    })
   }
 
   return {

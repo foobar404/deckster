@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
-import { FaCloudUploadAlt, FaGoogle, FaSignOutAlt, FaSyncAlt } from 'react-icons/fa'
+import { FaCloudUploadAlt, FaDesktop, FaGoogle, FaSignOutAlt, FaSyncAlt } from 'react-icons/fa'
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { AppContext } from '../context/AppContext'
@@ -297,7 +297,7 @@ export function SettingsPage() {
       <section className="border-b border-gray-200 py-4">
         <div className="mb-3">
           <h2 className="text-lg font-semibold text-gray-900">Appearance</h2>
-          <p className="text-sm text-gray-600">Choose how Deckster looks on this device.</p>
+          <p className="text-sm text-gray-600">Choose how Cram looks on this device.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {THEME_GROUPS.map(({ mode, label }) => (
@@ -314,7 +314,11 @@ export function SettingsPage() {
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
                   >
-                    <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ background: color }} aria-hidden="true" />
+                    {value === 'system' ? (
+                      <FaDesktop className="shrink-0 text-sm text-gray-500" aria-hidden="true" />
+                    ) : (
+                      <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ background: color }} aria-hidden="true" />
+                    )}
                     {optionLabel}
                   </button>
                 ))}

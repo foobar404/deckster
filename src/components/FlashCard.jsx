@@ -13,11 +13,13 @@ import { FaTimes, FaFrown, FaCheck, FaRocket } from 'react-icons/fa'
 const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     const [isFlipped, setIsFlipped] = useState(false)
     const [showBackContent, setShowBackContent] = useState(false)
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
-    const [selectedAnswer, setSelectedAnswer] = useState(null)
+    const [selectedAnswer, setSelectedAnswerState] = useState(null)
+    const [typedAnswer, setTypedAnswer] = useState('')
+    const selectedAnswerRef = useRef(null)
     const [isFlipping, setIsFlipping] = useState(false)
     const cardRef = useRef(null)
+    const cardContainerRef = useRef(null)
     const startPos = useRef({ x: 0, y: 0 })
     const hasDragged = useRef(false)
     const prevMove = useRef({ x: 0, y: 0, t: 0 })
@@ -27,6 +29,28 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     const pendingDragOffsetRef = useRef(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
 
+    const setSelectedAnswer = (answer) => {
+        if (selectedAnswerRef.current === answer) return
+        selectedAnswerRef.current = answer
+        setSelectedAnswerState(answer)
+    }
+
+    const getAnswerFromOffset = (offset) => {
+        if (offset.x < -20 && offset.y < -20) return 0
+        if (offset.x < -20 && offset.y > 20) return 1
+        if (offset.x > 20 && offset.y > 20) return 2
+        if (offset.x > 20 && offset.y < -20) return 3
+        return null
+    }
+
+    const applyDragOffset = (offset) => {
+        const container = cardContainerRef.current
+        if (!container) return
+        container.style.setProperty('--drag-x', `${offset.x}px`)
+        container.style.setProperty('--drag-y', `${offset.y}px`)
+        container.style.setProperty('--drag-rotation', `${offset.x * 0.1}deg`)
+    }
+
     const updateDragOffset = (offset) => {
         if (dragFrameRef.current !== null) {
             cancelAnimationFrame(dragFrameRef.current)
@@ -34,7 +58,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         }
         pendingDragOffsetRef.current = null
         dragOffsetRef.current = { x: offset.x, y: offset.y }
-        setDragOffset({ x: offset.x, y: offset.y })
+        applyDragOffset(offset)
     }
 
     const scheduleDragOffset = (offset) => {
@@ -46,8 +70,11 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         dragFrameRef.current = requestAnimationFrame(() => {
             dragFrameRef.current = null
             if (pendingDragOffsetRef.current) {
-                setDragOffset(pendingDragOffsetRef.current)
+                const nextOffset = pendingDragOffsetRef.current
                 pendingDragOffsetRef.current = null
+                applyDragOffset(nextOffset)
+                const nextAnswer = getAnswerFromOffset(nextOffset)
+                if (nextAnswer !== null) setSelectedAnswer(nextAnswer)
             }
         })
     }
@@ -89,27 +116,23 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         cleanTextForSpeech
     } = useSpeech()
 
-    // Extract image URLs and clean text for both sides - URLs are stripped from display text
-    const frontImageUrl = extractImageUrl(card.front)
-    const backImageUrl = extractImageUrl(card.back)
+    // Prefer dedicated image fields, with embedded URLs retained for older cards.
+    const frontImageUrl = card.frontImageUrl || extractImageUrl(card.front)
+    const backImageUrl = card.backImageUrl || card.imageUrl || extractImageUrl(card.back)
     // Clean text removes ALL URLs, not just images, for clean display during study
     const frontText = cleanTextFromImages(card.front)
     const backText = cleanTextFromImages(card.back)
 
-    // Preload images to prevent flicker during flip
+    // Fetch and decode both sides while the current card is being reviewed.
     useEffect(() => {
-        const preloadImages = () => {
-            if (frontImageUrl) {
-                const frontImg = new Image()
-                frontImg.src = frontImageUrl
-            }
-            if (backImageUrl) {
-                const backImg = new Image()
-                backImg.src = backImageUrl
-            }
-        }
-
-        preloadImages()
+        const imageUrls = new Set([frontImageUrl, backImageUrl].filter(Boolean))
+        imageUrls.forEach((url) => {
+            const image = new Image()
+            image.decoding = 'async'
+            image.fetchPriority = 'high'
+            image.src = url
+            image.decode?.().catch(() => {})
+        })
     }, [frontImageUrl, backImageUrl])
 
     const difficultyOptions = [
@@ -133,33 +156,24 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             setIsDragging(false)
         }
 
-        // Add flipping state for smoother animation
+        const nextIsFlipped = !isFlipped
         setIsFlipping(true)
+        setIsFlipped(nextIsFlipped)
+        setShowBackContent(nextIsFlipped)
 
-        // Start flip animation quickly
-        setTimeout(() => {
-            setIsFlipped(!isFlipped)
-
-            // Clear flipping state after a shorter animation period
-            setTimeout(() => {
-                setIsFlipping(false)
-            }, 180)
-        }, 8)
+        setTimeout(() => setIsFlipping(false), 200)
     }
 
-    // Handle delayed back content visibility for smooth animations
-    useEffect(() => {
-        if (isFlipped) {
-            // Show back content after flip animation reaches halfway point (shorter delay for snappy feel)
-            const timer = setTimeout(() => {
-                setShowBackContent(true)
-            }, 90)
-            return () => clearTimeout(timer)
-        } else {
-            // Hide back content immediately when flipping to front
-            setShowBackContent(false)
-        }
-    }, [isFlipped])
+    const handleTypeAnswerSubmit = (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (!typedAnswer.trim() || isFlipping) return
+
+        setIsFlipping(true)
+        setIsFlipped(true)
+        setShowBackContent(true)
+        setTimeout(() => setIsFlipping(false), 200)
+    }
 
     // Cleanup speech when card changes
     useEffect(() => {
@@ -204,28 +218,24 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     const handleTouchCancel = (e) => {
         // Reset dragging state if touch is cancelled
         setIsDragging(false)
+        setSelectedAnswer(null)
         updateDragOffset({ x: 0, y: 0 })
         hasDragged.current = false
     }
 
     const handleTouchEnd = (e) => {
-        const currentSelectedAnswer = selectedAnswer // Capture before clearing state
-        const wasDragging = isDragging
-
-        // Determine final answer from final dragOffset if selectedAnswer wasn't set yet
-        const computeAnswerFromOffset = (offset) => {
-            if (!offset) return null
-            const x = offset.x
-            const y = offset.y
-            if (x < -20 && y < -20) return 0
-            if (x < -20 && y > 20) return 1
-            if (x > 20 && y > 20) return 2
-            if (x > 20 && y < -20) return 3
-            return null
+        const answerAtRelease = getAnswerFromOffset(dragOffsetRef.current)
+        const lastSelectedAnswer = answerAtRelease ?? selectedAnswerRef.current
+        if (dragFrameRef.current !== null) {
+            cancelAnimationFrame(dragFrameRef.current)
+            dragFrameRef.current = null
         }
+        pendingDragOffsetRef.current = null
+        applyDragOffset(dragOffsetRef.current)
 
         // Stop dragging state first
         setIsDragging(false)
+        setSelectedAnswer(null)
 
         // If card is not flipped, flip is handled by click event
         if (!isFlipped) {
@@ -243,7 +253,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
 
             // Reduced threshold for faster flick detection
             const flingSpeedThreshold = 0.3 // px per ms (~300 px/s)
-            let finalAnswer = currentSelectedAnswer
+            let finalAnswer = answerAtRelease ?? lastSelectedAnswer
 
             if (speed > flingSpeedThreshold) {
                 // Determine quadrant from velocity vector
@@ -254,7 +264,7 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             }
 
             if (finalAnswer === null) {
-                finalAnswer = computeAnswerFromOffset(dragOffsetRef.current)
+                finalAnswer = lastSelectedAnswer
             }
 
             if (finalAnswer !== null) {
@@ -376,11 +386,12 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     useEffect(() => {
         setIsFlipped(false)
         setShowBackContent(false)
+        setTypedAnswer('')
         if (dragFrameRef.current !== null) cancelAnimationFrame(dragFrameRef.current)
         dragFrameRef.current = null
         pendingDragOffsetRef.current = null
         dragOffsetRef.current = { x: 0, y: 0 }
-        setDragOffset({ x: 0, y: 0 })
+        applyDragOffset({ x: 0, y: 0 })
         setIsDragging(false)
         setSelectedAnswer(null)
         setIsFlipping(false)
@@ -409,44 +420,17 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         }
     }, [card.id])
 
-    useEffect(() => {
-        let answer = null
-        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20) answer = 0
-        else if (isDragging && dragOffset.x < -20 && dragOffset.y > 20) answer = 1
-        else if (isDragging && dragOffset.x > 20 && dragOffset.y > 20) answer = 2
-        else if (isDragging && dragOffset.x > 20 && dragOffset.y < -20) answer = 3
-        setSelectedAnswer(answer)
-    }, [dragOffset, isDragging]);
-
     // Notify parent of drag state changes
     useEffect(() => {
         if (onDragStateChange) {
             onDragStateChange({
                 isFlipped,
                 isDragging,
-                dragOffset,
+                dragOffset: dragOffsetRef.current,
                 selectedAnswer
             })
         }
     }, [isFlipped, isDragging, selectedAnswer, onDragStateChange]);
-
-    const getSwipeIndicator = () => {
-        let answer = null
-        if (isDragging && dragOffset.x < -20 && dragOffset.y < -20) answer = 0
-        else if (isDragging && dragOffset.x < -20 && dragOffset.y > 20) answer = 1
-        else if (isDragging && dragOffset.x > 20 && dragOffset.y > 20) answer = 2
-        else if (isDragging && dragOffset.x > 20 && dragOffset.y < -20) answer = 3
-        if (answer === null) return null
-
-        const option = difficultyOptions[answer]
-        return {
-            ...option,
-            gradient: `linear-gradient(135deg, ${option.color}33, ${option.color}66)`,
-            borderColor: `${option.color}cc`
-        }
-    }
-
-    const swipeIndicator = getSwipeIndicator()
 
     const getMemoryMeta = () => {
         const strength = typeof card?.memoryStrength === 'number'
@@ -499,15 +483,18 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     return {
         isFlipped,
         showBackContent,
-        dragOffset,
         isDragging,
         selectedAnswer,
         isFlipping,
         cardRef,
+        cardContainerRef,
         frontImageUrl,
         backImageUrl,
         frontText,
         backText,
+        typedAnswer,
+        setTypedAnswer,
+        handleTypeAnswerSubmit,
         difficultyOptions,
         handleCardClick,
         handleTouchEnd,
@@ -517,7 +504,6 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         handlePointerMove,
         handlePointerUp,
         handlePointerCancel,
-        swipeIndicator,
         memoryMeta
     }
 }
@@ -526,17 +512,19 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
     const {
         isFlipped,
         showBackContent,
-        dragOffset,
         isDragging,
         selectedAnswer,
         isFlipping,
         cardRef,
+        cardContainerRef,
         frontImageUrl,
         backImageUrl,
         frontText,
         backText,
+        typedAnswer,
+        setTypedAnswer,
+        handleTypeAnswerSubmit,
         difficultyOptions,
-        swipeIndicator,
         memoryMeta,
         handleCardClick,
         handleTouchEnd,
@@ -560,38 +548,47 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         justifyContent: isHorizontalImage ? horizontalAlignment[appearance.textAlign] || 'center' : verticalAlignment[appearance.textVertical] || 'center',
         alignItems: isHorizontalImage ? verticalAlignment[appearance.textVertical] || 'center' : horizontalAlignment[appearance.textAlign] || 'center',
         textAlign: appearance.textAlign || 'center',
-        minWidth: 0
+        minWidth: 0,
+        minHeight: 0,
+        gap: hasImage ? '0.75rem' : 0
     })
-    const getImageStyle = (hasImage) => ({
-        width: hasImage && isHorizontalImage ? '42%' : '100%',
-        height: hasImage && isHorizontalImage ? '100%' : '45%',
-        maxHeight: '12rem',
+    const getImageStyle = (hasText) => ({
+        width: isHorizontalImage && hasText ? '65%' : '100%',
+        height: '100%',
         order: appearance.imagePosition === 'bottom' || appearance.imagePosition === 'right' ? 1 : 0,
-        flex: '0 1 45%',
-        minWidth: 0
+        flex: hasText ? (isHorizontalImage ? '1 1 65%' : '1 1 0%') : '1 1 100%',
+        minWidth: 0,
+        minHeight: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
     })
     const getTextStyle = (hasImage) => ({
         fontSize: textSizes[appearance.textSize] || textSizes.medium,
         textAlign: appearance.textAlign || 'center',
         order: appearance.imagePosition === 'bottom' || appearance.imagePosition === 'right' ? 0 : 1,
-        flex: hasImage ? '1 1 auto' : '0 1 auto',
+        flex: hasImage && isHorizontalImage ? '0 1 35%' : '0 1 auto',
+        maxWidth: hasImage && isHorizontalImage ? '35%' : '100%',
         minWidth: 0,
+        minHeight: 0,
         color: cardTextColor
     })
     const cardFaceStyle = {
-        backgroundColor: swipeIndicator ? `${swipeIndicator.color}18` : '#ffffff',
+        backgroundColor: '#ffffff',
         color: cardTextColor,
-        borderColor: swipeIndicator?.color || cardColor
+        borderColor: cardColor
     }
+    const typedAnswerMatches = typedAnswer.trim().replace(/\s+/g, ' ').toLocaleLowerCase() ===
+        backText.trim().replace(/\s+/g, ' ').toLocaleLowerCase()
 
     // Custom styles for FlashCard
     const customStyles = {
         // Ensure the card sits above the quadrant backgrounds
-        flashcardContainer: 'relative w-full h-full touch-none select-none transition-all duration-300 ease-out z-30',
+        flashcardContainer: 'relative w-full h-full touch-none select-none transition-none z-30',
         flashcard: 'relative w-full h-full cursor-pointer transform-gpu transition-all duration-200 ease-out',
         dragging: 'transition-none',
         // Use the utility name defined in index.css for 3D transform support
-        cardInner: 'relative w-full h-full transition-transform duration-300 ease-out transform-3d',
+        cardInner: 'relative w-full h-full transition-transform duration-200 ease-out transform-3d',
         // Give front and back clear background color and a visible solid border
         // Use opaque white for card faces so the backface doesn't show through during 3D flips
         cardFront: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl shadow-lg overflow-hidden',
@@ -600,18 +597,18 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         cardBackground: 'absolute inset-0 bg-center bg-cover filter blur-sm rounded-2xl',
         // Richer gradient overlay to add depth and a subtle vignette without blocking interactions
         cardGradientOverlay: 'absolute inset-0 pointer-events-none rounded-2xl bg-gradient-to-br from-black/40 via-black/10 to-black/30 ',
-        cardContent: 'relative z-10 p-6 h-full flex flex-col items-center justify-center text-center transition-all duration-200',
-        // Image wrapper: rounded with shadow to lift visuals
-        cardImage: 'mb-4 max-w-full max-h-48 flex-shrink-0 rounded-xl overflow-hidden shadow-2xl',
+        cardContent: 'relative z-10 min-h-0 p-4 sm:p-6 h-full flex flex-col items-center justify-center text-center transition-all duration-200',
+        // Image wrapper expands into available card space while preserving the image ratio.
+        cardImage: 'min-h-0 min-w-0 max-w-full max-h-full rounded-xl overflow-hidden shadow-2xl',
         // Actual img element styling
-        cardImageImg: 'w-full h-auto object-contain block',
+        cardImageImg: 'w-full h-full object-contain block',
         // Use standard break-words utility for reliable wrapping
         cardText: 'text-lg sm:text-xl md:text-2xl font-medium text-gray-900 leading-relaxed break-words max-w-full',
         bothSidesContainer: 'w-full h-full flex flex-col',
-        sideSection: 'flex-1 flex flex-col items-center justify-center',
+        sideSection: 'min-h-0 flex-1 flex flex-col items-center justify-center',
         sideLabel: 'text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide',
         sideDivider: 'w-full h-px bg-gray-300 my-4',
-        swipeIndicator: 'absolute inset-0 rounded-2xl border-2 flex flex-col items-center justify-center text-white font-semibold transition-all duration-200 pointer-events-none z-10',
+        swipeIndicator: 'absolute inset-0 rounded-2xl border-[8px] border-solid flex flex-col items-center justify-center text-white font-semibold pointer-events-none z-10',
         indicatorEmoji: 'text-3xl mb-2',
         indicatorLabel: 'text-lg uppercase tracking-wider'
     }
@@ -625,9 +622,10 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
 
     return (
         <div
-            className={styles.flashcard.flashcardContainer}
+            ref={cardContainerRef}
+            className={`${styles.flashcard.flashcardContainer} ${isDragging ? 'will-change-transform' : ''}`}
             style={{
-                transform: `translate(${dragOffset.x}px, ${dragOffset.y}px) rotate(${dragOffset.x * 0.1}deg) ${isFlipping ? 'scale(1.02)' : 'scale(1)'}`,
+                transform: 'translate(var(--drag-x, 0px), var(--drag-y, 0px)) rotate(var(--drag-rotation, 0deg))',
                 opacity: isDragging ? 0.8 : 1,
                 touchAction: 'none' /* prevent browser pull-to-refresh / scroll while interacting with card */
             }}
@@ -659,22 +657,54 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                 <div className={styles.flashcard.cardGradientOverlay}></div>
                             </>
                         )}
-                        <div className={styles.flashcard.cardContent} style={getContentLayoutStyle(Boolean(frontImageUrl))}>
-                            {frontImageUrl && (
-                                <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
-                                    <img
-                                        src={frontImageUrl}
-                                        alt="Card visual"
-                                        draggable={false}
-                                        onDragStart={(e) => e.preventDefault()}
-                                        className={styles.flashcard.cardImageImg}
-                                        style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
+                        <div
+                            className={styles.flashcard.cardContent}
+                            style={getContentLayoutStyle(false)}
+                        >
+                            <div className="flex min-h-0 w-full flex-1" style={getContentLayoutStyle(Boolean(frontImageUrl))}>
+                                {frontImageUrl && (
+                                    <div className={styles.flashcard.cardImage} style={getImageStyle(Boolean(frontText?.trim()))}>
+                                        <img
+                                            src={frontImageUrl}
+                                            alt="Card visual"
+                                            loading="eager"
+                                            fetchPriority="high"
+                                            decoding="async"
+                                            draggable={false}
+                                            onDragStart={(e) => e.preventDefault()}
+                                            className={styles.flashcard.cardImageImg}
+                                            style={{ width: '100%', height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
+                                        />
+                                    </div>
+                                )}
+                                {frontText && frontText.trim() ? (
+                                    <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))}>{frontText}</div>
+                                ) : null}
+                            </div>
+                            {studyOptions?.typeToAnswer && (
+                                <form
+                                    className="z-20 w-full shrink-0 px-2 py-1"
+                                    onSubmit={handleTypeAnswerSubmit}
+                                    onPointerDown={event => event.stopPropagation()}
+                                    onPointerMove={event => event.stopPropagation()}
+                                    onPointerUp={event => event.stopPropagation()}
+                                    onPointerCancel={event => event.stopPropagation()}
+                                    onClick={event => event.stopPropagation()}
+                                >
+                                    <input
+                                        id={`typed-answer-${card.id}`}
+                                        type="text"
+                                        value={typedAnswer}
+                                        onChange={event => setTypedAnswer(event.target.value)}
+                                        placeholder="Type your answer..."
+                                        aria-label="Type your answer"
+                                        autoComplete="off"
+                                        required
+                                        className="w-full border-0 border-b border-gray-300 bg-transparent px-1 py-2 text-center text-base placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-0"
+                                        style={{ color: cardTextColor }}
                                     />
-                                </div>
+                                </form>
                             )}
-                            {frontText && frontText.trim() ? (
-                                <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))}>{frontText}</div>
-                            ) : null}
                         </div>
                     </div>
                     <div className={`${styles.flashcard.cardBack} study-card-surface`} style={cardFaceStyle}>
@@ -713,6 +743,24 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                         <span>Recent: {memoryMeta.lastResultLabel}</span>
                                         <span>{memoryMeta.reviews} reviews</span>
                                     </div>
+                                    {studyOptions?.typeToAnswer && typedAnswer.trim() && (
+                                        <div className="mb-2 flex max-h-16 w-full shrink-0 items-start justify-between gap-2 overflow-y-auto rounded-lg bg-blue-50 px-3 py-2 text-left text-xs text-gray-700">
+                                            <div className="min-w-0">
+                                                <span className="font-semibold">Your answer</span>
+                                                <p className="break-words">{typedAnswer}</p>
+                                            </div>
+                                            {backText.trim() && (
+                                                <span className={`shrink-0 rounded-full px-2 py-1 font-semibold ${typedAnswerMatches ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                    {typedAnswerMatches ? 'Exact match' : 'Review below'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {studyOptions?.typeToAnswer && typedAnswer.trim() && !studyOptions?.showBothSides && (
+                                        <div className="mb-1 w-full shrink-0 text-left text-[10px] font-semibold uppercase text-gray-500">
+                                            Card answer
+                                        </div>
+                                    )}
                                     <div className="flex min-h-0 w-full flex-1" style={getContentLayoutStyle(Boolean(backImageUrl) && !studyOptions?.showBothSides)}>
                                     {studyOptions?.showBothSides ? (
                                         // Show both sides when option is enabled
@@ -721,14 +769,17 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                 <div className={styles.flashcard.sideLabel}>Front:</div>
                                                 <div className="flex min-h-0 w-full flex-1 items-center gap-2" style={getContentLayoutStyle(Boolean(frontImageUrl))}>
                                                 {frontImageUrl && (
-                                                    <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
+                                                    <div className={styles.flashcard.cardImage} style={getImageStyle(Boolean(frontText?.trim()))}>
                                                         <img
                                                             src={frontImageUrl}
                                                             alt="Front visual"
+                                                            loading="eager"
+                                                            fetchPriority="high"
+                                                            decoding="async"
                                                             draggable={false}
                                                             onDragStart={(e) => e.preventDefault()}
                                                             className={styles.flashcard.cardImageImg}
-                                                            style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
+                                                            style={{ width: '100%', height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
                                                         />
                                                     </div>
                                                 )}
@@ -739,17 +790,22 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                             </div>
                                             <div className={styles.flashcard.sideDivider}></div>
                                             <div className={styles.flashcard.sideSection}>
-                                                <div className={styles.flashcard.sideLabel}>Back:</div>
+                                                <div className={styles.flashcard.sideLabel}>
+                                                    {studyOptions?.typeToAnswer && typedAnswer.trim() ? 'Card answer:' : 'Back:'}
+                                                </div>
                                                 <div className="flex min-h-0 w-full flex-1 items-center gap-2" style={getContentLayoutStyle(Boolean(backImageUrl))}>
                                                 {backImageUrl && (
-                                                    <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
+                                                    <div className={styles.flashcard.cardImage} style={getImageStyle(Boolean(backText?.trim()))}>
                                                         <img
                                                             src={backImageUrl}
                                                             alt="Back visual"
+                                                            loading="eager"
+                                                            fetchPriority="high"
+                                                            decoding="async"
                                                             draggable={false}
                                                             onDragStart={(e) => e.preventDefault()}
                                                             className={styles.flashcard.cardImageImg}
-                                                            style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
+                                                            style={{ width: '100%', height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
                                                         />
                                                     </div>
                                                 )}
@@ -763,14 +819,17 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                         // Show only back side when option is disabled
                                         <>
                                             {backImageUrl && (
-                                                <div className={styles.flashcard.cardImage} style={getImageStyle(true)}>
+                                                <div className={styles.flashcard.cardImage} style={getImageStyle(Boolean(backText?.trim()))}>
                                                     <img
                                                         src={backImageUrl}
                                                         alt="Card visual"
+                                                        loading="eager"
+                                                        fetchPriority="high"
+                                                        decoding="async"
                                                         draggable={false}
                                                         onDragStart={(e) => e.preventDefault()}
                                                         className={styles.flashcard.cardImageImg}
-                                                        style={{ height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
+                                                        style={{ width: '100%', height: '100%', objectFit: appearance.imageFit === 'fill' ? 'cover' : 'contain' }}
                                                     />
                                                 </div>
                                             )}
@@ -786,19 +845,19 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                     </div>
                 </div>
 
-                {swipeIndicator && (
+                {difficultyOptions.map((option) => (
                     <div
-                        className={styles.flashcard.swipeIndicator}
+                        key={option.id}
+                        className={`${styles.flashcard.swipeIndicator} ${isDragging && selectedAnswer === option.id ? 'visible' : 'invisible'}`}
                         style={{
-                            background: swipeIndicator.gradient,
-                            borderColor: swipeIndicator.borderColor,
-                            color: 'white'
+                            background: `linear-gradient(135deg, ${option.color}33, ${option.color}66)`,
+                            borderColor: option.color
                         }}
                     >
-                        <span className={styles.flashcard.indicatorEmoji}>{swipeIndicator.icon}</span>
-                        <span className={styles.flashcard.indicatorLabel}>{swipeIndicator.label}</span>
+                        <span className={styles.flashcard.indicatorEmoji}>{option.icon}</span>
+                        <span className={styles.flashcard.indicatorLabel}>{option.label}</span>
                     </div>
-                )}
+                ))}
             </div>
         </div>
     )

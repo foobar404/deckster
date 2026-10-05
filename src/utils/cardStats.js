@@ -22,6 +22,13 @@ export const getCardState = (card) => {
   return hasBeenReviewed ? 'learning' : 'new'
 }
 
+export const matchesStudyStatusFilters = (card, options = {}) => (
+  (options.onlyNew && getCardState(card) === 'new') ||
+  (options.onlyMissed && getCardState(card) === 'struggling') ||
+  (options.onlyLearning && getCardState(card) === 'learning') ||
+  (options.onlyMastered && getCardState(card) === 'mastered')
+)
+
 export const getImprovement = (card) => {
   const history = Array.isArray(card.reviewHistory) ? card.reviewHistory : []
   if (history.length === 0) return 0

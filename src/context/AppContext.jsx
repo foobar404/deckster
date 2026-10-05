@@ -55,6 +55,7 @@ export const AppProvider = ({ children }) => {
     statusFiltersVersion: 1,
     recentlyWrong: false,
     showBothSides: false, // Show both front and back when card flips
+    typeToAnswer: false,
     autoRead: false, // Auto-read card contents using TTS
     cardLimit: 50, // Limit number of cards to study (null = no limit)
     cardLimitVersion: 1
@@ -62,7 +63,43 @@ export const AppProvider = ({ children }) => {
 
   // Load data from localStorage on app start
   useEffect(() => {
-    const savedDecks = loadFromStorage(STORAGE_KEYS.DECKS, [])
+    const storedDecks = loadFromStorage(STORAGE_KEYS.DECKS, [])
+    const savedDecks = Array.isArray(storedDecks) ? storedDecks : []
+    const savedDeletedDecks = loadFromStorage(STORAGE_KEYS.DELETED_DECKS, [])
+    const hasDeckHistory = savedDecks.length > 0 || (Array.isArray(savedDeletedDecks) && savedDeletedDecks.length > 0)
+    const initialDecks = hasDeckHistory ? savedDecks : (() => {
+      const now = new Date().toISOString()
+      const facts = [
+        ['How many hearts does an octopus have?', 'Three.'],
+        ['Which bird can fly backwards?', 'The hummingbird.'],
+        ['What is the dot over a lowercase i or j called?', 'A tittle.'],
+        ['Botanically, which is a berry: a strawberry or a banana?', 'A banana.'],
+        ['What is the only mammal capable of powered flight?', 'A bat.']
+      ]
+      const cards = facts.map(([front, back], index) => ({
+        id: Date.now() + index,
+        front,
+        back,
+        difficulty: 0,
+        memoryStrength: 0,
+        state: 'new',
+        lastReviewed: null,
+        lastReviewedAt: null,
+        reviewCount: 0,
+        correctStreak: 0,
+        lapseCount: 0,
+        lastResult: null,
+        createdAt: now
+      }))
+      return [{
+        id: Date.now(),
+        name: 'Tiny Weird Facts',
+        cards,
+        appearance: { icon: '\u2728', color: '#fef3c7' },
+        createdAt: now,
+        updatedAt: Date.now()
+      }]
+    })()
     const savedStats = loadFromStorage(STORAGE_KEYS.STATS, {
       totalReviews: 0,
       correct: 0,
@@ -81,6 +118,7 @@ export const AppProvider = ({ children }) => {
       statusFiltersVersion: 1,
       recentlyWrong: false,
       showBothSides: false,
+      typeToAnswer: false,
       autoRead: false,
       cardLimit: 50,
       cardLimitVersion: 1
@@ -90,6 +128,7 @@ export const AppProvider = ({ children }) => {
     const normalizedStudyOptions = {
       ...savedStudyOptions,
       mode: savedStudyOptions.mode === 'cram' ? 'cram' : 'review',
+      typeToAnswer: Boolean(savedStudyOptions.typeToAnswer),
       cardOrder: ['forward', 'reverse', 'random'].includes(savedStudyOptions.cardOrder) ? savedStudyOptions.cardOrder : 'forward',
       ...(savedStudyOptions.statusFiltersVersion === 1 ? {} : {
         onlyMissed: true,
@@ -104,7 +143,7 @@ export const AppProvider = ({ children }) => {
       })
     }
 
-    setDecks(savedDecks)
+    setDecks(initialDecks)
     setReviewStats(savedStats)
     setStudyOptions(normalizedStudyOptions)
     setTheme(THEME_VALUES.includes(savedTheme) ? savedTheme : 'system')
@@ -199,7 +238,10 @@ export const AppProvider = ({ children }) => {
   }
 
   const applySyncedPreferences = (preferences) => {
-    setStudyOptions(preferences.studyOptions)
+    setStudyOptions({
+      ...preferences.studyOptions,
+      typeToAnswer: Boolean(preferences.studyOptions?.typeToAnswer)
+    })
     setTheme(preferences.theme)
   }
 

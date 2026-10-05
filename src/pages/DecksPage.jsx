@@ -1,6 +1,6 @@
-import { useStyle } from '../utils'
-import { useNavigate } from 'react-router-dom'
-import { useState, useEffect, useContext } from 'react'
+import { useStyle, matchesStudyStatusFilters } from '../utils'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useLayoutEffect, useContext } from 'react'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { Portal } from '../components/Portal'
@@ -21,6 +21,7 @@ const deckSortOptions = [
  */
 const useDecksPage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { decks, setDecks, setActiveDeck, studyOptions, setStudyOptions } = useContext(AppContext)
   const { showInfo, showWarning } = useToast()
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -42,6 +43,14 @@ const useDecksPage = () => {
     } catch {
     }
   }, [selectedTag])
+
+  useLayoutEffect(() => {
+    if (!location.state?.navRoot) return
+    setEditingDeck(null)
+    setShowCreateForm(false)
+    setShowOptions(false)
+    setShowTagFilter(false)
+  }, [location.key, location.state])
 
   const createDeck = () => {
     if (!newDeckName.trim()) return
@@ -66,21 +75,15 @@ const useDecksPage = () => {
     }
   }
 
-  const getCardStrength = (card) => {
-    if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
-    if (typeof card?.difficulty === 'number') return Math.max(0, Math.min(100, card.difficulty))
-    return 0
-  }
-
   const getDeckStats = (deck) => {
     const total = deck.cards.length
+    let studyCards = deck.cards.filter(card => matchesStudyStatusFilters(card, studyOptions))
 
-    // Calculate study cards based on current options
-    let studyCount = total
-    if (studyOptions.onlyMissed) {
-      const missedCards = deck.cards.filter(card => getCardStrength(card) < 60 && card.state !== 'mastered')
-      studyCount = missedCards.length > 0 ? missedCards.length : total
+    if (studyOptions.mode !== 'cram' && studyOptions.recentlyWrong) {
+      studyCards = studyCards.filter(card => (card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2)
     }
+
+    let studyCount = studyCards.length
 
     // Apply card limit if set
     if (studyOptions.cardLimit && studyOptions.cardLimit > 0) {
@@ -416,6 +419,18 @@ export function DecksPage() {
                 </label>
               </div>
 
+              <div className={`${styles.decks.optionGroup} order-4`}>
+                <label className="flex items-center gap-3 text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(studyOptions.typeToAnswer)}
+                    onChange={(e) => setStudyOptions(prev => ({ ...prev, typeToAnswer: e.target.checked }))}
+                    className="form-check"
+                  />
+                  Type answer before revealing
+                </label>
+              </div>
+
               {studyOptions.mode !== 'cram' && <div className={`${styles.decks.optionGroup} order-2`}>
                 <div className="space-y-3">
                   <label className="block text-gray-700 font-medium">Cards per session</label>
@@ -582,7 +597,17 @@ export function DecksPage() {
               <div className={`${styles.decks.deckHeader} ${isCollapsed ? 'mb-0' : ''}`}>
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/75 text-3xl shadow-sm" aria-hidden="true">{deck.appearance?.icon || '📚'}</span>
-                  <h3 className={styles.decks.deckName} style={{ color: deckTextColor }}>{deck.name}</h3>
+                  <h3 className={styles.decks.deckName} style={{ color: deckTextColor }}>
+                    <button
+                      type="button"
+                      className="block max-w-full truncate text-left hover:text-blue-700 disabled:cursor-not-allowed"
+                      onClick={() => handleDeckSelect(deck)}
+                      disabled={stats.total === 0}
+                      aria-label={`Study ${deck.name}`}
+                    >
+                      {deck.name}
+                    </button>
+                  </h3>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-1">
                   <button

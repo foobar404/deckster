@@ -1,9 +1,8 @@
 import { useStyle } from '../utils'
-import { FaChevronDown } from 'react-icons/fa'
+import { FaChevronDown, FaEye, FaEyeSlash, FaUpload, FaMinus, FaPlus } from 'react-icons/fa'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { useState, useEffect, useContext, useRef } from 'react'
-import { FaFileUpload } from 'react-icons/fa'
 
 const deckColorOptions = [
   ['#ffffff', 'White'], ['#0B1026', 'Midnight navy'], ['#1A1F47', 'Navy'], ['#2D3EB3', 'Royal indigo'], ['#3F51B5', 'Indigo'],
@@ -142,11 +141,7 @@ const useImportPage = () => {
       showError('Choose a whole number between 1 and 300 cards.')
       return
     }
-    const selectedModel = models.find((entry) => entry.id === model)
-    if (!selectedModel) {
-      showError('Wait for the model list to load, then select a model.')
-      return
-    }
+    const selectedModel = models.find((entry) => entry.id === model) || { id: model }
 
     setIsGenerating(true)
     try {
@@ -208,7 +203,7 @@ const useImportPage = () => {
           'Authorization': `Bearer ${apiKey.trim()}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': window.location.origin,
-          'X-Title': 'Deckster'
+          'X-Title': 'Cram'
         },
         body: JSON.stringify(requestBody)
       })
@@ -425,6 +420,7 @@ Please\tPor favor`
     deckName,
     setDeckName,
     preview,
+    hasGeneratedDeckSettings: Boolean(generatedDeckSettings),
     activeTab,
     setActiveTab,
     apiKey,
@@ -459,6 +455,7 @@ export function ImportPage() {
     deckName,
     setDeckName,
     preview,
+    hasGeneratedDeckSettings,
     activeTab,
     setActiveTab,
     apiKey,
@@ -483,6 +480,8 @@ export function ImportPage() {
     handleFileSelect,
     sampleData
   } = useImportPage()
+  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false)
+  const [showApiKeyInMain, setShowApiKeyInMain] = useState(() => !apiKey.trim())
 
   // Custom styles for ImportPage
   const customStyles = {
@@ -503,6 +502,37 @@ export function ImportPage() {
 
   const baseStyles = useStyle()
   const styles = { ...baseStyles, import: customStyles }
+  const apiKeyField = (
+    <div className="mb-5">
+      <label htmlFor="openRouterKey" className={styles.import.label}>OpenRouter API key</label>
+      <div className="relative">
+        <textarea
+          id="openRouterKey"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          rows={2}
+          value={apiKey}
+          onChange={(event) => handleApiKeyChange(event.target.value)}
+          onBlur={(event) => setShowApiKeyInMain(!event.currentTarget.value.trim())}
+          placeholder="sk-or-v1-..."
+          className={`${styles.import.textarea} pr-12`}
+          style={{ WebkitTextSecurity: isApiKeyVisible ? 'none' : 'disc' }}
+        />
+        <button
+          type="button"
+          onClick={() => setIsApiKeyVisible(visible => !visible)}
+          aria-label={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+          title={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        >
+          {isApiKeyVisible ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+        </button>
+      </div>
+      <p className={styles.import.hint}>Saved in this browser's local storage and sent directly to OpenRouter. Anyone with access to this browser profile can retrieve it. Your prompts are processed by the selected model provider.</p>
+    </div>
+  )
 
   return (<>
     <section className={styles.import.container}>
@@ -531,7 +561,7 @@ export function ImportPage() {
           </button>
         </div>
 
-        <div className={styles.import.formSection}>
+        {(activeTab === 'text' || hasGeneratedDeckSettings) && <div className={styles.import.formSection}>
           <label htmlFor="deckName" className={styles.import.label}>Deck Name</label>
           <div className={styles.import.dropdown}>
             <input
@@ -575,49 +605,10 @@ export function ImportPage() {
               : 'Enter a name for your new deck.'
             }
           </div>
-        </div>
+        </div>}
 
         {activeTab === 'ai' && <div className={styles.import.formSection}>
-          <div className="mb-5">
-            <label htmlFor="openRouterKey" className={styles.import.label}>OpenRouter API key</label>
-            <input
-              id="openRouterKey"
-              type="password"
-              autoComplete="off"
-              value={apiKey}
-              onChange={(event) => handleApiKeyChange(event.target.value)}
-              placeholder="sk-or-v1-..."
-              className={styles.import.input}
-            />
-            <p className={styles.import.hint}>Saved in this browser's local storage and sent directly to OpenRouter. Anyone with access to this browser profile can retrieve it. Your prompts are processed by the selected model provider.</p>
-          </div>
-
-          <div className="mb-5">
-            <label htmlFor="openRouterModel" className={styles.import.label}>Model</label>
-            <select
-              id="openRouterModel"
-              value={model}
-              onChange={(event) => setModel(event.target.value)}
-              disabled={modelsLoading || models.length === 0}
-              className={styles.import.input}
-            >
-              {modelsLoading && <option value="">Loading popular models...</option>}
-              {!modelsLoading && models.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name} · in {formatModelPrice(entry.pricing?.prompt)} / out {formatModelPrice(entry.pricing?.completion)}
-                </option>
-              ))}
-              {!modelsLoading && models.length === 0 && <option value="">No models available</option>}
-            </select>
-            {modelsError ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <p className={styles.import.hint}>{modelsError}</p>
-                <button type="button" onClick={retryModels} className="text-sm font-medium text-blue-700 hover:underline">Retry</button>
-              </div>
-            ) : (
-              <p className={styles.import.hint}>Top 25 popular OpenRouter text models. Prices shown per million tokens; provider rates may vary.</p>
-            )}
-          </div>
+          {showApiKeyInMain && apiKeyField}
 
           <div className="mb-5">
             <label htmlFor="aiTopic" className={styles.import.label}>Topic and instructions</label>
@@ -633,39 +624,71 @@ export function ImportPage() {
           </div>
 
           <div className="mb-5 max-w-sm">
-            <label htmlFor="aiCardCount" className={styles.import.label}>Number of cards</label>
-            <input
-              id="aiCardCount"
-              type="number"
-              min="1"
-              max="300"
-              step="1"
-              value={cardCount}
-              onChange={(event) => setCardCount(event.target.value)}
-              className={styles.import.input}
-            />
+            <span className={styles.import.label}>Number of cards</span>
+            <div className="flex items-center gap-2" role="group" aria-label="Choose number of cards">
+              <button
+                type="button"
+                aria-label="Decrease card count"
+                disabled={Number(cardCount) <= 1}
+                onClick={() => setCardCount(current => Math.max(1, Number(current) - 1))}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <FaMinus aria-hidden="true" />
+              </button>
+              <output className="flex h-11 min-w-16 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-lg font-semibold text-gray-900" aria-live="polite">
+                {cardCount}
+              </output>
+              <button
+                type="button"
+                aria-label="Increase card count"
+                disabled={Number(cardCount) >= 300}
+                onClick={() => setCardCount(current => Math.min(300, Number(current) + 1))}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <FaPlus aria-hidden="true" />
+              </button>
+            </div>
           </div>
 
-          <button
-            type="button"
-            className={styles.import.importButton}
-            onClick={handleGenerate}
-            disabled={isGenerating || modelsLoading || models.length === 0 || !apiKey.trim() || !topic.trim() || !Number.isInteger(Number(cardCount)) || Number(cardCount) < 1 || Number(cardCount) > 300}
-          >
-            {isGenerating ? 'Generating...' : 'Generate cards'}
-          </button>
+          <details className="mb-5 rounded-lg border border-gray-200 px-4">
+            <summary className="cursor-pointer py-3 text-sm font-medium text-gray-700">Advanced generation settings</summary>
+            <div className="border-t border-gray-200 py-4">
+              {!showApiKeyInMain && apiKeyField}
+              <div className="mb-5">
+                <label htmlFor="openRouterModel" className={styles.import.label}>Model</label>
+                <select
+                  id="openRouterModel"
+                  value={model}
+                  onChange={(event) => setModel(event.target.value)}
+                  disabled={modelsLoading || models.length === 0}
+                  className={styles.import.input}
+                >
+                  {modelsLoading && <option value="">Loading popular models...</option>}
+                  {!modelsLoading && models.map((entry) => (
+                    <option key={entry.id} value={entry.id}>
+                      {entry.name} · in {formatModelPrice(entry.pricing?.prompt)} / out {formatModelPrice(entry.pricing?.completion)}
+                    </option>
+                  ))}
+                  {!modelsLoading && models.length === 0 && <option value="">No models available</option>}
+                </select>
+                {modelsError ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <p className={styles.import.hint}>{modelsError}</p>
+                    <button type="button" onClick={retryModels} className="text-sm font-medium text-blue-700 hover:underline">Retry</button>
+                  </div>
+                ) : (
+                  <p className={styles.import.hint}>Top popular OpenRouter text models. Prices shown per million tokens; provider rates may vary.</p>
+                )}
+              </div>
+
+            </div>
+          </details>
+
         </div>}
 
         {activeTab === 'text' && <div className={styles.import.formSection}>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="mb-2">
             <label htmlFor="importText" className={`${styles.import.label} mb-0`}>Card Data</label>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <FaFileUpload /> Import from file
-            </button>
             <input
               ref={fileInputRef}
               type="file"
@@ -702,13 +725,44 @@ export function ImportPage() {
           </section>
         )}
 
-        <div className="flex justify-center">
+        {activeTab === 'ai' && hasGeneratedDeckSettings && preview?.length > 0 && (
+          <p className="mb-3 text-center text-sm font-medium text-emerald-700" role="status">
+            Draft ready · review the cards, then import.
+          </p>
+        )}
+
+        <div className={`grid w-full items-center gap-2 ${activeTab === 'text' ? 'grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'grid-cols-1'}`}>
           <button
-            className={styles.import.importButton}
-            onClick={handleImport}
+            type="button"
+            className={`${activeTab === 'ai' && hasGeneratedDeckSettings && preview?.length > 0
+              ? 'w-full max-w-sm rounded-lg bg-emerald-600 px-4 py-3 font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50'
+              : `${styles.import.importButton} disabled:cursor-not-allowed disabled:opacity-50`} justify-self-center ${activeTab === 'text' ? 'col-start-2' : ''}`}
+            onClick={() => activeTab === 'ai' && !(hasGeneratedDeckSettings && preview?.length > 0) ? handleGenerate() : handleImport()}
+            disabled={activeTab === 'ai'
+              ? isGenerating || (hasGeneratedDeckSettings && preview?.length > 0
+                ? !deckName.trim() || !preview?.length
+                : !apiKey.trim() || !topic.trim() || !Number.isInteger(Number(cardCount)) || Number(cardCount) < 1 || Number(cardCount) > 300)
+              : !deckName.trim() || !preview?.length}
           >
-            Import Deck ({preview ? preview.length : 0} cards)
+            {activeTab === 'ai'
+              ? isGenerating
+                ? 'Generating draft...'
+                : hasGeneratedDeckSettings && preview?.length > 0
+                  ? `Import ${preview.length} cards`
+                  : `Generate ${cardCount} cards`
+              : 'Import Deck'}
           </button>
+          {activeTab === 'text' && (
+            <button
+              type="button"
+              className="group col-start-3 flex h-11 w-11 shrink-0 items-center justify-center justify-self-end rounded-lg border border-gray-300 bg-gray-50 text-gray-700 shadow-sm transition-all hover:bg-gray-100 hover:text-blue-600 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Import from file"
+              title="Import from file"
+            >
+              <FaUpload aria-hidden="true" className="text-base" />
+            </button>
+          )}
         </div>
       </div>
     </section>

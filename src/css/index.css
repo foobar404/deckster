@@ -64,6 +64,7 @@
 
   /* Dynamic Viewport Height Fix */
   --vh: 1vh;
+  --mobile-nav-clearance: calc(6rem + env(safe-area-inset-bottom) + 0.75rem);
 
   /* Typography - Modern font stack */
   font-family: 'Inter', 'SF Pro Display', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -626,16 +627,16 @@ input[type="reset"] {
 }
 
 :root[data-theme="light"] {
-  --theme-bg: #f8fafc;
-  --theme-app-background: linear-gradient(135deg, #f8fafc, #eff6ff 55%, #f0fdfa);
+  --theme-bg: #f5f8fc;
+  --theme-app-background: linear-gradient(125deg, #f4f8ff 0%, #eaf1ff 36%, #f9f4ff 68%, #eaf8f7 100%);
   --theme-surface: #ffffff;
-  --theme-surface-muted: #f1f5f9;
-  --theme-text: #0f172a;
-  --theme-text-soft: #475569;
-  --theme-border: #dbe3ed;
+  --theme-surface-muted: #eaf0f7;
+  --theme-text: #15243b;
+  --theme-text-soft: #4c5f75;
+  --theme-border: #d3ddeb;
   --theme-primary: #2563eb;
   --theme-primary-hover: #1d4ed8;
-  --theme-primary-soft: #eff6ff;
+  --theme-primary-soft: #e5efff;
   --gradient-primary: linear-gradient(135deg, #2563eb, #0891b2, #0f766e);
 }
 
@@ -685,44 +686,44 @@ input[type="reset"] {
 }
 
 :root[data-theme="sunset"] {
-  --theme-bg: #fff7ed;
-  --theme-app-background: linear-gradient(135deg, #fff7ed, #ffedd5 55%, #fff1f2);
+  --theme-bg: #fff6ef;
+  --theme-app-background: linear-gradient(125deg, #fff6ec 0%, #ffe6ce 35%, #ffe9e8 70%, #fff5e5 100%);
   --theme-surface: #fffdfa;
-  --theme-surface-muted: #ffedd5;
-  --theme-text: #431407;
-  --theme-text-soft: #7c2d12;
-  --theme-border: #fed7aa;
-  --theme-primary: #ea580c;
-  --theme-primary-hover: #c2410c;
-  --theme-primary-soft: #ffedd5;
+  --theme-surface-muted: #ffebdc;
+  --theme-text: #482417;
+  --theme-text-soft: #765044;
+  --theme-border: #f0cdb4;
+  --theme-primary: #c2410c;
+  --theme-primary-hover: #9a3412;
+  --theme-primary-soft: #ffeadb;
   --gradient-primary: linear-gradient(135deg, #ea580c, #e11d48, #b45309);
 }
 
 :root[data-theme="rose"] {
-  --theme-bg: #fff1f2;
-  --theme-app-background: linear-gradient(135deg, #fff1f2, #ffe4e6 55%, #fff7ed);
-  --theme-surface: #fffafa;
-  --theme-surface-muted: #ffe4e6;
-  --theme-text: #4c0519;
-  --theme-text-soft: #881337;
-  --theme-border: #fecdd3;
-  --theme-primary: #e11d48;
-  --theme-primary-hover: #be123c;
-  --theme-primary-soft: #ffe4e6;
+  --theme-bg: #fff5f4;
+  --theme-app-background: linear-gradient(125deg, #fff2f3 0%, #ffe1e6 36%, #fff0e3 70%, #fff7ed 100%);
+  --theme-surface: #fffdfb;
+  --theme-surface-muted: #ffeaed;
+  --theme-text: #491a27;
+  --theme-text-soft: #75424d;
+  --theme-border: #f3ccd2;
+  --theme-primary: #be123c;
+  --theme-primary-hover: #9f1239;
+  --theme-primary-soft: #ffe5e9;
   --gradient-primary: linear-gradient(135deg, #e11d48, #db2777, #f97316);
 }
 
 :root[data-theme="lavender"] {
-  --theme-bg: #f5f3ff;
-  --theme-app-background: linear-gradient(135deg, #f5f3ff, #ede9fe 55%, #fdf2f8);
-  --theme-surface: #fdfcff;
-  --theme-surface-muted: #ede9fe;
+  --theme-bg: #f8f6ff;
+  --theme-app-background: linear-gradient(125deg, #f6f3ff 0%, #e9e6ff 36%, #fff0f7 70%, #ecf8f7 100%);
+  --theme-surface: #fffefe;
+  --theme-surface-muted: #eeebff;
   --theme-text: #2e1065;
   --theme-text-soft: #5b21b6;
-  --theme-border: #ddd6fe;
+  --theme-border: #d8d3f6;
   --theme-primary: #7c3aed;
   --theme-primary-hover: #6d28d9;
-  --theme-primary-soft: #ede9fe;
+  --theme-primary-soft: #ebe7ff;
   --gradient-primary: linear-gradient(135deg, #7c3aed, #c026d3, #2563eb);
 }
 
@@ -772,30 +773,30 @@ input[type="reset"] {
 }
 
 :root[data-theme="mint"] {
-  --theme-bg: #ecfdf5;
-  --theme-app-background: linear-gradient(135deg, #ecfdf5, #d1fae5 55%, #f0fdfa);
-  --theme-surface: #f8fffb;
-  --theme-surface-muted: #d1fae5;
-  --theme-text: #022c22;
-  --theme-text-soft: #065f46;
-  --theme-border: #a7f3d0;
+  --theme-bg: #effcf6;
+  --theme-app-background: linear-gradient(125deg, #edfff5 0%, #d2f5e2 36%, #e3f7fb 70%, #f1faec 100%);
+  --theme-surface: #fcfffd;
+  --theme-surface-muted: #e0f5e9;
+  --theme-text: #0b352a;
+  --theme-text-soft: #356a55;
+  --theme-border: #b8dfcc;
   --theme-primary: #047857;
   --theme-primary-hover: #065f46;
-  --theme-primary-soft: #d1fae5;
+  --theme-primary-soft: #d8f3e4;
   --gradient-primary: linear-gradient(135deg, #047857, #0d9488, #2563eb);
 }
 
 :root[data-theme="amber"] {
-  --theme-bg: #fffbeb;
-  --theme-app-background: linear-gradient(135deg, #fffbeb, #fef3c7 55%, #fff7ed);
-  --theme-surface: #fffefa;
-  --theme-surface-muted: #fef3c7;
-  --theme-text: #451a03;
-  --theme-text-soft: #78350f;
-  --theme-border: #fde68a;
+  --theme-bg: #fffae9;
+  --theme-app-background: linear-gradient(125deg, #fff7d6 0%, #ffedba 34%, #fff0dd 68%, #eaf7ed 100%);
+  --theme-surface: #fffef9;
+  --theme-surface-muted: #fff1c7;
+  --theme-text: #462d0d;
+  --theme-text-soft: #75521e;
+  --theme-border: #ead39e;
   --theme-primary: #b45309;
   --theme-primary-hover: #92400e;
-  --theme-primary-soft: #fef3c7;
+  --theme-primary-soft: #ffefc5;
   --gradient-primary: linear-gradient(135deg, #b45309, #ea580c, #0f766e);
 }
 

@@ -9,18 +9,32 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      selfDestroying: true,
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: true
+        skipWaiting: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.destination === 'image',
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'deckster-card-images',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 90,
+                purgeOnQuotaError: true
+              }
+            }
+          }
+        ]
       },
       manifest: {
-        name: 'Deckster - Flashcard App',
-        short_name: 'Deckster',
+        name: 'Cram - Flashcard App',
+        short_name: 'Cram',
         description: 'A modern flashcard application with tinder-style swiping',
         theme_color: '#6366f1',
         background_color: '#ffffff',
