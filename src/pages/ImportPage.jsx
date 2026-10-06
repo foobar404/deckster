@@ -624,7 +624,7 @@ export function ImportPage() {
           </div>
 
           <div className="mb-5 max-w-sm">
-            <span className={styles.import.label}>Number of cards</span>
+            <label htmlFor="aiCardCount" className={styles.import.label}>Number of cards</label>
             <div className="flex items-center gap-2" role="group" aria-label="Choose number of cards">
               <button
                 type="button"
@@ -635,9 +635,16 @@ export function ImportPage() {
               >
                 <FaMinus aria-hidden="true" />
               </button>
-              <output className="flex h-11 min-w-16 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-lg font-semibold text-gray-900" aria-live="polite">
-                {cardCount}
-              </output>
+              <input
+                id="aiCardCount"
+                type="number"
+                min="1"
+                max="300"
+                step="1"
+                value={cardCount}
+                onChange={event => setCardCount(event.target.value)}
+                className="h-11 w-20 rounded-lg border border-gray-300 bg-white px-2 text-center text-lg font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
               <button
                 type="button"
                 aria-label="Increase card count"
@@ -755,7 +762,7 @@ export function ImportPage() {
           {activeTab === 'text' && (
             <button
               type="button"
-              className="group col-start-3 flex h-11 w-11 shrink-0 items-center justify-center justify-self-end rounded-lg border border-gray-300 bg-gray-50 text-gray-700 shadow-sm transition-all hover:bg-gray-100 hover:text-blue-600 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="group col-start-3 flex h-11 w-11 shrink-0 items-center justify-center justify-self-end rounded-lg border border-gray-200 bg-gray-100 text-gray-200 shadow-sm transition-all focus-visible:outlin e-none focus-visible:ring-2 focus-visible:ring-blue-500"
               onClick={() => fileInputRef.current?.click()}
               aria-label="Import from file"
               title="Import from file"
@@ -768,5 +775,3 @@ export function ImportPage() {
     </section>
   </>)
 }
-
-

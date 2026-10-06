@@ -1,6 +1,63 @@
 import { useStyle, useSpeech } from '../utils'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { FaTimes, FaFrown, FaCheck, FaRocket } from 'react-icons/fa'
+
+const FLIP_DURATION_MS = 250
+
+const getCharacterComparison = (enteredAnswer, expectedAnswer) => {
+    const normalize = value => value.trim().replace(/\s+/g, ' ')
+    const entered = Array.from(normalize(enteredAnswer))
+    const expected = Array.from(normalize(expectedAnswer))
+    const enteredLower = entered.map(character => character.toLocaleLowerCase())
+    const expectedLower = expected.map(character => character.toLocaleLowerCase())
+    const enteredMismatch = Array(entered.length).fill(false)
+    const expectedMismatch = Array(expected.length).fill(false)
+
+    if (Math.max(entered.length, expected.length) > 400 || entered.length * expected.length > 40000) {
+        let prefix = 0
+        while (prefix < entered.length && prefix < expected.length && enteredLower[prefix] === expectedLower[prefix]) prefix += 1
+        let enteredEnd = entered.length
+        let expectedEnd = expected.length
+        while (enteredEnd > prefix && expectedEnd > prefix && enteredLower[enteredEnd - 1] === expectedLower[expectedEnd - 1]) {
+            enteredEnd -= 1
+            expectedEnd -= 1
+        }
+        for (let index = prefix; index < enteredEnd; index += 1) enteredMismatch[index] = true
+        for (let index = prefix; index < expectedEnd; index += 1) expectedMismatch[index] = true
+    } else {
+        const lengths = Array.from({ length: entered.length + 1 }, () => new Uint16Array(expected.length + 1))
+        for (let enteredIndex = entered.length - 1; enteredIndex >= 0; enteredIndex -= 1) {
+            for (let expectedIndex = expected.length - 1; expectedIndex >= 0; expectedIndex -= 1) {
+                lengths[enteredIndex][expectedIndex] = enteredLower[enteredIndex] === expectedLower[expectedIndex]
+                    ? lengths[enteredIndex + 1][expectedIndex + 1] + 1
+                    : Math.max(lengths[enteredIndex + 1][expectedIndex], lengths[enteredIndex][expectedIndex + 1])
+            }
+        }
+
+        let enteredIndex = 0
+        let expectedIndex = 0
+        while (enteredIndex < entered.length || expectedIndex < expected.length) {
+            if (enteredIndex < entered.length && expectedIndex < expected.length && enteredLower[enteredIndex] === expectedLower[expectedIndex]) {
+                enteredIndex += 1
+                expectedIndex += 1
+            } else if (enteredIndex < entered.length && (
+                expectedIndex === expected.length ||
+                lengths[enteredIndex + 1][expectedIndex] >= lengths[enteredIndex][expectedIndex + 1]
+            )) {
+                enteredMismatch[enteredIndex] = true
+                enteredIndex += 1
+            } else {
+                expectedMismatch[expectedIndex] = true
+                expectedIndex += 1
+            }
+        }
+    }
+
+    return {
+        entered: entered.map((character, index) => ({ character, mismatch: enteredMismatch[index] })),
+        expected: expected.map((character, index) => ({ character, mismatch: expectedMismatch[index] }))
+    }
+}
 
 /**
  * Custom hook for FlashCard logic and state management
@@ -156,23 +213,18 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
             setIsDragging(false)
         }
 
+        if (studyOptions?.typeToAnswer && !isFlipped) {
+            const answer = window.prompt('Type your answer:')
+            if (answer === null || !answer.trim()) return
+            setTypedAnswer(answer.trim())
+        }
+
         const nextIsFlipped = !isFlipped
         setIsFlipping(true)
         setIsFlipped(nextIsFlipped)
         setShowBackContent(nextIsFlipped)
 
-        setTimeout(() => setIsFlipping(false), 200)
-    }
-
-    const handleTypeAnswerSubmit = (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        if (!typedAnswer.trim() || isFlipping) return
-
-        setIsFlipping(true)
-        setIsFlipped(true)
-        setShowBackContent(true)
-        setTimeout(() => setIsFlipping(false), 200)
+        setTimeout(() => setIsFlipping(false), FLIP_DURATION_MS)
     }
 
     // Cleanup speech when card changes
@@ -494,7 +546,6 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
         backText,
         typedAnswer,
         setTypedAnswer,
-        handleTypeAnswerSubmit,
         difficultyOptions,
         handleCardClick,
         handleTouchEnd,
@@ -522,8 +573,6 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         frontText,
         backText,
         typedAnswer,
-        setTypedAnswer,
-        handleTypeAnswerSubmit,
         difficultyOptions,
         memoryMeta,
         handleCardClick,
@@ -580,6 +629,14 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
     }
     const typedAnswerMatches = typedAnswer.trim().replace(/\s+/g, ' ').toLocaleLowerCase() ===
         backText.trim().replace(/\s+/g, ' ').toLocaleLowerCase()
+    const showAnswerComparison = Boolean(studyOptions?.typeToAnswer && typedAnswer.trim())
+    const answerComparison = useMemo(
+        () => getCharacterComparison(typedAnswer, backText),
+        [typedAnswer, backText]
+    )
+    const renderComparedCharacters = (characters, mismatchClass) => characters.map(({ character, mismatch }, index) => (
+        <span key={index} className={mismatch ? mismatchClass : undefined}>{character}</span>
+    ))
 
     // Custom styles for FlashCard
     const customStyles = {
@@ -587,19 +644,17 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         flashcardContainer: 'relative w-full h-full touch-none select-none transition-none z-30',
         flashcard: 'relative w-full h-full cursor-pointer transform-gpu transition-all duration-200 ease-out',
         dragging: 'transition-none',
-        // Use the utility name defined in index.css for 3D transform support
-        cardInner: 'relative w-full h-full transition-transform duration-200 ease-out transform-3d',
+        cardInner: 'relative w-full h-full transition-transform duration-[250ms] ease-in-out transform-3d will-change-transform',
         // Give front and back clear background color and a visible solid border
         // Use opaque white for card faces so the backface doesn't show through during 3D flips
-        cardFront: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl shadow-lg overflow-hidden',
-        cardBack: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl shadow-lg overflow-hidden transform-rotateY-180',
-        // stronger blur and rounded corners so background image softly diffuses behind the card
+        cardFront: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl overflow-hidden',
+        cardBack: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl overflow-hidden transform-rotateY-180',
+        // Stronger blur and rounded corners so the background image softly diffuses behind the card.
         cardBackground: 'absolute inset-0 bg-center bg-cover filter blur-sm rounded-2xl',
-        // Richer gradient overlay to add depth and a subtle vignette without blocking interactions
         cardGradientOverlay: 'absolute inset-0 pointer-events-none rounded-2xl bg-gradient-to-br from-black/40 via-black/10 to-black/30 ',
-        cardContent: 'relative z-10 min-h-0 p-4 sm:p-6 h-full flex flex-col items-center justify-center text-center transition-all duration-200',
+        cardContent: 'relative z-10 min-h-0 h-full flex flex-col items-center justify-center text-center transition-all duration-200',
         // Image wrapper expands into available card space while preserving the image ratio.
-        cardImage: 'min-h-0 min-w-0 max-w-full max-h-full rounded-xl overflow-hidden shadow-2xl',
+        cardImage: 'min-h-0 min-w-0 max-w-full max-h-full rounded-xl overflow-hidden',
         // Actual img element styling
         cardImageImg: 'w-full h-full object-contain block',
         // Use standard break-words utility for reliable wrapping
@@ -638,6 +693,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
             <div
                 ref={cardRef}
                 className={`${styles.flashcard.flashcard} ${isDragging ? styles.flashcard.dragging : ''}`}
+                style={{ perspective: '1000px' }}
             >
                 <div
                     className={styles.flashcard.cardInner}
@@ -658,7 +714,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                             </>
                         )}
                         <div
-                            className={styles.flashcard.cardContent}
+                            className={`${styles.flashcard.cardContent} ${frontImageUrl ? 'p-2 sm:p-3' : 'p-4 sm:p-6'}`}
                             style={getContentLayoutStyle(false)}
                         >
                             <div className="flex min-h-0 w-full flex-1" style={getContentLayoutStyle(Boolean(frontImageUrl))}>
@@ -681,30 +737,6 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                     <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))}>{frontText}</div>
                                 ) : null}
                             </div>
-                            {studyOptions?.typeToAnswer && (
-                                <form
-                                    className="z-20 w-full shrink-0 px-2 py-1"
-                                    onSubmit={handleTypeAnswerSubmit}
-                                    onPointerDown={event => event.stopPropagation()}
-                                    onPointerMove={event => event.stopPropagation()}
-                                    onPointerUp={event => event.stopPropagation()}
-                                    onPointerCancel={event => event.stopPropagation()}
-                                    onClick={event => event.stopPropagation()}
-                                >
-                                    <input
-                                        id={`typed-answer-${card.id}`}
-                                        type="text"
-                                        value={typedAnswer}
-                                        onChange={event => setTypedAnswer(event.target.value)}
-                                        placeholder="Type your answer..."
-                                        aria-label="Type your answer"
-                                        autoComplete="off"
-                                        required
-                                        className="w-full border-0 border-b border-gray-300 bg-transparent px-1 py-2 text-center text-base placeholder:text-gray-500 focus:border-blue-500 focus:outline-none focus:ring-0"
-                                        style={{ color: cardTextColor }}
-                                    />
-                                </form>
-                            )}
                         </div>
                     </div>
                     <div className={`${styles.flashcard.cardBack} study-card-surface`} style={cardFaceStyle}>
@@ -719,50 +751,57 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                 <div className={styles.flashcard.cardGradientOverlay}></div>
                             </>
                         )}
-                        <div className={styles.flashcard.cardContent} style={{
-                            opacity: showBackContent ? 1 : 0,
-                            visibility: showBackContent ? 'visible' : 'hidden'
-                        }}>
+                        <div
+                            className={`${styles.flashcard.cardContent} ${backImageUrl ? 'p-2 sm:p-3' : 'p-4 sm:p-6'}`}
+                            style={{
+                                opacity: showBackContent ? 1 : 0,
+                                visibility: showBackContent ? 'visible' : 'hidden'
+                            }}
+                        >
                             {showBackContent && (
                                 <>
-                                    <div className="w-full flex items-center justify-between gap-2 mb-3">
-                                        <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${memoryMeta.badgeClass}`}>
-                                            {memoryMeta.label}
+                                    <div className="mb-2 flex w-full min-w-0 items-center gap-2 whitespace-nowrap">
+                                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${memoryMeta.badgeClass}`}>
+                                            {memoryMeta.label} · {memoryMeta.strength}%
                                         </span>
-                                        <span className="text-[10px] font-medium text-gray-500">
-                                            {memoryMeta.strength}% memory
+                                        <div className="h-1.5 min-w-6 flex-1 overflow-hidden rounded-full bg-slate-200">
+                                            <div
+                                                className={`h-full rounded-full ${memoryMeta.accentClass}`}
+                                                style={memoryBarStyle}
+                                            />
+                                        </div>
+                                        <span className="min-w-0 truncate text-[10px] text-gray-500">
+                                            Recent: {memoryMeta.lastResultLabel}
                                         </span>
+                                        <span className="shrink-0 text-[10px] text-gray-500">{memoryMeta.reviews} reviews</span>
                                     </div>
-                                    <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-3">
-                                        <div
-                                            className={`h-full rounded-full ${memoryMeta.badgeClass.includes('emerald') ? 'bg-emerald-500' : memoryMeta.badgeClass.includes('blue') ? 'bg-blue-500' : memoryMeta.badgeClass.includes('amber') ? 'bg-amber-500' : 'bg-slate-400'}`}
-                                            style={memoryBarStyle}
-                                        />
-                                    </div>
-                                    <div className="w-full flex items-center justify-between text-[10px] text-gray-500 mb-3">
-                                        <span>Recent: {memoryMeta.lastResultLabel}</span>
-                                        <span>{memoryMeta.reviews} reviews</span>
-                                    </div>
-                                    {studyOptions?.typeToAnswer && typedAnswer.trim() && (
-                                        <div className="mb-2 flex max-h-16 w-full shrink-0 items-start justify-between gap-2 overflow-y-auto rounded-lg bg-blue-50 px-3 py-2 text-left text-xs text-gray-700">
-                                            <div className="min-w-0">
-                                                <span className="font-semibold">Your answer</span>
-                                                <p className="break-words">{typedAnswer}</p>
+                                    <div className="flex min-h-0 w-full flex-1" style={getContentLayoutStyle(Boolean(backImageUrl) && !studyOptions?.showBothSides && !showAnswerComparison)}>
+                                    {showAnswerComparison ? (
+                                        <div className={styles.flashcard.bothSidesContainer}>
+                                            <div className={styles.flashcard.sideSection}>
+                                                <div className="mb-2 flex w-full items-center justify-between gap-2">
+                                                    <div className={styles.flashcard.sideLabel}>Your answer:</div>
+                                                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${typedAnswerMatches ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                        {typedAnswerMatches ? 'Correct' : 'Incorrect'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto">
+                                                    <div className={`${styles.flashcard.cardText} w-full`} style={{ ...getTextStyle(false), whiteSpace: 'pre-wrap' }}>
+                                                        {renderComparedCharacters(answerComparison.entered, 'rounded-sm bg-red-100 px-0.5 font-semibold text-red-700')}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            {backText.trim() && (
-                                                <span className={`shrink-0 rounded-full px-2 py-1 font-semibold ${typedAnswerMatches ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                    {typedAnswerMatches ? 'Exact match' : 'Review below'}
-                                                </span>
-                                            )}
+                                            <div className={styles.flashcard.sideDivider}></div>
+                                            <div className={styles.flashcard.sideSection}>
+                                                <div className={styles.flashcard.sideLabel}>Card answer:</div>
+                                                <div className="flex min-h-0 w-full flex-1 items-center justify-center overflow-y-auto">
+                                                    <div className={`${styles.flashcard.cardText} w-full`} style={{ ...getTextStyle(false), whiteSpace: 'pre-wrap' }}>
+                                                        {renderComparedCharacters(answerComparison.expected, 'rounded-sm bg-emerald-100 px-0.5 font-semibold text-emerald-700')}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    )}
-                                    {studyOptions?.typeToAnswer && typedAnswer.trim() && !studyOptions?.showBothSides && (
-                                        <div className="mb-1 w-full shrink-0 text-left text-[10px] font-semibold uppercase text-gray-500">
-                                            Card answer
-                                        </div>
-                                    )}
-                                    <div className="flex min-h-0 w-full flex-1" style={getContentLayoutStyle(Boolean(backImageUrl) && !studyOptions?.showBothSides)}>
-                                    {studyOptions?.showBothSides ? (
+                                    ) : studyOptions?.showBothSides ? (
                                         // Show both sides when option is enabled
                                         <div className={styles.flashcard.bothSidesContainer}>
                                             <div className={styles.flashcard.sideSection}>
@@ -836,10 +875,10 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                             {backText && backText.trim() ? (
                                                 <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))}>{backText}</div>
                                             ) : null}
-                                        </>
-                                    )}
-                                    </div>
                                 </>
+                            )}
+                            </div>
+                            </>
                             )}
                         </div>
                     </div>
@@ -862,5 +901,3 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         </div>
     )
 }
-
-

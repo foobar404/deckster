@@ -217,13 +217,13 @@ export function DecksPage() {
 
   // Custom styles for DecksPage
   const customStyles = {
-    container: 'min-h-screen p-4 pb-20 md:pb-4 md:max-w-6xl md:mx-auto',
+    container: 'min-h-0 p-4 pb-4 md:max-w-6xl md:mx-auto',
     header: 'grid grid-cols-1 md:grid-cols-3 items-center mb-6 gap-3',
     headerActions: 'flex items-center gap-3 justify-end',
     createForm: 'mb-6 p-4 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg',
     formActions: 'flex gap-3 mt-4',
     decksGrid: 'grid grid-cols-1 items-start md:grid-cols-2 lg:grid-cols-3 gap-4',
-    deckCard: 'relative self-start p-6 bg-white/90 backdrop-blur-lg border-8 border-solid rounded-xl shadow-lg hover:shadow-xl transition-all duration-200',
+    deckCard: 'relative self-start bg-white/90 backdrop-blur-lg border-8 border-solid rounded-xl shadow-lg hover:shadow-xl transition-all duration-200',
     emptyState: 'flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[50vh] p-8 text-center w-full',
     optionsBtn: 'p-2 bg-white/90 border border-white/10 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center w-11 h-11',
     btnPrimary: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-3 min-w-[140px] justify-center shadow-md',
@@ -237,8 +237,8 @@ export function DecksPage() {
     presetButton: 'px-3 py-2 text-sm rounded-lg transition-all duration-200 min-w-[44px] touch-manipulation',
     presetButtonActive: 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm',
     presetButtonInactive: 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent',
-    deckHeader: 'flex items-center justify-between mb-4',
-    deckName: 'text-xl font-semibold text-gray-900 truncate',
+    deckHeader: 'flex items-center justify-between',
+    deckName: 'text-xl font-semibold text-gray-900',
     deleteBtn: 'p-0 bg-white/60 text-gray-500 hover:bg-white hover:text-red-600 rounded-md transition-colors duration-150 flex items-center justify-center w-9 h-9',
     deckStats: 'mb-4 space-y-2',
     statRow: 'flex justify-between text-sm text-gray-600',
@@ -484,7 +484,18 @@ export function DecksPage() {
 
       <div className={styles.decks.header}>
         <div className="md:col-span-3">
-          <h1 className="text-3xl font-bold text-gray-900">My Decks</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold leading-none text-gray-900">My Decks</h1>
+            <span
+              className="flex h-7 min-w-7 items-center justify-center rounded-lg mt-1 px-1.5 text-lg font-bold tabular-nums"
+              style={{
+                backgroundColor: 'var(--theme-primary)',
+                color: 'var(--theme-primary-contrast)'
+              }}
+            >
+              {decks.length}
+            </span>
+          </div>
           <p className="text-gray-600 mt-2">Organize your decks — create, edit, and start studying.</p>
         </div>
 
@@ -593,14 +604,14 @@ export function DecksPage() {
           const deckTextColor = 'var(--theme-text)'
 
           return (
-            <div key={deck.id} className={`${styles.decks.deckCard} ${isCollapsed ? 'p-3' : ''}`} style={{ borderColor: deckColor, color: deckTextColor }}>
-              <div className={`${styles.decks.deckHeader} ${isCollapsed ? 'mb-0' : ''}`}>
+            <div key={deck.id} className={`${styles.decks.deckCard} ${isCollapsed ? 'p-3' : 'p-6'}`} style={{ borderColor: deckColor, color: deckTextColor }}>
+              <div className={`${styles.decks.deckHeader} ${isCollapsed ? 'mb-0' : 'mb-4'}`}>
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/75 text-3xl shadow-sm" aria-hidden="true">{deck.appearance?.icon || '📚'}</span>
-                  <h3 className={styles.decks.deckName} style={{ color: deckTextColor }}>
+                  <h3 className={`${styles.decks.deckName} min-w-0 ${isCollapsed ? 'truncate' : ''}`} style={{ color: deckTextColor }}>
                     <button
                       type="button"
-                      className="block max-w-full truncate text-left hover:text-blue-700 disabled:cursor-not-allowed"
+                      className={`block max-w-full text-left hover:text-blue-700 disabled:cursor-not-allowed ${isCollapsed ? 'truncate' : 'whitespace-normal break-words'}`}
                       onClick={() => handleDeckSelect(deck)}
                       disabled={stats.total === 0}
                       aria-label={`Study ${deck.name}`}
@@ -689,5 +700,3 @@ export function DecksPage() {
     </div>
   )
 }
-
-

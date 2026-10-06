@@ -440,8 +440,8 @@ export function ReviewPage() {
 
   // Custom styles for ReviewPage
   const customStyles = {
-    container: 'h-full min-h-0 flex flex-col overflow-y-auto p-2 sm:p-4 md:max-w-3xl md:mx-auto md:w-full',
-    studyContainer: 'h-full flex flex-col px-2 pb-2 pt-2 sm:px-4 sm:pb-4 sm:pt-2 md:max-w-3xl md:mx-auto md:w-full',
+    container: 'h-full min-h-0 flex flex-col p-2 sm:p-4 md:max-w-3xl md:mx-auto md:w-full',
+    studyContainer: 'h-full min-h-0 flex flex-col px-2 pb-2 pt-2 sm:px-4 sm:pb-4 sm:pt-2 md:max-w-3xl md:mx-auto md:w-full',
     emptyState: 'flex flex-col items-center justify-center min-h-96 p-6 text-center',
     emptyIcon: 'text-5xl text-gray-400 mb-3',
     // Tighten header spacing and ensure it stacks above the card
@@ -453,7 +453,7 @@ export function ReviewPage() {
     // Card visual style available to the page: translucent background + 10px solid border
     card: 'bg-white/30 border-[10px] border-gray-200/50 border-solid rounded-2xl p-4',
     // Allow the card stack to flex and shrink without producing vertical scroll, less padding on mobile
-    cardStack: 'flex-1 flex items-center justify-center p-1 sm:p-3 min-h-0',
+    cardStack: 'flex-1 flex items-center justify-center p-1 sm:p-3 min-h-0 overflow-visible',
     // Panel styles used for empty/result states
     panel: 'flex flex-col items-center justify-center p-6 text-center',
     panelLarge: 'flex flex-col items-center justify-center bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg p-8 text-center',
@@ -471,7 +471,7 @@ export function ReviewPage() {
     quadBottomRight: 'absolute bottom-0 right-0 w-1/2 h-1/2 border-2 border-dashed border-transparent bg-blue-500/10 transition-colors duration-75',
     quadBottomRightActive: 'border-blue-500 bg-blue-500/40',
     // Card wrapper: wider on mobile, more constrained on desktop
-    cardWrapper: 'w-full max-w-none sm:max-w-xl lg:max-w-2xl mx-auto h-full max-h-[80vh] flex items-center justify-center relative z-10',
+    cardWrapper: 'w-full max-w-none sm:max-w-xl lg:max-w-2xl mx-auto h-full min-h-0 max-h-full flex items-center justify-center relative z-10',
     // Result panel specifics
     resultIcon: 'text-6xl text-yellow-500 mb-4',
     resultTitle: 'text-2xl font-bold text-gray-900 mb-6',
@@ -763,7 +763,10 @@ export function ReviewPage() {
     ]
     const mostMissedAnswers = [...missedAnswers].sort((a, b) => b.misses - a.misses)
     return (
-      <div className={styles.review.container}>
+      <div
+        className={`${styles.review.container} overflow-y-auto`}
+        style={{ paddingBottom: '50px' }}
+      >
         <div className={`${styles.review.panelLarge} w-full max-w-2xl gap-5`}>
           <div className={styles.review.resultIcon}><FaTrophy /></div>
           <h2 className={`${styles.review.resultTitle} mb-0`}>Session Complete!</h2>
@@ -892,5 +895,3 @@ export function ReviewPage() {
     </div>
   )
 }
-
-

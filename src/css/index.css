@@ -609,7 +609,7 @@ input[type="reset"] {
   }
 }
 
-/* 3D Transform Support for Animations */
+/* 3D transform support for the study-card flip */
 .transform-3d {
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
@@ -620,7 +620,6 @@ input[type="reset"] {
   -webkit-backface-visibility: hidden;
 }
 
-/* Transform utilities for card flips */
 .transform-rotateY-180 {
   transform: rotateY(180deg);
   -webkit-transform: rotateY(180deg);
