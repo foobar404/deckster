@@ -24,8 +24,8 @@ export default defineConfig({
               cacheName: 'deckster-card-images',
               cacheableResponse: { statuses: [0, 200] },
               expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 90,
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 30,
                 purgeOnQuotaError: true
               }
             }

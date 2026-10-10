@@ -4,13 +4,7 @@ import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { AppContext } from '../context/AppContext'
 import { firebaseAuth, firebaseConfigured, firebaseDb } from '../utils/firebase'
-import { THEME_OPTIONS, THEME_VALUES } from '../utils/themes'
-
-const THEME_GROUPS = [
-  { mode: 'light', label: 'Light' },
-  { mode: 'dark', label: 'Dark' },
-  { mode: 'system', label: 'System' }
-]
+import { THEME_MODE_VALUES, THEME_OPTIONS, THEME_VALUES } from '../utils/themes'
 
 const CARD_STAT_FIELDS = [
   'difficulty', 'memoryStrength', 'state', 'lastReviewed', 'lastReviewedAt',
@@ -116,6 +110,8 @@ export function SettingsPage() {
     studyOptions,
     theme,
     setTheme,
+    themeMode,
+    setThemeMode,
     localSettingsChangedAt
   } = useContext(AppContext)
   const [user, setUser] = useState(null)
@@ -124,6 +120,15 @@ export function SettingsPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [lastSyncedAt, setLastSyncedAt] = useState(() => localStorage.getItem('flashcards_last_firebase_sync'))
+  const [systemPrefersDark, setSystemPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const isDarkMode = themeMode === 'dark' || (themeMode === 'system' && systemPrefersDark)
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const updateSystemPreference = event => setSystemPrefersDark(event.matches)
+    mediaQuery.addEventListener('change', updateSystemPreference)
+    return () => mediaQuery.removeEventListener('change', updateSystemPreference)
+  }, [])
 
   useEffect(() => {
     if (!firebaseAuth) return
@@ -147,6 +152,7 @@ export function SettingsPage() {
       let remoteDeletedDecks = []
       let syncedStudyOptions = studyOptions
       let syncedTheme = theme
+      let syncedThemeMode = themeMode
       let cloudIsNewer = false
       let remoteSettingsVersion = null
       let shouldUpdateSettings = true
@@ -162,7 +168,18 @@ export function SettingsPage() {
         syncedStudyOptions = cloudIsNewer && profile.studyOptions && typeof profile.studyOptions === 'object'
           ? profile.studyOptions
           : studyOptions
-        syncedTheme = cloudIsNewer && THEME_VALUES.includes(profile.theme) ? profile.theme : theme
+        if (cloudIsNewer) {
+          syncedTheme = THEME_VALUES.includes(profile.theme)
+            ? profile.theme
+            : profile.theme === 'system'
+              ? 'light'
+              : theme
+          syncedThemeMode = THEME_MODE_VALUES.includes(profile.themeMode)
+            ? profile.themeMode
+            : profile.theme === 'system'
+              ? 'system'
+              : THEME_OPTIONS.find(option => option.value === profile.theme)?.defaultMode || themeMode
+        }
       }
 
       const { decks: syncedDecks, deletedDecks: syncedDeletedDecks } = mergeDeckSnapshots(
@@ -177,6 +194,7 @@ export function SettingsPage() {
         deletedDecks: syncedDeletedDecks,
         studyOptions: syncedStudyOptions,
         theme: syncedTheme,
+        themeMode: syncedThemeMode,
         settingsUpdatedAt: shouldUpdateSettings ? serverTimestamp() : remoteSettingsVersion,
         email: account.email || '',
         displayName: account.displayName || '',
@@ -186,7 +204,7 @@ export function SettingsPage() {
       applySyncedDecks(syncedDecks)
       setDeletedDecks(syncedDeletedDecks)
       if (cloudIsNewer) {
-        applySyncedPreferences({ studyOptions: syncedStudyOptions, theme: syncedTheme })
+        applySyncedPreferences({ studyOptions: syncedStudyOptions, theme: syncedTheme, themeMode: syncedThemeMode })
       }
 
       const syncedAt = new Date().toISOString()
@@ -232,7 +250,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-5 md:px-8">
+    <div className="mx-auto w-full max-w-3xl p-4">
       <header className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
         <p className="mt-2 text-gray-600">Appearance and account sync</p>
@@ -294,36 +312,58 @@ export function SettingsPage() {
         {error && <p role="alert" className="mt-3 break-words text-sm text-red-700">{error}</p>}
       </section>
 
-      <section className="border-b border-gray-200 py-4">
-        <div className="mb-3">
-          <h2 className="text-lg font-semibold text-gray-900">Appearance</h2>
-          <p className="text-sm text-gray-600">Choose how Cram looks on this device.</p>
+      <section className="border-b border-gray-200 py-3">
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <h2 className="text-base font-semibold text-gray-900">Appearance</h2>
+          <p className="text-xs text-gray-600">Choose a color theme</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {THEME_GROUPS.map(({ mode, label }) => (
-            <fieldset key={mode} className={mode === 'system' ? 'sm:col-span-2' : ''}>
-              <legend className="mb-1 text-sm font-semibold text-gray-700">{label}</legend>
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                {THEME_OPTIONS.filter(option => option.mode === mode).map(({ value, label: optionLabel, color }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={theme === value}
-                    onClick={() => setTheme(value)}
-                    className={`flex min-h-11 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-sm font-medium transition-colors ${theme === value
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
-                      : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    {value === 'system' ? (
-                      <FaDesktop className="shrink-0 text-sm text-gray-500" aria-hidden="true" />
-                    ) : (
-                      <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ background: color }} aria-hidden="true" />
-                    )}
-                    {optionLabel}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <span>Light</span>
+            <button
+              type="button"
+              role="switch"
+              aria-label="Dark mode"
+              aria-checked={isDarkMode}
+              onClick={() => setThemeMode(isDarkMode ? 'light' : 'dark')}
+              className="theme-mode-toggle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              style={{ backgroundColor: isDarkMode ? 'var(--theme-primary)' : 'var(--theme-border)' }}
+            >
+              <span
+                className="theme-mode-toggle-thumb"
+                style={{ backgroundColor: '#fff', transform: isDarkMode ? 'translateX(20px)' : 'translateX(0)' }}
+              />
+            </button>
+            <span>Dark</span>
+          </div>
+          <button
+            type="button"
+            aria-pressed={themeMode === 'system'}
+            onClick={() => setThemeMode('system')}
+            className={`inline-flex min-h-8 items-center gap-1 rounded-lg border px-2 text-xs font-medium transition-colors ${themeMode === 'system'
+              ? 'border-blue-500 bg-blue-50 text-blue-700'
+              : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
+          >
+            <FaDesktop aria-hidden="true" />
+            System
+          </button>
+        </div>
+        <div className="grid grid-cols-5 gap-1 sm:grid-cols-7 sm:gap-1.5 lg:grid-cols-9">
+          {THEME_OPTIONS.map(({ value, label: optionLabel, color }) => (
+            <button
+              key={value}
+              type="button"
+              aria-label={`Use ${optionLabel} theme`}
+              aria-pressed={theme === value}
+              title={optionLabel}
+              onClick={() => setTheme(value)}
+              className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-1 text-[10px] font-medium leading-tight transition-colors ${theme === value
+                ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500/30'
+                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
+            >
+              <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ background: color }} aria-hidden="true" />
+              <span className="w-full truncate text-center">{optionLabel}</span>
+            </button>
           ))}
         </div>
       </section>

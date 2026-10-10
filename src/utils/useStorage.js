@@ -5,7 +5,8 @@ export const STORAGE_KEYS = {
     DELETED_DECKS: 'flashcards_deleted_decks',
     STATS: 'flashcards_stats',
     STUDY_OPTIONS: 'flashcards_study_options',
-    THEME: 'flashcards_theme'
+    THEME: 'flashcards_theme',
+    THEME_MODE: 'flashcards_theme_mode'
 }
 
 export const useStorage = () => {

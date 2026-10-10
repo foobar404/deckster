@@ -1,5 +1,5 @@
 import { useStorage } from '../utils'
-import { THEME_VALUES } from '../utils/themes'
+import { THEME_MODE_VALUES, THEME_OPTIONS, THEME_VALUES } from '../utils/themes'
 import { createContext, useState, useEffect } from 'react'
 
 export const AppContext = createContext()
@@ -29,7 +29,8 @@ export const AppProvider = ({ children }) => {
   })
   const [activeDeck, setActiveDeck] = useState(null)
   const [isInitialized, setIsInitialized] = useState(false)
-  const [theme, setTheme] = useState('system')
+  const [theme, setTheme] = useState('light')
+  const [themeMode, setThemeMode] = useState('system')
   const [localSettingsChangedAt, setLocalSettingsChangedAt] = useState(() => {
     try {
       return Number(localStorage.getItem('flashcards_local_settings_changed_at')) || 0
@@ -97,6 +98,7 @@ export const AppProvider = ({ children }) => {
         cards,
         appearance: { icon: '\u2728', color: '#fef3c7' },
         createdAt: now,
+        totalStudyTimeSeconds: 0,
         updatedAt: Date.now()
       }]
     })()
@@ -124,6 +126,14 @@ export const AppProvider = ({ children }) => {
       cardLimitVersion: 1
     })
     const savedTheme = loadFromStorage(STORAGE_KEYS.THEME, 'system')
+    const normalizedTheme = THEME_VALUES.includes(savedTheme) ? savedTheme : 'light'
+    const savedThemeMode = loadFromStorage(STORAGE_KEYS.THEME_MODE, null)
+    const legacyThemeMode = savedTheme === 'system'
+      ? 'system'
+      : THEME_OPTIONS.find(option => option.value === savedTheme)?.defaultMode || 'system'
+    const normalizedThemeMode = THEME_MODE_VALUES.includes(savedThemeMode)
+      ? savedThemeMode
+      : legacyThemeMode
 
     const normalizedStudyOptions = {
       ...savedStudyOptions,
@@ -146,7 +156,8 @@ export const AppProvider = ({ children }) => {
     setDecks(initialDecks)
     setReviewStats(savedStats)
     setStudyOptions(normalizedStudyOptions)
-    setTheme(THEME_VALUES.includes(savedTheme) ? savedTheme : 'system')
+    setTheme(normalizedTheme)
+    setThemeMode(normalizedThemeMode)
     setIsInitialized(true) // Mark as initialized after loading
   }, [])
 
@@ -178,18 +189,20 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     if (!isInitialized) return
     saveToStorage(STORAGE_KEYS.THEME, theme)
+    saveToStorage(STORAGE_KEYS.THEME_MODE, themeMode)
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const applyTheme = () => {
-      const resolvedTheme = theme === 'system' ? (mediaQuery.matches ? 'dark' : 'light') : theme
-      document.documentElement.dataset.theme = resolvedTheme
+      const resolvedMode = themeMode === 'system' ? (mediaQuery.matches ? 'dark' : 'light') : themeMode
+      document.documentElement.dataset.theme = theme
+      document.documentElement.dataset.themeMode = resolvedMode
     }
 
     applyTheme()
-    if (theme !== 'system') return
+    if (themeMode !== 'system') return
     mediaQuery.addEventListener('change', applyTheme)
     return () => mediaQuery.removeEventListener('change', applyTheme)
-  }, [theme, isInitialized])
+  }, [theme, themeMode, isInitialized])
 
   // Enhanced setDecks that handles active deck synchronization
   const markLocalSettingsChanged = () => {
@@ -242,7 +255,8 @@ export const AppProvider = ({ children }) => {
       ...preferences.studyOptions,
       typeToAnswer: Boolean(preferences.studyOptions?.typeToAnswer)
     })
-    setTheme(preferences.theme)
+    setTheme(THEME_VALUES.includes(preferences.theme) ? preferences.theme : 'light')
+    setThemeMode(THEME_MODE_VALUES.includes(preferences.themeMode) ? preferences.themeMode : 'system')
   }
 
   const handleStudyOptionsChange = (newOptions) => {
@@ -252,6 +266,11 @@ export const AppProvider = ({ children }) => {
 
   const handleThemeChange = (newTheme) => {
     setTheme(newTheme)
+    markLocalSettingsChanged()
+  }
+
+  const handleThemeModeChange = (newThemeMode) => {
+    setThemeMode(newThemeMode)
     markLocalSettingsChanged()
   }
 
@@ -270,6 +289,8 @@ export const AppProvider = ({ children }) => {
     setStudyOptions: handleStudyOptionsChange,
     theme,
     setTheme: handleThemeChange,
+    themeMode,
+    setThemeMode: handleThemeModeChange,
     localSettingsChangedAt,
     isInitialized
   }

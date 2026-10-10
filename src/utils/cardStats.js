@@ -1,23 +1,46 @@
+const MASTERY_POINTS_BY_RATING = { 1: 2, 2: 3, 3: 4 }
+const MASTERY_POINTS_REQUIRED = 20
+
 export const getCardStrength = (card) => {
   if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
   if (typeof card?.difficulty === 'number') return Math.max(0, Math.min(100, card.difficulty))
   return 0
 }
 
+const getMasteryPoints = (card) => {
+  const history = Array.isArray(card?.reviewHistory) ? card.reviewHistory : []
+  return history.reduce((points, review) => {
+    if (review?.rating === 0) return 0
+    return points + (MASTERY_POINTS_BY_RATING[review?.rating] || 0)
+  }, 0)
+}
+
 export const getCardState = (card) => {
-  const isStruggling = (card?.lapseCount || 0) > 0 || (card?.lastResult ?? 3) < 2
-  if (isStruggling || card?.state === 'struggling') return 'struggling'
+  const history = Array.isArray(card?.reviewHistory) ? card.reviewHistory : []
+  const latestHistoryRating = history[history.length - 1]?.rating
+  const latestRating = Number.isInteger(card?.lastResult)
+    ? card.lastResult
+    : Number.isInteger(latestHistoryRating)
+      ? latestHistoryRating
+      : null
+  const hasReviewHistory = history.length > 0
+  const isStruggling = latestRating === null
+    ? (card?.lapseCount || 0) > 0 || card?.state === 'struggling'
+    : latestRating < 2
+
+  if (hasReviewHistory && getMasteryPoints(card) >= MASTERY_POINTS_REQUIRED) return 'mastered'
+  if (isStruggling) return 'struggling'
 
   const hasBeenReviewed = (card?.reviewCount || 0) > 0 ||
-    (Array.isArray(card?.reviewHistory) && card.reviewHistory.length > 0) ||
+    hasReviewHistory ||
     Boolean(card?.lastReviewedAt || card?.lastReviewed) ||
     Number.isInteger(card?.lastResult)
 
-  if (card?.state === 'mastered') return 'mastered'
+  if (card?.state === 'mastered' && !hasReviewHistory) return 'mastered'
   if (card?.state === 'learning') return 'learning'
 
   const strength = getCardStrength(card)
-  if (strength >= 80) return 'mastered'
+  if (!hasReviewHistory && strength >= 80) return 'mastered'
   if (strength >= 55) return 'learning'
   return hasBeenReviewed ? 'learning' : 'new'
 }

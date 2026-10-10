@@ -377,6 +377,8 @@ const useImportPage = () => {
         id: baseId + 9999, // ensure different id than card ids
         name: targetName,
         cards: cardsToAdd,
+        createdAt: new Date().toISOString(),
+        totalStudyTimeSeconds: 0,
         ...(generatedDeckSettings && activeTab === 'ai' ? { appearance: generatedDeckSettings } : {})
       }
 

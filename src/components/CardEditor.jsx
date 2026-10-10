@@ -49,7 +49,7 @@ const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
         reviewCount: card.reviewCount || 0,
         correctStreak: card.correctStreak || 0,
         lapseCount: card.lapseCount || 0,
-        lastResult: card.lastResult || null,
+        lastResult: card.lastResult ?? null,
         createdAt: card.createdAt || new Date().toISOString(),
         ...card // Preserve any other properties
       }
@@ -617,6 +617,8 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
                       <img
                         src={extractImageUrl(card.front)}
                         alt="Preview"
+                        loading="lazy"
+                        decoding="async"
                         className={styles.cardEditor.imagePreviewThumb}
                         onError={(e) => e.target.style.display = 'none'}
                       />
@@ -641,6 +643,8 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
                       <img
                         src={extractImageUrl(card.back)}
                         alt="Preview"
+                        loading="lazy"
+                        decoding="async"
                         className={styles.cardEditor.imagePreviewThumb}
                         onError={(e) => e.target.style.display = 'none'}
                       />

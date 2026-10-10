@@ -180,18 +180,6 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     const frontText = cleanTextFromImages(card.front)
     const backText = cleanTextFromImages(card.back)
 
-    // Fetch and decode both sides while the current card is being reviewed.
-    useEffect(() => {
-        const imageUrls = new Set([frontImageUrl, backImageUrl].filter(Boolean))
-        imageUrls.forEach((url) => {
-            const image = new Image()
-            image.decoding = 'async'
-            image.fetchPriority = 'high'
-            image.src = url
-            image.decode?.().catch(() => {})
-        })
-    }, [frontImageUrl, backImageUrl])
-
     const difficultyOptions = [
         { id: 0, label: 'Again', color: '#9ca3af', icon: <FaTimes /> },
         { id: 1, label: 'Hard', color: '#fb923c', icon: <FaFrown /> },
@@ -649,9 +637,9 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         // Use opaque white for card faces so the backface doesn't show through during 3D flips
         cardFront: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl overflow-hidden',
         cardBack: 'absolute inset-0 w-full h-full backface-hidden bg-white backdrop-blur-md border-[8px] border-solid rounded-2xl overflow-hidden transform-rotateY-180',
-        // Stronger blur and rounded corners so the background image softly diffuses behind the card.
-        cardBackground: 'absolute inset-0 bg-center bg-cover filter blur-sm rounded-2xl',
-        cardGradientOverlay: 'absolute inset-0 pointer-events-none rounded-2xl bg-gradient-to-br from-black/40 via-black/10 to-black/30 ',
+        // Blur the background image beneath the card content.
+        cardBackground: 'absolute inset-0 bg-center bg-cover filter blur-sm',
+        cardGradientOverlay: 'absolute inset-0 pointer-events-none bg-gradient-to-br from-black/40 via-black/10 to-black/30 ',
         cardContent: 'relative z-10 min-h-0 h-full flex flex-col items-center justify-center text-center transition-all duration-200',
         // Image wrapper expands into available card space while preserving the image ratio.
         cardImage: 'min-h-0 min-w-0 max-w-full max-h-full rounded-xl overflow-hidden',

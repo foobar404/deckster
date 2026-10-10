@@ -15,6 +15,25 @@ const deckSortOptions = [
   { value: 'oldest', label: 'Old', description: 'Oldest first' }
 ]
 
+const getDeckCreationTime = deck => {
+  const time = deck.createdAt ? new Date(deck.createdAt).getTime() : Number(deck.id)
+  return Number.isFinite(time) ? time : 0
+}
+
+const formatDeckCreationDate = deck => {
+  const timestamp = getDeckCreationTime(deck)
+  return timestamp ? new Date(timestamp).toLocaleDateString() : 'Unknown'
+}
+
+const formatStudyTime = value => {
+  const seconds = Math.max(0, Math.floor(Number(value) || 0))
+  if (seconds < 60) return `${seconds}s`
+
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return hours ? `${hours}h ${minutes}m` : `${Math.floor(seconds / 60)}m`
+}
+
 /**
  * Custom hook for DecksPage logic and state management
  * @returns {Object} All state and handlers needed by the DecksPage component
@@ -58,7 +77,9 @@ const useDecksPage = () => {
     const newDeck = {
       id: Date.now(),
       name: newDeckName.trim(),
-      cards: []
+      cards: [],
+      createdAt: new Date().toISOString(),
+      totalStudyTimeSeconds: 0
     }
 
     setDecks(prev => [...prev, newDeck])
@@ -206,18 +227,14 @@ export function DecksPage() {
         return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) * direction
       }
 
-      const getCreationTime = deck => {
-        const time = deck.createdAt ? new Date(deck.createdAt).getTime() : Number(deck.id)
-        return Number.isFinite(time) ? time : 0
-      }
       const direction = sortMode === 'newest' ? 1 : -1
-      return (getCreationTime(b) - getCreationTime(a)) * direction
+      return (getDeckCreationTime(b) - getDeckCreationTime(a)) * direction
     })
   const currentSortOption = deckSortOptions.find(option => option.value === sortMode)
 
   // Custom styles for DecksPage
   const customStyles = {
-    container: 'min-h-0 p-4 pb-4 md:max-w-6xl md:mx-auto',
+    container: 'min-h-0 p-4 md:max-w-6xl md:mx-auto',
     header: 'grid grid-cols-1 md:grid-cols-3 items-center mb-6 gap-3',
     headerActions: 'flex items-center gap-3 justify-end',
     createForm: 'mb-6 p-4 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg',
@@ -529,7 +546,6 @@ export function DecksPage() {
             value={newDeckName}
             onChange={(e) => setNewDeckName(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && createDeck()}
-            autoFocus
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <div className={styles.decks.formActions}>
@@ -656,7 +672,15 @@ export function DecksPage() {
 
                 <div className={styles.decks.deckStats}>
                 <DeckStatusSummary cards={deck.cards} />
-                {studyOptions.mode !== 'cram' && (studyOptions.cardLimit || studyOptions.onlyMissed) && (
+                  <div className={styles.decks.statRow}>
+                    <span className="font-medium" style={{ color: deckTextColor }}>Created:</span>
+                    <span style={{ color: deckTextColor }}>{formatDeckCreationDate(deck)}</span>
+                  </div>
+                  <div className={styles.decks.statRow}>
+                    <span className="font-medium" style={{ color: deckTextColor }}>Total study time:</span>
+                    <span style={{ color: deckTextColor }}>{formatStudyTime(deck.totalStudyTimeSeconds)}</span>
+                  </div>
+                  {studyOptions.mode !== 'cram' && (studyOptions.cardLimit || studyOptions.onlyMissed) && (
                   <div className={styles.decks.statRow} style={{ borderTop: '1px solid var(--theme-border)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
                     <span className="font-medium" style={{ color: deckTextColor }}>Study Session:</span>
                     <span className="font-medium" style={{ color: deckTextColor }}>{stats.studyCount} cards</span>

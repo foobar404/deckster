@@ -29,6 +29,7 @@ const useReviewPage = () => {
   const cramMetricsRef = useRef(new Map())
   const cramTurnRef = useRef(0)
   const finishedEarlyRef = useRef(false)
+  const sessionTimeRecordedRef = useRef(false)
   const previousStudyOptionsRef = useRef(studyOptions)
   const [dragState, setDragState] = useState({
     isFlipped: false,
@@ -119,6 +120,24 @@ const useReviewPage = () => {
     clearFromStorage('deckster_review_state')
     clearFromStorage('deckster_cram_state')
   }, [clearFromStorage])
+
+  const recordSessionTime = useCallback(() => {
+    if (sessionTimeRecordedRef.current || !activeDeck) return
+    sessionTimeRecordedRef.current = true
+
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - sessionStartedAt) / 1000))
+    if (elapsedSeconds === 0) return
+
+    setDecks(previousDecks => previousDecks.map(deck => (
+      deck.id === activeDeck.id
+        ? {
+          ...deck,
+          totalStudyTimeSeconds: Math.max(0, Number(deck.totalStudyTimeSeconds) || 0) + elapsedSeconds,
+          updatedAt: Date.now()
+        }
+        : deck
+    )))
+  }, [activeDeck, sessionStartedAt, setDecks])
 
   const getCardStrength = useCallback((card) => {
     if (typeof card?.memoryStrength === 'number') return Math.max(0, Math.min(100, card.memoryStrength))
@@ -217,6 +236,7 @@ const useReviewPage = () => {
 
     ignoreLoadRef.current = true
     finishedEarlyRef.current = false
+    sessionTimeRecordedRef.current = false
     cramMetricsRef.current = new Map()
     cramTurnRef.current = 0
     // Clear persisted state
@@ -250,10 +270,11 @@ const useReviewPage = () => {
   }, [activeDeck, prepareStudyCards, resortStudyCards, originalStudyCards, studyOptions, clearFromStorage])
 
   const finishSession = useCallback(() => {
+    recordSessionTime()
     finishedEarlyRef.current = true
     clearReviewState()
     setShowResult(true)
-  }, [clearReviewState])
+  }, [clearReviewState, recordSessionTime])
 
   const continueSession = useCallback(() => {
     const answeredCards = studyCards.slice(0, sessionStats.total)
@@ -265,6 +286,8 @@ const useReviewPage = () => {
     const continuedCards = [...answeredCards, ...remainingCards]
     clearReviewState()
     finishedEarlyRef.current = false
+    sessionTimeRecordedRef.current = false
+    setSessionStartedAt(Date.now())
     setStudyCards(continuedCards)
     setEligibleStudyCards(continuedCards)
     setOriginalStudyCards(continuedCards)
@@ -289,6 +312,7 @@ const useReviewPage = () => {
       if (resetFromNavigation) handledNavRootRef.current = navRoot
       clearReviewState()
       finishedEarlyRef.current = false
+      sessionTimeRecordedRef.current = false
       ignoreLoadRef.current = false
       cramMetricsRef.current = new Map()
       cramTurnRef.current = 0
@@ -309,6 +333,7 @@ const useReviewPage = () => {
 
     if (!activeDeck) return
 
+    sessionTimeRecordedRef.current = false
     const stateLoaded = loadReviewState()
     if (stateLoaded) return
 
@@ -360,6 +385,7 @@ const useReviewPage = () => {
     cramMetricsRef,
     cramTurnRef,
     finishedEarlyRef,
+    recordSessionTime,
     saveReviewState,
     loadReviewState,
     clearReviewState
@@ -379,6 +405,7 @@ export function ReviewPage() {
     resetSession,
     finishSession,
     continueSession,
+    recordSessionTime,
     currentCardIndex,
     setCurrentCardIndex,
     showResult,
@@ -402,46 +429,43 @@ export function ReviewPage() {
     saveReviewState,
     loadReviewState
   } = useReviewPage()
-  const preloadedImageUrlsRef = useRef(new Set())
+  const preloadedImageRef = useRef(null)
 
   useEffect(() => {
-    const upcomingCards = studyCards.slice(currentCardIndex + 1, currentCardIndex + 3)
-    const imageUrls = new Set()
+    const nextCard = studyCards[currentCardIndex + 1]
+    if (!nextCard) {
+      preloadedImageRef.current = null
+      return
+    }
 
-    upcomingCards.forEach(card => {
-      const embeddedImageUrls = [card.displayFront, card.displayBack, card.front, card.back]
-        .filter(text => typeof text === 'string')
-        .flatMap(text => text.match(/https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)(?:\?[^\s]*)?/gi) || [])
-      const cardImageUrls = [
-        card.displayFrontImage,
-        card.displayBackImage,
-        card.frontImageUrl,
-        card.backImageUrl,
-        card.imageUrl,
-        ...embeddedImageUrls
-      ]
+    const nextFront = nextCard.displayFront ?? nextCard.front
+    const nextBack = nextCard.displayBack ?? nextCard.back
+    const getEmbeddedImageUrl = text => typeof text === 'string'
+      ? text.match(/https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)(?:\?[^\s]*)?/i)?.[0]
+      : null
+    const imageUrl = nextCard.displayFrontImage ||
+      nextCard.frontImageUrl ||
+      getEmbeddedImageUrl(nextFront) ||
+      nextCard.displayBackImage ||
+      nextCard.backImageUrl ||
+      nextCard.imageUrl ||
+      getEmbeddedImageUrl(nextBack)
+    if (!imageUrl) {
+      preloadedImageRef.current = null
+      return
+    }
 
-      cardImageUrls.forEach(url => {
-        if (typeof url === 'string' && url) imageUrls.add(url)
-      })
-    })
-
-    imageUrls.forEach(url => {
-      if (preloadedImageUrlsRef.current.has(url)) return
-
-      const image = new Image()
-      image.decoding = 'async'
-      image.fetchPriority = 'low'
-      image.src = url
-      preloadedImageUrlsRef.current.add(url)
-      image.decode?.().catch(() => preloadedImageUrlsRef.current.delete(url))
-    })
+    const image = new Image()
+    image.decoding = 'async'
+    image.fetchPriority = 'low'
+    image.src = imageUrl
+    preloadedImageRef.current = image
   }, [studyCards, currentCardIndex])
 
   // Custom styles for ReviewPage
   const customStyles = {
-    container: 'h-full min-h-0 flex flex-col p-2 sm:p-4 md:max-w-3xl md:mx-auto md:w-full',
-    studyContainer: 'h-full min-h-0 flex flex-col px-2 pb-2 pt-2 sm:px-4 sm:pb-4 sm:pt-2 md:max-w-3xl md:mx-auto md:w-full',
+    container: 'h-full min-h-0 flex flex-col p-4 md:max-w-3xl md:mx-auto md:w-full',
+    studyContainer: 'h-full min-h-0 flex flex-col px-4 pb-2 pt-2 sm:pb-4 sm:pt-2 md:max-w-3xl md:mx-auto md:w-full',
     emptyState: 'flex flex-col items-center justify-center min-h-96 p-6 text-center',
     emptyIcon: 'text-5xl text-gray-400 mb-3',
     // Tighten header spacing and ensure it stacks above the card
@@ -528,11 +552,11 @@ export function ReviewPage() {
     const reviewedAt = new Date().toISOString()
     const reviewHistory = Array.isArray(card.reviewHistory) ? card.reviewHistory : []
 
-    return {
+    const updatedCard = {
       ...card,
       difficulty: nextStrength,
       memoryStrength: nextStrength,
-      state: rating < 2 ? 'struggling' : nextStrength >= 80 ? 'mastered' : 'learning',
+      state: rating < 2 ? 'struggling' : 'learning',
       lastReviewed: reviewedAt,
       lastReviewedAt: reviewedAt,
       reviewCount,
@@ -548,6 +572,8 @@ export function ReviewPage() {
       }],
       updatedAt: reviewedAt
     }
+    updatedCard.state = resolveCardState(updatedCard)
+    return updatedCard
   }
 
   const getCramCards = (deck, options, previousCardId) => {
@@ -680,10 +706,12 @@ export function ReviewPage() {
       const nextCards = getCramCards(nextDeck, studyOptions, currentCard.id)
       setStudyCards(nextCards)
       setCurrentCardIndex(0)
+      if (nextCards.length === 0) recordSessionTime()
       setShowResult(nextCards.length === 0)
     } else if (currentCardIndex < studyCards.length - 1) {
       setCurrentCardIndex(prev => prev + 1)
     } else {
+      recordSessionTime()
       setShowResult(true)
     }
   }
@@ -696,14 +724,14 @@ export function ReviewPage() {
 
   if (!activeDeck || !activeDeck.cards || activeDeck.cards.length === 0) {
     return (
-      <div className={styles.review.container}>
+      <div className={`${styles.review.container} overflow-y-auto`}>
         <h1 className="w-full text-left text-2xl font-bold text-gray-900 mb-2">Study</h1>
         <p className="w-full text-left text-gray-600 mb-6">Start a study session by selecting a deck from the Decks page.</p>
         <div className={styles.review.panel}>
           <div className={styles.review.emptyIcon}><FaBook /></div>
           <h2 className="mb-4">Choose a Deck</h2>
           {decks.length > 0 ? (
-            <div className="w-full max-w-md space-y-2 pb-40">
+            <div className="w-full max-w-md space-y-2">
               {decks.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(deck => (
                 <button
                   key={deck.id}
