@@ -1,4 +1,4 @@
-export { ReviewPage } from './ReviewPage'
+export { StudyPage } from './StudyPage'
 export { DecksPage } from './DecksPage'
-export { ImportPage } from './ImportPage'
+export { ImportPage } from './TextImportPage'
 export { SettingsPage } from './SettingsPage'

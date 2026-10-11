@@ -1,12 +1,14 @@
-import { useStyle, matchesStudyStatusFilters } from '../utils'
+import '../css/decks.css'
+import { matchesStudyStatusFilters } from '../utils'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect, useLayoutEffect, useContext } from 'react'
 import { AppContext } from '../context/AppContext'
 import { useToast } from '../context/ToastContext'
 import { Portal } from '../components/Portal'
 import { CardEditor } from '../components/CardEditor'
+import { AiCardGeneratorModal } from '../components/AiCardGeneratorModal'
 import { DeckStatusSummary } from '../components/DeckStatusSummary'
-import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaSort, FaChevronDown, FaChevronUp } from 'react-icons/fa'
+import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaMagic, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaSort, FaChevronDown, FaChevronUp } from 'react-icons/fa'
 
 const deckSortOptions = [
   { value: 'name-asc', label: 'A-Z', description: 'Name, A to Z' },
@@ -41,12 +43,13 @@ const formatStudyTime = value => {
 const useDecksPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { decks, setDecks, setActiveDeck, studyOptions, setStudyOptions } = useContext(AppContext)
+  const { decks, setDecks, setActiveDeck, studyOptions: defaultStudyOptions, updateDeckStudyOptions } = useContext(AppContext)
   const { showInfo, showWarning } = useToast()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newDeckName, setNewDeckName] = useState('')
   const [editingDeck, setEditingDeck] = useState(null)
   const [showOptions, setShowOptions] = useState(false)
+  const [optionsDeckId, setOptionsDeckId] = useState(null)
   const [selectedTag, setSelectedTag] = useState(() => {
     try {
       return localStorage.getItem('flashcards_selected_deck_tag') || 'all'
@@ -68,8 +71,20 @@ const useDecksPage = () => {
     setEditingDeck(null)
     setShowCreateForm(false)
     setShowOptions(false)
+    setOptionsDeckId(null)
     setShowTagFilter(false)
   }, [location.key, location.state])
+
+  const optionsDeck = decks.find(deck => String(deck.id) === String(optionsDeckId))
+  const studyOptions = optionsDeck?.studyOptions || defaultStudyOptions
+  const setStudyOptions = update => {
+    updateDeckStudyOptions(optionsDeckId, update)
+  }
+
+  const openStudyOptions = deck => {
+    setOptionsDeckId(deck.id)
+    setShowOptions(true)
+  }
 
   const createDeck = () => {
     if (!newDeckName.trim()) return
@@ -88,6 +103,16 @@ const useDecksPage = () => {
     showInfo(`Created new deck "${newDeck.name}"`)
   }
 
+  const createAiDeck = generatedDeck => {
+    const newDeck = {
+      id: Date.now() + 9999,
+      ...generatedDeck,
+      createdAt: new Date().toISOString(),
+      totalStudyTimeSeconds: 0
+    }
+    setDecks(previousDecks => [...previousDecks, newDeck])
+  }
+
   const deleteDeck = (deckId) => {
     const deckToDelete = decks.find(deck => deck.id === deckId)
     if (deckToDelete && window.confirm(`Delete "${deckToDelete.name}" and all its cards? This cannot be undone.`)) {
@@ -97,18 +122,19 @@ const useDecksPage = () => {
   }
 
   const getDeckStats = (deck) => {
+    const deckStudyOptions = deck.studyOptions || defaultStudyOptions
     const total = deck.cards.length
-    let studyCards = deck.cards.filter(card => matchesStudyStatusFilters(card, studyOptions))
+    let studyCards = deck.cards.filter(card => matchesStudyStatusFilters(card, deckStudyOptions))
 
-    if (studyOptions.mode !== 'cram' && studyOptions.recentlyWrong) {
+    if (deckStudyOptions.mode !== 'cram' && deckStudyOptions.recentlyWrong) {
       studyCards = studyCards.filter(card => (card.lapseCount || 0) > 0 || (card.lastResult ?? 3) < 2)
     }
 
     let studyCount = studyCards.length
 
     // Apply card limit if set
-    if (studyOptions.cardLimit && studyOptions.cardLimit > 0) {
-      studyCount = Math.min(studyCount, studyOptions.cardLimit)
+    if (deckStudyOptions.cardLimit && deckStudyOptions.cardLimit > 0) {
+      studyCount = Math.min(studyCount, deckStudyOptions.cardLimit)
     }
 
     return { total, studyCount }
@@ -125,7 +151,7 @@ const useDecksPage = () => {
 
   const handleDeckSelect = (deck) => {
     setActiveDeck(deck)
-    navigate('/review')
+    navigate('/study')
   }
 
   return {
@@ -135,6 +161,7 @@ const useDecksPage = () => {
     setActiveDeck,
     studyOptions,
     setStudyOptions,
+    defaultStudyOptions,
     showInfo,
     showWarning,
     showCreateForm,
@@ -149,7 +176,10 @@ const useDecksPage = () => {
     setShowTagFilter,
     showOptions,
     setShowOptions,
+    optionsDeckId,
+    openStudyOptions,
     createDeck,
+    createAiDeck,
     deleteDeck,
     getDeckStats,
     updateDeck,
@@ -158,6 +188,7 @@ const useDecksPage = () => {
 }
 
 export function DecksPage() {
+  const [showAiDeckGenerator, setShowAiDeckGenerator] = useState(false)
   const [collapsedDeckIds, setCollapsedDeckIds] = useState(() => {
     try {
       const savedIds = JSON.parse(localStorage.getItem('flashcards_collapsed_deck_ids') || '[]')
@@ -181,6 +212,7 @@ export function DecksPage() {
     setActiveDeck,
     studyOptions,
     setStudyOptions,
+    defaultStudyOptions,
     showInfo,
     showWarning,
     showCreateForm,
@@ -195,7 +227,10 @@ export function DecksPage() {
     setShowTagFilter,
     showOptions,
     setShowOptions,
+    optionsDeckId,
+    openStudyOptions,
     createDeck,
+    createAiDeck,
     deleteDeck,
     getDeckStats,
     updateDeck,
@@ -231,40 +266,35 @@ export function DecksPage() {
       return (getDeckCreationTime(b) - getDeckCreationTime(a)) * direction
     })
   const currentSortOption = deckSortOptions.find(option => option.value === sortMode)
+  const optionsDeck = decks.find(deck => String(deck.id) === String(optionsDeckId))
 
-  // Custom styles for DecksPage
   const customStyles = {
-    container: 'min-h-0 p-4 md:max-w-6xl md:mx-auto',
-    header: 'grid grid-cols-1 md:grid-cols-3 items-center mb-6 gap-3',
-    headerActions: 'flex items-center gap-3 justify-end',
-    createForm: 'mb-6 p-4 bg-white/90 backdrop-blur-lg border border-white/20 rounded-xl shadow-lg',
-    formActions: 'flex gap-3 mt-4',
-    decksGrid: 'grid grid-cols-1 items-start md:grid-cols-2 lg:grid-cols-3 gap-4',
-    deckCard: 'relative self-start bg-white/90 backdrop-blur-lg border-8 border-solid rounded-xl shadow-lg hover:shadow-xl transition-all duration-200',
-    emptyState: 'flex flex-col items-center justify-center min-h-[40vh] sm:min-h-[50vh] p-8 text-center w-full',
-    optionsBtn: 'p-2 bg-white/90 border border-white/10 text-gray-600 hover:bg-blue-50 hover:text-blue-600 rounded-lg shadow-sm transition-all duration-200 flex items-center justify-center w-11 h-11',
-    btnPrimary: 'bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-3 min-w-[140px] justify-center shadow-md',
-    btnCram: 'bg-amber-400 hover:bg-amber-500 text-white font-medium py-2 px-6 rounded-lg transition-all duration-200 flex items-center gap-3 min-w-[140px] justify-center shadow-md',
-    btnSecondary: 'bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2',
-    // ensure the close button is a centered square so the icon is visually centered
-    closeButton: 'absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors duration-200 flex items-center justify-center w-9 h-9',
-    optionGroup: 'mb-5 sm:mb-6',
-    radioGroup: 'flex flex-col gap-2 ml-4',
-    optionActions: 'flex gap-3 mt-6',
-    presetButton: 'px-3 py-2 text-sm rounded-lg transition-all duration-200 min-w-[44px] touch-manipulation',
-    presetButtonActive: 'bg-blue-100 text-blue-700 border border-blue-200 shadow-sm',
-    presetButtonInactive: 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-transparent',
-    deckHeader: 'flex items-center justify-between',
-    deckName: 'text-xl font-semibold text-gray-900',
-    deleteBtn: 'p-0 bg-white/60 text-gray-500 hover:bg-white hover:text-red-600 rounded-md transition-colors duration-150 flex items-center justify-center w-9 h-9',
-    deckStats: 'mb-4 space-y-2',
-    statRow: 'flex justify-between text-sm text-gray-600',
-    deckActions: 'flex gap-3 justify-center mt-4',
-    emptyIcon: 'text-6xl text-gray-400 mb-4'
+    container: 'decks-page',
+    header: 'decks-page__header',
+    createForm: 'decks-page__create-form surface-panel',
+    formActions: 'decks-page__form-actions',
+    decksGrid: 'decks-grid',
+    deckCard: 'deck-card surface-panel',
+    emptyState: 'decks-page__empty',
+    optionsBtn: 'button button--icon button--quiet decks-page__options-button',
+    btnPrimary: 'button button--primary decks-page__action-button',
+    btnCram: 'button button--cram decks-page__action-button',
+    btnSecondary: 'button button--secondary',
+    closeButton: 'button button--icon button--quiet modal-dialog__close',
+    optionGroup: 'study-option-group',
+    radioGroup: 'study-option-radio-list',
+    presetButton: 'study-option-preset',
+    presetButtonActive: 'is-selected',
+    deckHeader: 'deck-card__header',
+    deckName: 'deck-card__name',
+    deleteBtn: 'button button--icon button--quiet deck-card__delete',
+    deckStats: 'deck-card__stats',
+    statRow: 'deck-card__stat',
+    deckActions: 'deck-card__actions',
+    emptyIcon: 'decks-page__empty-icon'
   }
 
-  const baseStyles = useStyle()
-  const styles = { ...baseStyles, decks: { ...baseStyles.decks, ...customStyles } }
+  const styles = { decks: customStyles }
 
   if (editingDeck) {
     return (
@@ -282,11 +312,21 @@ export function DecksPage() {
 
   return (
     <div className={styles.decks.container}>
+      {showAiDeckGenerator && (
+        <AiCardGeneratorModal
+          onClose={() => setShowAiDeckGenerator(false)}
+          onCreateDeck={generatedDeck => {
+            createAiDeck(generatedDeck)
+            setShowAiDeckGenerator(false)
+          }}
+        />
+      )}
+
       {/* Study Options Modal */}
       {showOptions && (
         <Portal>
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 z-50" onClick={() => setShowOptions(false)}>
-            <div className="bg-white rounded-xl p-4 sm:p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto relative flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-backdrop decks-options-backdrop" onClick={() => setShowOptions(false)}>
+            <div className="modal-dialog decks-options-dialog" onClick={(e) => e.stopPropagation()}>
               <button
                 className={styles.decks.closeButton}
                 onClick={() => setShowOptions(false)}
@@ -294,24 +334,22 @@ export function DecksPage() {
               >
                 <FaTimes />
               </button>
-              <h3 className="text-xl font-semibold text-gray-900 mb-4 sm:mb-6 pr-8">Study Options</h3>
+              <h3 className="modal-dialog__title">
+                Study Options{optionsDeck ? ` · ${optionsDeck.name}` : ''}
+              </h3>
 
-              <div className={`${styles.decks.optionGroup} order-1`}>
-                <label className="block text-gray-700 font-medium mb-3">Study mode</label>
-                <div className="flex flex-wrap gap-2">
+              <div className={`${styles.decks.optionGroup} study-option-group--mode`}>
+                <label className="form-label">Study mode</label>
+                <div className="study-option-preset-row">
                   {[
-                    { value: 'review', label: 'Review' },
+                    { value: 'review', label: 'Study' },
                     { value: 'cram', label: 'Cram' }
                   ].map(mode => (
                     <button
                       key={mode.value}
                       type="button"
                       onClick={() => setStudyOptions(prev => ({ ...prev, mode: mode.value }))}
-                      className={`${styles.decks.presetButton} ${
-                        studyOptions.mode === mode.value
-                          ? styles.decks.presetButtonActive
-                          : styles.decks.presetButtonInactive
-                      }`}
+                      className={`${styles.decks.presetButton}${studyOptions.mode === mode.value ? ` ${styles.decks.presetButtonActive}` : ''}`}
                     >
                       {mode.label}
                     </button>
@@ -319,24 +357,24 @@ export function DecksPage() {
                 </div>
               </div>
 
-              <div className={`${styles.decks.optionGroup} order-4`}>
+              <div className={`${styles.decks.optionGroup} study-option-group--behavior`}>
                 {studyOptions.mode !== 'cram' && (
-                  <div className="mb-4">
-                    <label className="block text-gray-700 font-medium mb-2">Card order:</label>
+                  <div className="study-option-subgroup">
+                    <label className="form-label">Card order:</label>
                     <div className={styles.decks.radioGroup}>
                       {[
                         { value: 'forward', label: 'Forward' },
                         { value: 'reverse', label: 'Reverse' },
                         { value: 'random', label: 'Random' }
                       ].map(order => (
-                        <label key={order.value} className="flex items-center gap-3 text-gray-700">
+                        <label key={order.value} className="study-option-radio">
                           <input
                             type="radio"
                             name="card-order"
                             value={order.value}
                             checked={studyOptions.cardOrder === order.value}
                             onChange={(e) => setStudyOptions(prev => ({ ...prev, cardOrder: e.target.value }))}
-                            className="form-radio"
+                            className="study-option-control"
                           />
                           {order.label}
                         </label>
@@ -344,124 +382,120 @@ export function DecksPage() {
                     </div>
                   </div>
                 )}
-                <label className="block text-gray-700 font-medium mb-2">Card Direction:</label>
+                <label className="form-label">Card direction:</label>
                 <div className={styles.decks.radioGroup}>
-                  <label className="flex items-center gap-3 text-gray-700">
+                  <label className="study-option-radio">
                     <input
                       type="radio"
                       value="front-to-back"
                       checked={studyOptions.direction === 'front-to-back'}
                       onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
-                      className="form-radio"
+                      className="study-option-control"
                     />
                     Front → Back
                   </label>
-                  <label className="flex items-center gap-3 text-gray-700">
+                  <label className="study-option-radio">
                     <input
                       type="radio"
                       value="back-to-front"
                       checked={studyOptions.direction === 'back-to-front'}
                       onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
-                      className="form-radio"
+                      className="study-option-control"
                     />
                     Back → Front
                   </label>
-                  <label className="flex items-center gap-3 text-gray-700">
+                  <label className="study-option-radio">
                     <input
                       type="radio"
                       value="random"
                       checked={studyOptions.direction === 'random'}
                       onChange={(e) => setStudyOptions(prev => ({ ...prev, direction: e.target.value }))}
-                      className="form-radio"
+                      className="study-option-control"
                     />
                     <FaRandom /> Mixed Direction
                   </label>
                 </div>
               </div>
 
-              <div className={`${styles.decks.optionGroup} order-3`}>
-                <label className="block text-gray-700 font-medium mb-3">Filter by status</label>
-                <div className="flex flex-wrap gap-2 sm:gap-3">
-                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+              <div className={`${styles.decks.optionGroup} study-option-group--filters`}>
+                <label className="form-label">Filter by status</label>
+                <div className="study-option-checks">
+                  <label className="study-option-check">
                     <input
                       type="checkbox"
                       checked={studyOptions.onlyNew}
                       onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyNew: e.target.checked }))}
-                      className="form-check"
+                      className="study-option-control"
                     />
                     New
                   </label>
 
-                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <label className="study-option-check">
                     <input
                       type="checkbox"
                       checked={studyOptions.onlyMissed}
                       onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyMissed: e.target.checked }))}
-                      className="form-check"
+                      className="study-option-control"
                     />
                     Weak
                   </label>
 
-                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <label className="study-option-check">
                     <input
                       type="checkbox"
                       checked={studyOptions.onlyLearning}
                       onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyLearning: e.target.checked }))}
-                      className="form-check"
+                      className="study-option-control"
                     />
                     Learning
                   </label>
 
-                  <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  <label className="study-option-check">
                     <input
                       type="checkbox"
                       checked={studyOptions.onlyMastered}
                       onChange={(e) => setStudyOptions(prev => ({ ...prev, onlyMastered: e.target.checked }))}
-                      className="form-check"
+                      className="study-option-control"
                     />
                     Mastered
                   </label>
                 </div>
               </div>
 
-              <div className={`${styles.decks.optionGroup} order-4`}>
-                <label className="flex items-center gap-3 text-gray-700">
+              <div className={`${styles.decks.optionGroup} study-option-group--behavior`}>
+                <label className="study-option-radio">
                   <input
                     type="checkbox"
                     checked={studyOptions.showBothSides}
                     onChange={(e) => setStudyOptions(prev => ({ ...prev, showBothSides: e.target.checked }))}
-                    className="form-check"
+                    className="study-option-control"
                   />
                   Show Both Sides When Flipped
                 </label>
               </div>
 
-              <div className={`${styles.decks.optionGroup} order-4`}>
-                <label className="flex items-center gap-3 text-gray-700">
+              <div className={`${styles.decks.optionGroup} study-option-group--behavior`}>
+                <label className="study-option-radio">
                   <input
                     type="checkbox"
                     checked={Boolean(studyOptions.typeToAnswer)}
                     onChange={(e) => setStudyOptions(prev => ({ ...prev, typeToAnswer: e.target.checked }))}
-                    className="form-check"
+                    className="study-option-control"
                   />
                   Type answer before revealing
                 </label>
               </div>
 
-              {studyOptions.mode !== 'cram' && <div className={`${styles.decks.optionGroup} order-2`}>
-                <div className="space-y-3">
-                  <label className="block text-gray-700 font-medium">Cards per session</label>
-                  <div className="flex flex-wrap items-center gap-2">
+              {studyOptions.mode !== 'cram' && <div className={`${styles.decks.optionGroup} study-option-group--limit`}>
+                <div className="study-option-limit">
+                  <label className="form-label">Cards per session</label>
+                  <div className="study-option-preset-row">
                     {[10, 25, 50, 100].map(preset => (
                       <button
                         key={preset}
                         type="button"
                         onClick={() => setStudyOptions(prev => ({ ...prev, cardLimit: preset }))}
-                        className={`${styles.decks.presetButton} ${
-                          studyOptions.cardLimit === preset
-                            ? styles.decks.presetButtonActive
-                            : styles.decks.presetButtonInactive
-                        }`}
+                        className={`${styles.decks.presetButton}${studyOptions.cardLimit === preset ? ` ${styles.decks.presetButtonActive}` : ''}`}
                       >
                         {preset}
                       </button>
@@ -478,16 +512,12 @@ export function DecksPage() {
                       }}
                       placeholder="Custom"
                       aria-label="Custom cards per session"
-                      className="w-24 rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:border-blue-400 focus:outline-none"
+                      className="field field--compact study-option-custom-limit"
                     />
                     <button
                       type="button"
                       onClick={() => setStudyOptions(prev => ({ ...prev, cardLimit: null }))}
-                      className={`${styles.decks.presetButton} ${
-                        studyOptions.cardLimit === null
-                          ? styles.decks.presetButtonActive
-                          : styles.decks.presetButtonInactive
-                      }`}
+                      className={`${styles.decks.presetButton}${studyOptions.cardLimit === null ? ` ${styles.decks.presetButtonActive}` : ''}`}
                     >
                       No limit
                     </button>
@@ -500,11 +530,11 @@ export function DecksPage() {
       )}
 
       <div className={styles.decks.header}>
-        <div className="md:col-span-3">
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold leading-none text-gray-900">My Decks</h1>
+        <div className="decks-page__intro">
+          <div className="decks-page__title-row">
+            <h1 className="decks-page__title">My Decks</h1>
             <span
-              className="flex h-7 min-w-7 items-center justify-center rounded-lg mt-1 px-1.5 text-lg font-bold tabular-nums"
+              className="decks-page__count"
               style={{
                 backgroundColor: 'var(--theme-primary)',
                 color: 'var(--theme-primary-contrast)'
@@ -513,40 +543,38 @@ export function DecksPage() {
               {decks.length}
             </span>
           </div>
-          <p className="text-gray-600 mt-2">Organize your decks — create, edit, and start studying.</p>
+          <p className="decks-page__description">Organize your decks — each deck has its own study options.</p>
         </div>
 
-        <div className="md:col-span-3 flex items-center justify-center gap-4">
+        <div className="decks-page__header-actions">
           <button
+            type="button"
+            className="button button--outline decks-page__action-button"
+            onClick={() => setShowAiDeckGenerator(true)}
+          >
+            <FaMagic aria-hidden="true" /> Create AI Deck
+          </button>
+          <button
+            type="button"
             className={styles.decks.btnPrimary}
             onClick={() => setShowCreateForm(true)}
           >
             <FaPlus /> New Deck
           </button>
 
-          <button
-            className={styles.decks.optionsBtn}
-            onClick={() => setShowOptions(true)}
-            title="Study Options"
-            style={{
-              position: 'relative'
-            }}
-          >
-            <FaCog />
-          </button>
         </div>
       </div>
 
       {showCreateForm && (
         <div className={styles.decks.createForm}>
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">Create New Deck</h3>
+          <h3 className="decks-page__section-title">Create New Deck</h3>
           <input
             type="text"
             placeholder="Deck name..."
             value={newDeckName}
             onChange={(e) => setNewDeckName(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && createDeck()}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="field"
           />
           <div className={styles.decks.formActions}>
             <button className={styles.decks.btnSecondary} onClick={() => setShowCreateForm(false)}>
@@ -559,7 +587,7 @@ export function DecksPage() {
         </div>
       )}
 
-      <div className="relative mb-4 flex flex-wrap items-center gap-2">
+      <div className="decks-page__toolbar">
         <button
           type="button"
           onClick={() => {
@@ -568,7 +596,7 @@ export function DecksPage() {
           }}
           aria-label={`Sort decks: ${currentSortOption.description}. Click to change sort order.`}
           title={`Sort: ${currentSortOption.description}`}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          className="button button--outline deck-toolbar-button"
         >
           <FaSort />
           {currentSortOption.label}
@@ -578,18 +606,18 @@ export function DecksPage() {
           onClick={() => setShowTagFilter(open => !open)}
           aria-expanded={showTagFilter}
           aria-haspopup="true"
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          className="button button--outline deck-toolbar-button"
         >
           <FaFilter />
           {selectedTag === 'all' ? 'Filter by tag' : selectedTag}
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{selectedTag === 'all' ? availableTags.length : 1}</span>
+          <span className="deck-toolbar-button__count">{selectedTag === 'all' ? availableTags.length : 1}</span>
         </button>
         {showTagFilter && (
-          <div className="absolute left-0 top-full z-30 mt-2 min-w-56 rounded-lg border border-gray-200 bg-white p-2 shadow-xl">
+          <div className="deck-filter-menu">
             <button
               type="button"
               onClick={() => { setSelectedTag('all'); setShowTagFilter(false) }}
-              className={`block w-full rounded-md px-3 py-2 text-left text-sm ${selectedTag === 'all' ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+              className={`deck-filter-menu__option${selectedTag === 'all' ? ' is-selected' : ''}`}
             >
               All decks
             </button>
@@ -598,48 +626,35 @@ export function DecksPage() {
                 key={tag}
                 type="button"
                 onClick={() => { setSelectedTag(tag); setShowTagFilter(false) }}
-                className={`block w-full rounded-md px-3 py-2 text-left text-sm ${selectedTag === tag ? 'bg-blue-50 font-medium text-blue-700' : 'text-gray-700 hover:bg-gray-50'}`}
+                className={`deck-filter-menu__option${selectedTag === tag ? ' is-selected' : ''}`}
               >
                 {tag}
               </button>
             )) : (
-              <p className="px-3 py-2 text-sm text-gray-500">No tags defined yet. Add tags in a deck’s Edit page.</p>
+              <p className="deck-filter-menu__empty">No tags defined yet. Add tags in a deck’s Edit page.</p>
             )}
           </div>
         )}
         {selectedTag !== 'all' && (
-          <span className="ml-3 text-sm text-gray-500">Showing decks tagged “{selectedTag}”</span>
+          <span className="decks-page__filter-summary">Showing decks tagged “{selectedTag}”</span>
         )}
       </div>
 
       <div className={styles.decks.decksGrid}>
         {visibleDecks.map(deck => {
           const stats = getDeckStats(deck)
+          const deckStudyOptions = deck.studyOptions || defaultStudyOptions
           const isCollapsed = collapsedDeckIds.has(deck.id)
           const deckColor = deck.appearance?.color || '#ffffff'
           const deckTextColor = 'var(--theme-text)'
 
           return (
-            <div key={deck.id} className={`${styles.decks.deckCard} ${isCollapsed ? 'p-3' : 'p-6'}`} style={{ borderColor: deckColor, color: deckTextColor }}>
-              <div className={`${styles.decks.deckHeader} ${isCollapsed ? 'mb-0' : 'mb-4'}`}>
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-white/75 text-3xl shadow-sm" aria-hidden="true">{deck.appearance?.icon || '📚'}</span>
-                  <h3 className={`${styles.decks.deckName} min-w-0 ${isCollapsed ? 'truncate' : ''}`} style={{ color: deckTextColor }}>
-                    <button
-                      type="button"
-                      className={`block max-w-full text-left hover:text-blue-700 disabled:cursor-not-allowed ${isCollapsed ? 'truncate' : 'whitespace-normal break-words'}`}
-                      onClick={() => handleDeckSelect(deck)}
-                      disabled={stats.total === 0}
-                      aria-label={`Study ${deck.name}`}
-                    >
-                      {deck.name}
-                    </button>
-                  </h3>
-                </div>
-                <div className="flex flex-shrink-0 items-center gap-1">
+            <div key={deck.id} className={`${styles.decks.deckCard}${isCollapsed ? ' is-collapsed' : ' is-expanded'}`} style={{ borderColor: deckColor, color: deckTextColor }}>
+              <div className={`${styles.decks.deckHeader}${isCollapsed ? ' is-collapsed' : ''}`}>
+                <div className="deck-card__identity">
                   <button
                     type="button"
-                    className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-white/70 hover:text-blue-600"
+                    className="button button--icon button--quiet deck-card__collapse"
                     onClick={() => setCollapsedDeckIds(prev => {
                       const next = new Set(prev)
                       if (next.has(deck.id)) next.delete(deck.id)
@@ -651,6 +666,29 @@ export function DecksPage() {
                     title={isCollapsed ? 'Expand deck' : 'Collapse deck'}
                   >
                     {isCollapsed ? <FaChevronDown /> : <FaChevronUp />}
+                  </button>
+                  <span className="deck-card__icon" aria-hidden="true">{deck.appearance?.icon || '📚'}</span>
+                  <h3 className={`${styles.decks.deckName}${isCollapsed ? ' is-collapsed' : ''}`} style={{ color: deckTextColor }}>
+                    <button
+                      type="button"
+                      className="deck-card__study-button"
+                      onClick={() => handleDeckSelect(deck)}
+                      disabled={stats.total === 0}
+                      aria-label={`Study ${deck.name}`}
+                    >
+                      {deck.name}
+                    </button>
+                  </h3>
+                </div>
+                <div className="deck-card__tools">
+                  <button
+                    type="button"
+                    className={styles.decks.optionsBtn}
+                    onClick={() => openStudyOptions(deck)}
+                    aria-label={`Study options for ${deck.name}`}
+                    title="Study options"
+                  >
+                    <FaCog />
                   </button>
                   <button
                     className={styles.decks.deleteBtn}
@@ -665,25 +703,25 @@ export function DecksPage() {
 
               {!isCollapsed && <>
               {(deck.tags || []).length > 0 && (
-                <div className="mb-3 flex flex-wrap gap-1.5">
-                  {deck.tags.map(tag => <span key={tag} className="rounded-full bg-white/70 px-2 py-0.5 text-xs text-gray-600">{tag}</span>)}
+                <div className="deck-card__tags">
+                  {deck.tags.map(tag => <span key={tag} className="deck-card__tag">{tag}</span>)}
                 </div>
               )}
 
                 <div className={styles.decks.deckStats}>
                 <DeckStatusSummary cards={deck.cards} />
                   <div className={styles.decks.statRow}>
-                    <span className="font-medium" style={{ color: deckTextColor }}>Created:</span>
+                    <span className="deck-card__stat-label" style={{ color: deckTextColor }}>Created:</span>
                     <span style={{ color: deckTextColor }}>{formatDeckCreationDate(deck)}</span>
                   </div>
                   <div className={styles.decks.statRow}>
-                    <span className="font-medium" style={{ color: deckTextColor }}>Total study time:</span>
+                    <span className="deck-card__stat-label" style={{ color: deckTextColor }}>Total study time:</span>
                     <span style={{ color: deckTextColor }}>{formatStudyTime(deck.totalStudyTimeSeconds)}</span>
                   </div>
-                  {studyOptions.mode !== 'cram' && (studyOptions.cardLimit || studyOptions.onlyMissed) && (
-                  <div className={styles.decks.statRow} style={{ borderTop: '1px solid var(--theme-border)', paddingTop: '0.5rem', marginTop: '0.5rem' }}>
-                    <span className="font-medium" style={{ color: deckTextColor }}>Study Session:</span>
-                    <span className="font-medium" style={{ color: deckTextColor }}>{stats.studyCount} cards</span>
+                  {deckStudyOptions.mode !== 'cram' && (deckStudyOptions.cardLimit || deckStudyOptions.onlyMissed) && (
+                  <div className={`${styles.decks.statRow} deck-card__stat--session`}>
+                    <span className="deck-card__stat-label" style={{ color: deckTextColor }}>Study Session:</span>
+                    <span className="deck-card__stat-label" style={{ color: deckTextColor }}>{stats.studyCount} cards</span>
                   </div>
                 )}
               </div>
@@ -696,12 +734,12 @@ export function DecksPage() {
                   <FaEdit /> Edit
                 </button>
                 <button
-                  className={studyOptions.mode === 'cram' ? styles.decks.btnCram : styles.decks.btnPrimary}
+                  className={deckStudyOptions.mode === 'cram' ? styles.decks.btnCram : styles.decks.btnPrimary}
                   onClick={() => handleDeckSelect(deck)}
                   disabled={stats.total === 0}
                 >
                   <FaBook />
-                  {stats.total === 0 ? 'No Cards' : studyOptions.mode === 'cram' ? 'Cram' : 'Study'}
+                  {stats.total === 0 ? 'No Cards' : deckStudyOptions.mode === 'cram' ? 'Cram' : 'Study'}
                 </button>
                 {/* delete button is in the top-right of the card header */}
               </div>
@@ -714,12 +752,12 @@ export function DecksPage() {
       {decks.length === 0 && (
         <div className={styles.decks.emptyState}>
           <div className={styles.decks.emptyIcon}><FaBook /></div>
-          <h2 className="text-2xl font-semibold text-gray-700 mb-2">No Decks Yet</h2>
-          <p className="text-gray-500">Create your first deck to start studying!</p>
+          <h2 className="decks-page__empty-title">No Decks Yet</h2>
+          <p className="decks-page__empty-description">Create your first deck to start studying!</p>
         </div>
       )}
       {decks.length > 0 && visibleDecks.length === 0 && (
-        <p className="py-10 text-center text-sm text-gray-500">No decks match this tag.</p>
+        <p className="decks-page__no-results">No decks match this tag.</p>
       )}
     </div>
   )

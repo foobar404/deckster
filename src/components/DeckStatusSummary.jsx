@@ -1,10 +1,10 @@
 import { getCardState } from '../utils'
 
 const STATUSES = [
-  { key: 'new', label: 'New', color: 'deck-status-new deck-status-bar' },
-  { key: 'struggling', label: 'Weak', color: 'deck-status-struggling deck-status-bar' },
-  { key: 'learning', label: 'Learning', color: 'deck-status-learning deck-status-bar' },
-  { key: 'mastered', label: 'Mastered', color: 'deck-status-mastered deck-status-bar' }
+  { key: 'new', label: 'New' },
+  { key: 'struggling', label: 'Weak' },
+  { key: 'learning', label: 'Learning' },
+  { key: 'mastered', label: 'Mastered' }
 ]
 
 export const getDeckStatusCounts = (cards = []) => cards.reduce((counts, card) => {
@@ -18,32 +18,32 @@ export function DeckStatusSummary({ cards = [] }) {
   const statusDescription = STATUSES.map(({ label, key }) => `${label}: ${counts[key]}`).join(', ')
 
   return (
-    <div>
-      <div className="mb-2 flex items-center justify-between text-xs text-gray-600">
+    <div className="deck-status-summary">
+      <div className="deck-status-summary__meta">
         <span>Card status</span>
         <span>{total} card{total === 1 ? '' : 's'}</span>
       </div>
       <div
         role="img"
         aria-label={`${total} cards. ${statusDescription}`}
-        className="flex h-3 w-full overflow-hidden rounded-full bg-gray-200"
+        className="deck-status-summary__bar"
       >
-        {STATUSES.map(({ key, color }) => counts[key] > 0 && (
+        {STATUSES.map(({ key }) => counts[key] > 0 && (
           <span
             key={key}
-            className={`h-full ${color}`}
+            className={`deck-status-bar deck-status-${key}`}
             style={{ width: `${(counts[key] / total) * 100}%` }}
           />
         ))}
       </div>
-      <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-gray-600">
-        {STATUSES.map(({ key, label, color }) => (
-          <span key={key} className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-gray-50 px-2 py-1.5">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className={`h-2 w-2 flex-shrink-0 rounded-full ${color}`} />
-              <span className="truncate">{label}</span>
+      <div className="deck-status-summary__legend">
+        {STATUSES.map(({ key, label }) => (
+          <span key={key} className="deck-status-summary__item">
+            <span className="deck-status-summary__label">
+              <span className={`deck-status-dot deck-status-${key}`} />
+              <span>{label}</span>
             </span>
-            <span className="shrink-0 font-semibold text-gray-800">{counts[key]}</span>
+            <span className="deck-status-summary__count">{counts[key]}</span>
           </span>
         ))}
       </div>

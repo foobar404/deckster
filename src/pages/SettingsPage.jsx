@@ -1,8 +1,10 @@
+import '../css/settings.css'
 import { useContext, useEffect, useState } from 'react'
-import { FaCloudUploadAlt, FaDesktop, FaGoogle, FaSignOutAlt, FaSyncAlt } from 'react-icons/fa'
+import { FaCloudUploadAlt, FaDesktop, FaEye, FaEyeSlash, FaGoogle, FaSignOutAlt, FaSyncAlt } from 'react-icons/fa'
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { AppContext } from '../context/AppContext'
+import { OPENROUTER_API_KEY_STORAGE_KEY } from '../utils/aiSettings'
 import { firebaseAuth, firebaseConfigured, firebaseDb } from '../utils/firebase'
 import { THEME_MODE_VALUES, THEME_OPTIONS, THEME_VALUES } from '../utils/themes'
 
@@ -119,6 +121,15 @@ export function SettingsPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [apiKey, setApiKey] = useState(() => {
+    try {
+      return localStorage.getItem(OPENROUTER_API_KEY_STORAGE_KEY) || ''
+    } catch {
+      return ''
+    }
+  })
+  const [isApiKeyVisible, setIsApiKeyVisible] = useState(false)
+  const [apiKeyError, setApiKeyError] = useState('')
   const [lastSyncedAt, setLastSyncedAt] = useState(() => localStorage.getItem('flashcards_last_firebase_sync'))
   const [systemPrefersDark, setSystemPrefersDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   const isDarkMode = themeMode === 'dark' || (themeMode === 'system' && systemPrefersDark)
@@ -188,9 +199,18 @@ export function SettingsPage() {
         deletedDecks,
         remoteDeletedDecks
       )
+      const localDecksById = new Map(decks.map(deck => [String(deck.id), deck]))
+      const decksWithStudyOptions = syncedDecks.map(deck => {
+        if (deck.studyOptions && typeof deck.studyOptions === 'object') return deck
+        const localDeck = localDecksById.get(String(deck.id))
+        return {
+          ...deck,
+          studyOptions: localDeck?.studyOptions || syncedStudyOptions
+        }
+      })
 
       await setDoc(profileRef, {
-        decks: syncedDecks,
+        decks: decksWithStudyOptions,
         deletedDecks: syncedDeletedDecks,
         studyOptions: syncedStudyOptions,
         theme: syncedTheme,
@@ -201,7 +221,7 @@ export function SettingsPage() {
         updatedAt: serverTimestamp()
       }, { merge: true })
 
-      applySyncedDecks(syncedDecks)
+      applySyncedDecks(decksWithStudyOptions)
       setDeletedDecks(syncedDeletedDecks)
       if (cloudIsNewer) {
         applySyncedPreferences({ studyOptions: syncedStudyOptions, theme: syncedTheme, themeMode: syncedThemeMode })
@@ -249,48 +269,62 @@ export function SettingsPage() {
     return Number.isNaN(date.getTime()) ? 'Not synced yet' : `Last synced ${date.toLocaleString()}`
   }
 
+  const handleApiKeyChange = value => {
+    setApiKey(value)
+    setApiKeyError('')
+    try {
+      if (value) {
+        localStorage.setItem(OPENROUTER_API_KEY_STORAGE_KEY, value)
+      } else {
+        localStorage.removeItem(OPENROUTER_API_KEY_STORAGE_KEY)
+      }
+    } catch {
+      setApiKeyError('Could not save the API key in this browser.')
+    }
+  }
+
   return (
-    <div className="mx-auto w-full max-w-3xl p-4">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="mt-2 text-gray-600">Appearance and account sync</p>
+    <div className="settings-page">
+      <header className="settings-page__header">
+        <h1 className="settings-page__title">Settings</h1>
+        <p className="settings-page__description">Appearance and account sync</p>
       </header>
 
-      <section className="border-y border-gray-200 py-5">
-        <div className="mb-4 flex items-start gap-3">
+      <section className="settings-section settings-section--sync">
+        <div className="settings-section__intro">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Sync</h2>
-            <p className="text-sm text-gray-600">Sync settings accross devices.</p>
+            <h2 className="settings-section__title">Sync</h2>
+            <p className="settings-section__description">Sync settings accross devices.</p>
           </div>
         </div>
 
         {!firebaseConfigured ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="font-semibold">Sync is not configured</p>
+          <div className="settings-alert settings-alert--warning">
+            <p className="settings-alert__title">Sync is not configured</p>
           </div>
         ) : authLoading ? (
-          <p className="text-sm text-gray-600">Checking account…</p>
+          <p className="settings-section__description">Checking account…</p>
         ) : user ? (
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="truncate font-medium text-gray-900">{user.displayName || 'Google account connected'}</p>
-              <p className="truncate text-sm text-gray-600">{user.email}</p>
-              <p className="mt-1 text-xs text-gray-500">{formatSyncTime()}</p>
+          <div className="sync-account">
+            <div className="sync-account__identity">
+              <p className="sync-account__name">{user.displayName || 'Google account connected'}</p>
+              <p className="sync-account__email">{user.email}</p>
+              <p className="sync-account__time">{formatSyncTime()}</p>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
+            <div className="sync-account__actions">
               <button
                 type="button"
                 disabled={isSyncing}
                 onClick={() => syncProfile(user)}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                className="button button--success"
               >
-                <FaSyncAlt className={isSyncing ? 'animate-spin' : ''} />
+                <FaSyncAlt className={isSyncing ? 'is-spinning' : ''} />
                 {isSyncing ? 'Syncing' : 'Sync now'}
               </button>
               <button
                 type="button"
                 onClick={disconnectGoogle}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="button button--outline"
               >
                 <FaSignOutAlt />
                 Disconnect
@@ -301,24 +335,60 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={connectGoogle}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-800 shadow-sm hover:bg-gray-50"
+            className="button button--outline"
           >
-            <FaGoogle className="text-red-500" />
+            <FaGoogle className="sync-account__google-icon" />
             Connect Google account
           </button>
         )}
 
-        {message && <p role="status" className="mt-3 text-sm text-emerald-700">{message}</p>}
-        {error && <p role="alert" className="mt-3 break-words text-sm text-red-700">{error}</p>}
+        {message && <p role="status" className="form-message form-message--success">{message}</p>}
+        {error && <p role="alert" className="form-message form-message--error">{error}</p>}
       </section>
 
-      <section className="border-b border-gray-200 py-3">
-        <div className="mb-2 flex items-baseline justify-between gap-2">
-          <h2 className="text-base font-semibold text-gray-900">Appearance</h2>
-          <p className="text-xs text-gray-600">Choose a color theme</p>
+      <section className="settings-section settings-section--ai">
+        <div className="settings-section__intro">
+          <div>
+            <h2 className="settings-section__title">AI generation</h2>
+            <p className="settings-section__description">Your OpenRouter API key is saved in this browser and shared with AI import and card generation.</p>
+          </div>
         </div>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs text-gray-600">
+        <label htmlFor="settingsOpenRouterApiKey" className="settings-api-key__label">OpenRouter API key</label>
+        <div className="settings-api-key__control">
+          <textarea
+            id="settingsOpenRouterApiKey"
+            autoComplete="off"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            rows={2}
+            value={apiKey}
+            onChange={event => handleApiKeyChange(event.target.value)}
+            placeholder="sk-or-v1-..."
+            className="field settings-api-key__input"
+            style={{ WebkitTextSecurity: isApiKeyVisible ? 'none' : 'disc' }}
+          />
+          <button
+            type="button"
+            onClick={() => setIsApiKeyVisible(visible => !visible)}
+            aria-label={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+            title={isApiKeyVisible ? 'Hide API key' : 'Show API key'}
+            className="button button--icon button--quiet settings-api-key__toggle"
+          >
+            {isApiKeyVisible ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+          </button>
+        </div>
+        <p className="settings-section__description">Anyone with access to this browser profile can retrieve it. Your prompts are sent directly to the selected model provider.</p>
+        {apiKeyError && <p role="alert" className="form-message form-message--error">{apiKeyError}</p>}
+      </section>
+
+      <section className="settings-section settings-section--appearance">
+        <div className="appearance-section__heading">
+          <h2 className="settings-section__title">Appearance</h2>
+          <p className="appearance-section__hint">Choose a color theme</p>
+        </div>
+        <div className="theme-mode-row">
+          <div className="theme-mode-control">
             <span>Light</span>
             <button
               type="button"
@@ -326,7 +396,7 @@ export function SettingsPage() {
               aria-label="Dark mode"
               aria-checked={isDarkMode}
               onClick={() => setThemeMode(isDarkMode ? 'light' : 'dark')}
-              className="theme-mode-toggle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="theme-mode-toggle"
               style={{ backgroundColor: isDarkMode ? 'var(--theme-primary)' : 'var(--theme-border)' }}
             >
               <span
@@ -340,15 +410,13 @@ export function SettingsPage() {
             type="button"
             aria-pressed={themeMode === 'system'}
             onClick={() => setThemeMode('system')}
-            className={`inline-flex min-h-8 items-center gap-1 rounded-lg border px-2 text-xs font-medium transition-colors ${themeMode === 'system'
-              ? 'border-blue-500 bg-blue-50 text-blue-700'
-              : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
+            className={`button button--small button--outline theme-system-button${themeMode === 'system' ? ' is-selected' : ''}`}
           >
             <FaDesktop aria-hidden="true" />
             System
           </button>
         </div>
-        <div className="grid grid-cols-5 gap-1 sm:grid-cols-7 sm:gap-1.5 lg:grid-cols-9">
+        <div className="theme-picker">
           {THEME_OPTIONS.map(({ value, label: optionLabel, color }) => (
             <button
               key={value}
@@ -357,12 +425,10 @@ export function SettingsPage() {
               aria-pressed={theme === value}
               title={optionLabel}
               onClick={() => setTheme(value)}
-              className={`flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-lg border px-1 py-1 text-[10px] font-medium leading-tight transition-colors ${theme === value
-                ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500/30'
-                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`theme-picker__choice${theme === value ? ' is-selected' : ''}`}
             >
-              <span className="h-3 w-3 shrink-0 rounded-full border border-black/10" style={{ background: color }} aria-hidden="true" />
-              <span className="w-full truncate text-center">{optionLabel}</span>
+              <span className="theme-picker__swatch" style={{ background: color }} aria-hidden="true" />
+              <span className="theme-picker__label">{optionLabel}</span>
             </button>
           ))}
         </div>

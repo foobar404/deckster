@@ -4,6 +4,47 @@ import { createContext, useState, useEffect } from 'react'
 
 export const AppContext = createContext()
 
+const DEFAULT_STUDY_OPTIONS = {
+  mode: 'review',
+  direction: 'front-to-back',
+  cardOrder: 'forward',
+  onlyMissed: true,
+  weakestFirst: true,
+  onlyNew: true,
+  onlyLearning: true,
+  onlyMastered: true,
+  statusFiltersVersion: 1,
+  recentlyWrong: false,
+  showBothSides: false,
+  typeToAnswer: false,
+  autoRead: false,
+  cardLimit: 50,
+  cardLimitVersion: 1
+}
+
+const normalizeStudyOptions = (options, fallback = DEFAULT_STUDY_OPTIONS) => {
+  const savedOptions = options && typeof options === 'object' ? options : {}
+  const mergedOptions = { ...fallback, ...savedOptions }
+
+  return {
+    ...mergedOptions,
+    mode: mergedOptions.mode === 'cram' ? 'cram' : 'review',
+    typeToAnswer: Boolean(mergedOptions.typeToAnswer),
+    cardOrder: ['forward', 'reverse', 'random'].includes(mergedOptions.cardOrder) ? mergedOptions.cardOrder : 'forward',
+    ...(mergedOptions.statusFiltersVersion === 1 ? {} : {
+      onlyMissed: true,
+      onlyNew: true,
+      onlyLearning: true,
+      onlyMastered: true,
+      statusFiltersVersion: 1
+    }),
+    ...(mergedOptions.cardLimitVersion === 1 ? {} : {
+      cardLimit: 50,
+      cardLimitVersion: 1
+    })
+  }
+}
+
 const getTimestamp = value => {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
@@ -44,23 +85,7 @@ export const AppProvider = ({ children }) => {
     incorrect: 0,
     streakCount: 0
   })
-  const [studyOptions, setStudyOptions] = useState({
-    mode: 'review',
-    direction: 'front-to-back', // 'front-to-back', 'back-to-front', 'random'
-    cardOrder: 'forward', // 'forward', 'reverse', 'random'
-    onlyMissed: true,
-    weakestFirst: true,
-    onlyNew: true,
-    onlyLearning: true,
-    onlyMastered: true,
-    statusFiltersVersion: 1,
-    recentlyWrong: false,
-    showBothSides: false, // Show both front and back when card flips
-    typeToAnswer: false,
-    autoRead: false, // Auto-read card contents using TTS
-    cardLimit: 50, // Limit number of cards to study (null = no limit)
-    cardLimitVersion: 1
-  })
+  const [studyOptions, setStudyOptions] = useState(DEFAULT_STUDY_OPTIONS)
 
   // Load data from localStorage on app start
   useEffect(() => {
@@ -108,23 +133,7 @@ export const AppProvider = ({ children }) => {
       incorrect: 0,
       streakCount: 0
     })
-    const savedStudyOptions = loadFromStorage(STORAGE_KEYS.STUDY_OPTIONS, {
-      mode: 'review',
-      direction: 'front-to-back',
-      cardOrder: 'forward',
-      onlyMissed: true,
-      weakestFirst: true,
-      onlyNew: true,
-      onlyLearning: true,
-      onlyMastered: true,
-      statusFiltersVersion: 1,
-      recentlyWrong: false,
-      showBothSides: false,
-      typeToAnswer: false,
-      autoRead: false,
-      cardLimit: 50,
-      cardLimitVersion: 1
-    })
+    const savedStudyOptions = loadFromStorage(STORAGE_KEYS.STUDY_OPTIONS, DEFAULT_STUDY_OPTIONS)
     const savedTheme = loadFromStorage(STORAGE_KEYS.THEME, 'system')
     const normalizedTheme = THEME_VALUES.includes(savedTheme) ? savedTheme : 'light'
     const savedThemeMode = loadFromStorage(STORAGE_KEYS.THEME_MODE, null)
@@ -135,25 +144,13 @@ export const AppProvider = ({ children }) => {
       ? savedThemeMode
       : legacyThemeMode
 
-    const normalizedStudyOptions = {
-      ...savedStudyOptions,
-      mode: savedStudyOptions.mode === 'cram' ? 'cram' : 'review',
-      typeToAnswer: Boolean(savedStudyOptions.typeToAnswer),
-      cardOrder: ['forward', 'reverse', 'random'].includes(savedStudyOptions.cardOrder) ? savedStudyOptions.cardOrder : 'forward',
-      ...(savedStudyOptions.statusFiltersVersion === 1 ? {} : {
-        onlyMissed: true,
-        onlyNew: true,
-        onlyLearning: true,
-        onlyMastered: true,
-        statusFiltersVersion: 1
-      }),
-      ...(savedStudyOptions.cardLimitVersion === 1 ? {} : {
-        cardLimit: 50,
-        cardLimitVersion: 1
-      })
-    }
+    const normalizedStudyOptions = normalizeStudyOptions(savedStudyOptions)
+    const decksWithStudyOptions = initialDecks.map(deck => ({
+      ...deck,
+      studyOptions: normalizeStudyOptions(deck.studyOptions, normalizedStudyOptions)
+    }))
 
-    setDecks(initialDecks)
+    setDecks(decksWithStudyOptions)
     setReviewStats(savedStats)
     setStudyOptions(normalizedStudyOptions)
     setTheme(normalizedTheme)
@@ -220,12 +217,16 @@ export const AppProvider = ({ children }) => {
     const changedAt = Date.now()
     const previousById = new Map(decks.map(deck => [String(deck.id), deck]))
     const nextDecks = requestedDecks.map(deck => {
+      const normalizedDeck = {
+        ...deck,
+        studyOptions: normalizeStudyOptions(deck.studyOptions, studyOptions)
+      }
       const previousDeck = previousById.get(String(deck.id))
-      if (!previousDeck) return deck.updatedAt ? deck : { ...deck, updatedAt: changedAt }
-      if (JSON.stringify(previousDeck) === JSON.stringify(deck)) return deck
+      if (!previousDeck) return normalizedDeck.updatedAt ? normalizedDeck : { ...normalizedDeck, updatedAt: changedAt }
+      if (JSON.stringify(previousDeck) === JSON.stringify(normalizedDeck)) return normalizedDeck
 
-      const hasExplicitVersion = getTimestamp(deck.updatedAt) > getTimestamp(previousDeck.updatedAt)
-      return hasExplicitVersion ? deck : { ...deck, updatedAt: changedAt }
+      const hasExplicitVersion = getTimestamp(normalizedDeck.updatedAt) > getTimestamp(previousDeck.updatedAt)
+      return hasExplicitVersion ? normalizedDeck : { ...normalizedDeck, updatedAt: changedAt }
     })
 
     if (JSON.stringify(decks) === JSON.stringify(nextDecks)) return
@@ -245,16 +246,49 @@ export const AppProvider = ({ children }) => {
     if (activeDeck && removedDecks.some(deck => String(deck.id) === String(activeDeck.id))) setActiveDeck(null)
   }
 
+  const updateDeckStudyOptions = (deckId, update) => {
+    if (deckId === null || deckId === undefined) return
+
+    const changedAt = Date.now()
+    const getUpdatedOptions = currentOptions => normalizeStudyOptions(
+      typeof update === 'function' ? update(currentOptions) : update,
+      studyOptions
+    )
+
+    setDecks(previousDecks => previousDecks.map(deck => {
+      if (String(deck.id) !== String(deckId)) return deck
+      return {
+        ...deck,
+        studyOptions: getUpdatedOptions(deck.studyOptions || studyOptions),
+        updatedAt: changedAt
+      }
+    }))
+    setActiveDeck(currentDeck => {
+      if (!currentDeck || String(currentDeck.id) !== String(deckId)) return currentDeck
+      return {
+        ...currentDeck,
+        studyOptions: getUpdatedOptions(currentDeck.studyOptions || studyOptions),
+        updatedAt: changedAt
+      }
+    })
+    markLocalSettingsChanged()
+  }
+
   const applySyncedDecks = (syncedDecks) => {
-    setDecks(syncedDecks)
-    if (activeDeck && !syncedDecks.some(deck => String(deck.id) === String(activeDeck.id))) setActiveDeck(null)
+    const currentDecksById = new Map(decks.map(deck => [String(deck.id), deck]))
+    const normalizedDecks = syncedDecks.map(deck => {
+      const currentDeck = currentDecksById.get(String(deck.id))
+      return {
+        ...deck,
+        studyOptions: normalizeStudyOptions(deck.studyOptions, currentDeck?.studyOptions || studyOptions)
+      }
+    })
+    setDecks(normalizedDecks)
+    if (activeDeck && !normalizedDecks.some(deck => String(deck.id) === String(activeDeck.id))) setActiveDeck(null)
   }
 
   const applySyncedPreferences = (preferences) => {
-    setStudyOptions({
-      ...preferences.studyOptions,
-      typeToAnswer: Boolean(preferences.studyOptions?.typeToAnswer)
-    })
+    setStudyOptions(normalizeStudyOptions(preferences.studyOptions, studyOptions))
     setTheme(THEME_VALUES.includes(preferences.theme) ? preferences.theme : 'light')
     setThemeMode(THEME_MODE_VALUES.includes(preferences.themeMode) ? preferences.themeMode : 'system')
   }
@@ -277,6 +311,7 @@ export const AppProvider = ({ children }) => {
   const value = {
     decks,
     setDecks: handleDecksChange,
+    updateDeckStudyOptions,
     deletedDecks,
     setDeletedDecks,
     applySyncedDecks,

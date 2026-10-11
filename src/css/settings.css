@@ -1,0 +1,344 @@
+.settings-page {
+  width: 100%;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: 1rem;
+}
+
+.settings-page__header {
+  margin-bottom: 1.5rem;
+}
+
+.settings-page__title {
+  margin: 0;
+  font-size: 1.875rem;
+  text-align: center;
+}
+
+.settings-page__description {
+  margin-top: 0.5rem;
+  color: var(--theme-text-soft);
+  text-align: center;
+}
+
+.settings-section {
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.settings-section--sync {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--theme-border);
+}
+
+.settings-section--appearance {
+  padding-block: 0.75rem;
+}
+
+.settings-api-key__label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--theme-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.settings-api-key__control {
+  position: relative;
+}
+
+.settings-api-key__input {
+  width: 100%;
+  padding-right: 3rem;
+}
+
+.settings-api-key__toggle {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  width: 2.25rem;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0;
+  color: var(--theme-text-soft);
+}
+
+.settings-section__intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.settings-section__title {
+  margin: 0;
+  color: var(--theme-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.settings-section__description {
+  margin: 0.25rem 0 0;
+  color: var(--theme-text-soft);
+  font-size: 0.875rem;
+}
+
+.settings-alert {
+  padding: 1rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.625rem;
+  font-size: 0.875rem;
+}
+
+.settings-alert--warning {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.settings-alert__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.sync-account {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sync-account__identity {
+  min-width: 0;
+}
+
+.sync-account__name,
+.sync-account__email {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-account__name {
+  color: var(--theme-text);
+  font-weight: 500;
+}
+
+.sync-account__email {
+  color: var(--theme-text-soft);
+  font-size: 0.875rem;
+}
+
+.sync-account__time {
+  margin: 0.25rem 0 0;
+  color: var(--theme-text-soft);
+  font-size: 0.75rem;
+}
+
+.sync-account__actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sync-account__google-icon {
+  color: #ef4444;
+}
+
+.is-spinning {
+  animation: settings-spin 900ms linear infinite;
+}
+
+.form-message {
+  margin: 0.75rem 0 0;
+}
+
+.appearance-section__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.appearance-section__heading .settings-section__title {
+  font-size: 1rem;
+}
+
+.appearance-section__hint {
+  margin: 0;
+  color: var(--theme-text-soft);
+  font-size: 0.75rem;
+}
+
+.theme-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.theme-mode-control {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--theme-text-soft);
+  font-size: 0.75rem;
+}
+
+.theme-mode-toggle {
+  position: relative;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 1.5rem;
+  min-width: 2.75rem;
+  min-height: 1.5rem;
+  flex: 0 0 auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 999px;
+  background: var(--theme-surface-muted);
+  box-shadow: none;
+  backdrop-filter: none;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+button.theme-mode-toggle::before,
+button.theme-mode-toggle:hover::before {
+  display: none;
+}
+
+.theme-mode-toggle:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+
+.theme-mode-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+  transition: transform 150ms ease;
+}
+
+.theme-system-button {
+  min-height: 2rem;
+  min-width: 0;
+  padding: 0.25rem 0.5rem;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.theme-system-button.is-selected {
+  border-color: var(--theme-primary);
+  background: var(--theme-primary-soft);
+  color: var(--theme-primary);
+}
+
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.theme-picker__choice {
+  display: flex;
+  min-width: 0;
+  min-height: 3rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.625rem;
+  background: var(--theme-surface);
+  color: var(--theme-text-soft);
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 1.25;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+button.theme-picker__choice::before,
+button.theme-picker__choice:hover::before {
+  display: none;
+}
+
+.theme-picker__choice:hover {
+  background: var(--theme-surface-muted);
+}
+
+.theme-picker__choice.is-selected {
+  border-color: var(--theme-primary);
+  background: var(--theme-primary-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  color: var(--theme-primary);
+}
+
+.theme-picker__choice:focus-visible,
+.theme-system-button:focus-visible {
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
+}
+
+.theme-picker__swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: 0 0 auto;
+  border: 1px solid rgb(0 0 0 / 10%);
+  border-radius: 50%;
+}
+
+.theme-picker__label {
+  width: 100%;
+  overflow: hidden;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes settings-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (min-width: 640px) {
+  .settings-page {
+    padding: 1rem 1.5rem;
+  }
+
+  .sync-account {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .theme-picker {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.375rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .theme-picker {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-spinning {
+    animation: none;
+  }
+}
