@@ -30,6 +30,9 @@ const normalizeStudyOptions = (options, fallback = DEFAULT_STUDY_OPTIONS) => {
     ...mergedOptions,
     mode: mergedOptions.mode === 'cram' ? 'cram' : 'review',
     typeToAnswer: Boolean(mergedOptions.typeToAnswer),
+    direction: ['front-to-back', 'back-to-front', 'random'].includes(mergedOptions.direction)
+      ? mergedOptions.direction
+      : 'front-to-back',
     cardOrder: ['forward', 'reverse', 'random'].includes(mergedOptions.cardOrder) ? mergedOptions.cardOrder : 'forward',
     ...(mergedOptions.statusFiltersVersion === 1 ? {} : {
       onlyMissed: true,

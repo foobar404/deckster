@@ -160,7 +160,7 @@ button.app-navigation__button:hover::before {
 
 .toast-region {
   position: fixed;
-  z-index: 50;
+  z-index: 10000;
   top: 1rem;
   right: 0;
   left: 0;

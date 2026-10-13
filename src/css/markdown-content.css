@@ -1,0 +1,107 @@
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content p {
+  margin: 0.45em 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin: 0.45em 0 0.25em;
+  font-size: 1.15em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.5em auto;
+  padding-left: 1.4em;
+  text-align: left;
+}
+
+.markdown-content li + li {
+  margin-top: 0.2em;
+}
+
+.markdown-content blockquote {
+  margin: 0.6em 0;
+  padding-left: 0.75em;
+  border-left: 0.2em solid color-mix(in srgb, currentColor 35%, transparent);
+  opacity: 0.85;
+  text-align: left;
+}
+
+.markdown-content code {
+  padding: 0.05em 0.25em;
+  border-radius: 0.25em;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.82em;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content pre {
+  max-width: 100%;
+  overflow: auto;
+  margin: 0.5em 0;
+  padding: 0.6em;
+  border-radius: 0.5em;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  text-align: left;
+}
+
+.markdown-content pre code {
+  padding: 0;
+  background: transparent;
+  overflow-wrap: normal;
+}
+
+.markdown-content a {
+  color: #1d4ed8;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+  overflow-wrap: anywhere;
+}
+
+.markdown-content hr {
+  margin: 0.75em 0;
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.markdown-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0.5em auto;
+  border-collapse: collapse;
+  font-size: 0.8em;
+  text-align: left;
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: 0.25em 0.45em;
+  border: 1px solid color-mix(in srgb, currentColor 25%, transparent);
+}
+
+.markdown-content img {
+  max-width: 100%;
+  max-height: 12rem;
+  height: auto;
+  border-radius: 0.5rem;
+  object-fit: contain;
+}

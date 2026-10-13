@@ -52,6 +52,24 @@
   transform: rotateY(180deg);
 }
 
+.flashcard__face-indicator {
+  position: absolute;
+  z-index: 20;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgb(148 163 184 / 25%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 88%);
+  backdrop-filter: blur(8px);
+  color: #475569;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
 .flashcard__background {
   position: absolute;
   inset: 0;
@@ -183,22 +201,22 @@
   text-transform: uppercase;
 }
 
-.flashcard__memory-badge--fresh {
+.flashcard__memory-badge--new {
   background: #f1f5f9;
   color: #334155;
 }
 
-.flashcard__memory-badge--shaky {
+.flashcard__memory-badge--weak {
   background: #fef3c7;
   color: #b45309;
 }
 
-.flashcard__memory-badge--steady {
+.flashcard__memory-badge--learning {
   background: #dbeafe;
   color: #1d4ed8;
 }
 
-.flashcard__memory-badge--strong {
+.flashcard__memory-badge--mastered {
   background: #d1fae5;
   color: #047857;
 }
@@ -218,19 +236,19 @@
   transition: width 250ms ease;
 }
 
-.flashcard__memory-fill--fresh {
+.flashcard__memory-fill--new {
   background: #94a3b8;
 }
 
-.flashcard__memory-fill--shaky {
+.flashcard__memory-fill--weak {
   background: #f59e0b;
 }
 
-.flashcard__memory-fill--steady {
+.flashcard__memory-fill--learning {
   background: #3b82f6;
 }
 
-.flashcard__memory-fill--strong {
+.flashcard__memory-fill--mastered {
   background: #10b981;
 }
 
@@ -246,6 +264,13 @@
   flex: 0 0 auto;
   color: #6b7280;
   font-size: 0.625rem;
+}
+
+.flashcard__face-indicator--inline {
+  position: static;
+  z-index: auto;
+  flex: 0 0 auto;
+  margin-left: 0.25rem;
 }
 
 .flashcard__side-heading {

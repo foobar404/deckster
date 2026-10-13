@@ -324,6 +324,22 @@ button.import-retry-button:hover::before {
   border-radius: 0.5rem;
 }
 
+.import-preview__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  color: var(--theme-text-soft);
+  font-size: 0.875rem;
+}
+
+.import-preview__pagination-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .import-preview__card {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -389,40 +405,7 @@ button.import-retry-button:hover::before {
   font-size: 1rem;
 }
 
-.ai-generator-indicator__sparkle {
-  position: absolute;
-  top: -0.3rem;
-  right: -0.35rem;
-  color: #fde68a;
-  font-size: 0.75rem;
-  line-height: 1;
-}
 
-.ai-generator-indicator.is-generating > svg {
-  animation: ai-generator-wand 900ms ease-in-out infinite;
-  transform-origin: 65% 70%;
-}
-
-.ai-generator-indicator.is-generating .ai-generator-indicator__sparkle {
-  animation: ai-generator-sparkle 750ms ease-in-out infinite alternate;
-}
-
-@keyframes ai-generator-wand {
-  0%, 100% { transform: rotate(-12deg); }
-  50% { transform: rotate(12deg); }
-}
-
-@keyframes ai-generator-sparkle {
-  from { opacity: 0.35; transform: scale(0.65) rotate(-20deg); }
-  to { opacity: 1; transform: scale(1.15) rotate(20deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ai-generator-indicator.is-generating > svg,
-  .ai-generator-indicator.is-generating .ai-generator-indicator__sparkle {
-    animation: none;
-  }
-}
 
 .import-file-button {
   width: 2.75rem;

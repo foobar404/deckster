@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useToast } from '../context/ToastContext'
 import { FaInfoCircle, FaExclamationTriangle, FaExclamationCircle, FaTimes } from 'react-icons/fa'
 
@@ -83,14 +84,14 @@ export function ToastContainer() {
 
   if (toasts.length === 0) return null
 
-  return (
+  return createPortal(
     <div className="toast-region">
       {toasts.map(toast => (
         <div key={toast.id} className="toast-region__item">
           <Toast toast={toast} />
         </div>
       ))}
-    </div>
+    </div>,
+    document.body
   )
 }
-

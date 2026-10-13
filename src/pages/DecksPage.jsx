@@ -8,7 +8,7 @@ import { Portal } from '../components/Portal'
 import { CardEditor } from '../components/CardEditor'
 import { AiCardGeneratorModal } from '../components/AiCardGeneratorModal'
 import { DeckStatusSummary } from '../components/DeckStatusSummary'
-import { FaPlus, FaTrash, FaEdit, FaBook, FaCog, FaMagic, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaSort, FaChevronDown, FaChevronUp } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaBook, FaCog, FaMagic, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaSort, FaChevronDown, FaChevronUp } from 'react-icons/fa'
 
 const deckSortOptions = [
   { value: 'name-asc', label: 'A-Z', description: 'Name, A to Z' },
@@ -115,10 +115,11 @@ const useDecksPage = () => {
 
   const deleteDeck = (deckId) => {
     const deckToDelete = decks.find(deck => deck.id === deckId)
-    if (deckToDelete && window.confirm(`Delete "${deckToDelete.name}" and all its cards? This cannot be undone.`)) {
-      setDecks(prev => prev.filter(deck => deck.id !== deckId))
-      showWarning(`Deleted deck "${deckToDelete.name}"`)
-    }
+    if (!deckToDelete || !window.confirm(`Delete "${deckToDelete.name}" and all its cards? This cannot be undone.`)) return false
+
+    setDecks(prev => prev.filter(deck => deck.id !== deckId))
+    showWarning(`Deleted deck "${deckToDelete.name}"`)
+    return true
   }
 
   const getDeckStats = (deck) => {
@@ -265,6 +266,9 @@ export function DecksPage() {
       const direction = sortMode === 'newest' ? 1 : -1
       return (getDeckCreationTime(b) - getDeckCreationTime(a)) * direction
     })
+  const allVisibleDecksCollapsed = visibleDecks.length > 0 &&
+    visibleDecks.every(deck => collapsedDeckIds.has(deck.id))
+  const hasCollapsedVisibleDecks = visibleDecks.some(deck => collapsedDeckIds.has(deck.id))
   const currentSortOption = deckSortOptions.find(option => option.value === sortMode)
   const optionsDeck = decks.find(deck => String(deck.id) === String(optionsDeckId))
 
@@ -287,7 +291,6 @@ export function DecksPage() {
     presetButtonActive: 'is-selected',
     deckHeader: 'deck-card__header',
     deckName: 'deck-card__name',
-    deleteBtn: 'button button--icon button--quiet deck-card__delete',
     deckStats: 'deck-card__stats',
     statRow: 'deck-card__stat',
     deckActions: 'deck-card__actions',
@@ -301,7 +304,10 @@ export function DecksPage() {
       <CardEditor
         deck={editingDeck}
         onDraftSave={updateDeck}
-        onSave={(updatedDeck) => {
+          onDelete={() => {
+            if (deleteDeck(editingDeck.id)) setEditingDeck(null)
+          }}
+          onSave={(updatedDeck) => {
           updateDeck(updatedDeck)
           setEditingDeck(null) // Go back to deck list
         }}
@@ -612,6 +618,36 @@ export function DecksPage() {
           {selectedTag === 'all' ? 'Filter by tag' : selectedTag}
           <span className="deck-toolbar-button__count">{selectedTag === 'all' ? availableTags.length : 1}</span>
         </button>
+        <div className="decks-page__collapse-actions">
+          <button
+            type="button"
+            className="button button--outline deck-toolbar-button"
+            onClick={() => setCollapsedDeckIds(previousIds => new Set([
+              ...previousIds,
+              ...visibleDecks.map(deck => deck.id)
+            ]))}
+            disabled={visibleDecks.length === 0 || allVisibleDecksCollapsed}
+            title="Fold all visible decks"
+          >
+            <FaChevronUp />
+            Fold all
+          </button>
+          <button
+            type="button"
+            className="button button--outline deck-toolbar-button"
+            onClick={() => {
+              const visibleDeckIds = new Set(visibleDecks.map(deck => deck.id))
+              setCollapsedDeckIds(previousIds => new Set(
+                [...previousIds].filter(deckId => !visibleDeckIds.has(deckId))
+              ))
+            }}
+            disabled={!hasCollapsedVisibleDecks}
+            title="Unfold all visible decks"
+          >
+            <FaChevronDown />
+            Unfold all
+          </button>
+        </div>
         {showTagFilter && (
           <div className="deck-filter-menu">
             <button
@@ -689,14 +725,6 @@ export function DecksPage() {
                     title="Study options"
                   >
                     <FaCog />
-                  </button>
-                  <button
-                    className={styles.decks.deleteBtn}
-                    onClick={() => deleteDeck(deck.id)}
-                    aria-label={`Delete ${deck.name}`}
-                    title="Delete deck"
-                  >
-                    <FaTrash />
                   </button>
                 </div>
               </div>

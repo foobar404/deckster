@@ -541,7 +541,7 @@ export function StudyPage() {
       ...card,
       difficulty: nextStrength,
       memoryStrength: nextStrength,
-      state: rating < 2 ? 'struggling' : 'learning',
+      state: rating < 2 ? 'weak' : 'learning',
       lastReviewed: reviewedAt,
       lastReviewedAt: reviewedAt,
       reviewCount,

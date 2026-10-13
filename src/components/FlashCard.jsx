@@ -1,9 +1,11 @@
 import '../css/flashcard.css'
-import { useSpeech } from '../utils'
+import { getCardState, getCardStrength, STATE_META, useSpeech } from '../utils'
+import { MarkdownContent } from './MarkdownContent'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { FaTimes, FaFrown, FaCheck, FaRocket } from 'react-icons/fa'
 
 const FLIP_DURATION_MS = 250
+const containsMarkdownImage = value => /!\[[^\]]*\]\(https?:\/\/[^)\s]+\)/i.test(value || '')
 
 const getCharacterComparison = (enteredAnswer, expectedAnswer) => {
     const normalize = value => value.trim().replace(/\s+/g, ' ')
@@ -175,8 +177,12 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     } = useSpeech()
 
     // Prefer dedicated image fields, with embedded URLs retained for older cards.
-    const frontImageUrl = card.frontImageUrl || extractImageUrl(card.front)
-    const backImageUrl = card.backImageUrl || card.imageUrl || extractImageUrl(card.back)
+    const frontImageUrl = card.frontImageUrl || (
+        containsMarkdownImage(card.front) ? null : extractImageUrl(card.front)
+    )
+    const backImageUrl = card.backImageUrl || card.imageUrl || (
+        containsMarkdownImage(card.back) ? null : extractImageUrl(card.back)
+    )
     // Clean text removes ALL URLs, not just images, for clean display during study
     const frontText = cleanTextFromImages(card.front)
     const backText = cleanTextFromImages(card.back)
@@ -474,11 +480,8 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
     }, [isFlipped, isDragging, selectedAnswer, onDragStateChange]);
 
     const getMemoryMeta = () => {
-        const strength = typeof card?.memoryStrength === 'number'
-            ? Math.max(0, Math.min(100, card.memoryStrength))
-            : typeof card?.difficulty === 'number'
-                ? Math.max(0, Math.min(100, card.difficulty))
-                : 0
+        const strength = getCardStrength(card)
+        const state = getCardState(card)
 
         const lastResultLabel = card?.lastResult === 0
             ? 'Again'
@@ -490,29 +493,11 @@ const useFlashCard = (card, onReview, onDragStateChange, studyOptions) => {
                         ? 'Easy'
                         : 'Unrated'
 
-        let label = 'Fresh'
-        let badgeClass = 'flashcard__memory-badge--fresh'
-        let accentClass = 'flashcard__memory-fill--fresh'
-
-        if (strength >= 80) {
-            label = 'Strong'
-            badgeClass = 'flashcard__memory-badge--strong'
-            accentClass = 'flashcard__memory-fill--strong'
-        } else if (strength >= 55) {
-            label = 'Steady'
-            badgeClass = 'flashcard__memory-badge--steady'
-            accentClass = 'flashcard__memory-fill--steady'
-        } else if (strength >= 25) {
-            label = 'Shaky'
-            badgeClass = 'flashcard__memory-badge--shaky'
-            accentClass = 'flashcard__memory-fill--shaky'
-        }
-
         return {
             strength,
-            label,
-            badgeClass,
-            accentClass,
+            label: STATE_META[state].label,
+            badgeClass: `flashcard__memory-badge--${state}`,
+            accentClass: `flashcard__memory-fill--${state}`,
             lastResultLabel,
             reviews: card?.reviewCount || 0,
             streak: card?.correctStreak || 0
@@ -693,6 +678,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                 <div className={styles.flashcard.cardGradientOverlay}></div>
                             </>
                         )}
+                        <span className="flashcard__face-indicator">Front</span>
                         <div
                             className={`${styles.flashcard.cardContent}${frontImageUrl ? ' has-image' : ''}`}
                             style={getContentLayoutStyle(false)}
@@ -703,8 +689,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                         <img
                                             src={frontImageUrl}
                                             alt="Card visual"
-                                            loading="eager"
-                                            fetchPriority="high"
+                                            loading="lazy"
                                             decoding="async"
                                             draggable={false}
                                             onDragStart={(e) => e.preventDefault()}
@@ -714,7 +699,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                     </div>
                                 )}
                                 {frontText && frontText.trim() ? (
-                                    <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))}>{frontText}</div>
+                                    <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))} content={frontText} />
                                 ) : null}
                             </div>
                         </div>
@@ -744,7 +729,14 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                         <span className={`flashcard__memory-badge ${memoryMeta.badgeClass}`}>
                                             {memoryMeta.label} · {memoryMeta.strength}%
                                         </span>
-                                        <div className="flashcard__memory-track">
+                                        <div
+                                            className="flashcard__memory-track"
+                                            role="progressbar"
+                                            aria-label={`${memoryMeta.label} card strength`}
+                                            aria-valuemin={0}
+                                            aria-valuemax={100}
+                                            aria-valuenow={memoryMeta.strength}
+                                        >
                                             <div
                                                 className={`flashcard__memory-fill ${memoryMeta.accentClass}`}
                                                 style={memoryBarStyle}
@@ -754,6 +746,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                             Recent: {memoryMeta.lastResultLabel}
                                         </span>
                                         <span className="flashcard__memory-reviews">{memoryMeta.reviews} reviews</span>
+                                        <span className="flashcard__face-indicator flashcard__face-indicator--inline">Back</span>
                                     </div>
                                     <div className="flashcard__content-body" style={getContentLayoutStyle(Boolean(backImageUrl) && !studyOptions?.showBothSides && !showAnswerComparison)}>
                                     {showAnswerComparison ? (
@@ -792,8 +785,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                         <img
                                                             src={frontImageUrl}
                                                             alt="Front visual"
-                                                            loading="eager"
-                                                            fetchPriority="high"
+                                                            loading="lazy"
                                                             decoding="async"
                                                             draggable={false}
                                                             onDragStart={(e) => e.preventDefault()}
@@ -803,7 +795,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                     </div>
                                                 )}
                                                 {frontText && frontText.trim() ? (
-                                                    <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))}>{frontText}</div>
+                                                    <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))} content={frontText} />
                                                 ) : null}
                                                 </div>
                                             </div>
@@ -818,8 +810,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                         <img
                                                             src={backImageUrl}
                                                             alt="Back visual"
-                                                            loading="eager"
-                                                            fetchPriority="high"
+                                                            loading="lazy"
                                                             decoding="async"
                                                             draggable={false}
                                                             onDragStart={(e) => e.preventDefault()}
@@ -829,7 +820,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                     </div>
                                                 )}
                                                 {backText && backText.trim() ? (
-                                                    <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))}>{backText}</div>
+                                                    <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))} content={backText} />
                                                 ) : null}
                                                 </div>
                                             </div>
@@ -842,8 +833,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                     <img
                                                         src={backImageUrl}
                                                         alt="Card visual"
-                                                        loading="eager"
-                                                        fetchPriority="high"
+                                                        loading="lazy"
                                                         decoding="async"
                                                         draggable={false}
                                                         onDragStart={(e) => e.preventDefault()}
@@ -853,7 +843,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                 </div>
                                             )}
                                             {backText && backText.trim() ? (
-                                                <div className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))}>{backText}</div>
+                                                <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))} content={backText} />
                                             ) : null}
                                 </>
                             )}

@@ -2,7 +2,7 @@ import { getCardState } from '../utils'
 
 const STATUSES = [
   { key: 'new', label: 'New' },
-  { key: 'struggling', label: 'Weak' },
+  { key: 'weak', label: 'Weak' },
   { key: 'learning', label: 'Learning' },
   { key: 'mastered', label: 'Mastered' }
 ]
@@ -10,7 +10,7 @@ const STATUSES = [
 export const getDeckStatusCounts = (cards = []) => cards.reduce((counts, card) => {
   counts[getCardState(card)] += 1
   return counts
-}, { new: 0, struggling: 0, learning: 0, mastered: 0 })
+}, { new: 0, weak: 0, learning: 0, mastered: 0 })
 
 export function DeckStatusSummary({ cards = [] }) {
   const counts = getDeckStatusCounts(cards)

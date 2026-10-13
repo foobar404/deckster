@@ -112,6 +112,13 @@
   font-size: 0.875rem;
 }
 
+.decks-page__collapse-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
 .deck-toolbar-button__count {
   padding: 0.125rem 0.5rem;
   border-radius: 999px;

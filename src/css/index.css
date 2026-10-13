@@ -503,7 +503,7 @@ input[type="reset"] {
 }
 
 .deck-status-new { --deck-status-color: #9ca3af; --deck-status-soft: #f3f4f6; --deck-status-text: #374151; }
-.deck-status-struggling { --deck-status-color: #fb923c; --deck-status-soft: #ffedd5; --deck-status-text: #c2410c; }
+.deck-status-weak { --deck-status-color: #fb923c; --deck-status-soft: #ffedd5; --deck-status-text: #c2410c; }
 .deck-status-learning { --deck-status-color: #3b82f6; --deck-status-soft: #dbeafe; --deck-status-text: #1d4ed8; }
 .deck-status-mastered { --deck-status-color: #22c55e; --deck-status-soft: #dcfce7; --deck-status-text: #15803d; }
 

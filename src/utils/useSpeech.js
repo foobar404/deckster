@@ -259,14 +259,19 @@ export const useSpeech = () => {
     }, [])
 
     /**
-     * Clean text by removing all URLs (for clean text display during study)
+     * Hide bare URLs during study while preserving Markdown links and images.
      */
     const cleanTextFromImages = useCallback((text) => {
         if (!text || typeof text !== 'string') return ''
 
-        // Remove all URLs from text (http/https) for clean study experience
-        const urlRegex = /https?:\/\/[^\s]+/gi
-        return text.replace(urlRegex, '').trim()
+        const markdownLinks = []
+        const protectedText = text.replace(
+            /!?\[[^\]]*\]\(https?:\/\/[^)\s]+(?:\s+["'][^)]*["'])?\)/gi,
+            link => `\u0000markdown-link-${markdownLinks.push(link) - 1}\u0000`
+        )
+        const withoutUrls = protectedText.replace(/https?:\/\/[^\s]+/gi, '')
+
+        return withoutUrls.replace(/\u0000markdown-link-(\d+)\u0000/g, (_, index) => markdownLinks[Number(index)]).trim()
     }, [])
 
     /**

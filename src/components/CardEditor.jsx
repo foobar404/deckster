@@ -2,12 +2,15 @@ import '../css/card-editor.css';
 import '../css/card-editor-settings.css';
 import { Portal } from './Portal';
 import { AiCardGeneratorModal } from './AiCardGeneratorModal';
+import { MarkdownContent } from './MarkdownContent'
 import { OPENROUTER_API_KEY_STORAGE_KEY } from '../utils/aiSettings';
 import { DECK_COLOR_OPTIONS } from '../utils/deckColors';
 import { useToast } from '../context/ToastContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSpeech, useStorage, getCardStrength, getCardState, getImprovement, getRatingCounts, STATE_META, formatLastReviewed } from '../utils';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaCog, FaTimes, FaRobot, FaMagic } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaArrowUp, FaArrowDown, FaChevronDown, FaChevronUp, FaCog, FaTimes, FaRobot, FaMagic } from 'react-icons/fa';
+
+const CARD_PAGE_SIZE = 50
 
 /**
  * Custom hook for CardEditor logic and state management
@@ -199,6 +202,19 @@ const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
     })
   }, [])
 
+  const moveCard = useCallback((cardId, direction) => {
+    setCards(previousCards => {
+      const currentIndex = previousCards.findIndex(card => card.id === cardId)
+      const nextIndex = currentIndex + direction
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= previousCards.length) return previousCards
+
+      const reorderedCards = [...previousCards]
+      const [card] = reorderedCards.splice(currentIndex, 1)
+      reorderedCards.splice(nextIndex, 0, card)
+      return reorderedCards
+    })
+  }, [])
+
   const deleteCard = useCallback((cardId) => {
     const cardToDelete = cards.find(card => card.id === cardId)
     setCards(prev => prev.filter(card => card.id !== cardId))
@@ -263,6 +279,7 @@ const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
     addCard,
     addGeneratedCards,
     updateCard,
+    moveCard,
     deleteCard,
 
     // Modal management
@@ -280,12 +297,20 @@ const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
   }
 }
 
-export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
+export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
   const { showError, showInfo } = useToast()
   const [showDeckSettings, setShowDeckSettings] = useState(false)
   const [showAiGenerator, setShowAiGenerator] = useState(false)
   const [suggestingDeckField, setSuggestingDeckField] = useState(null)
   const [cardStatusFilter, setCardStatusFilter] = useState('all')
+  const [foldedCardIds, setFoldedCardIds] = useState(() => (
+    (deck.cards || []).length > CARD_PAGE_SIZE
+      ? new Set((deck.cards || []).map(card => card.id))
+      : new Set()
+  ))
+  const [cardPage, setCardPage] = useState(0)
+  const cardsListRef = useRef(null)
+  const shouldScrollToCardsRef = useRef(false)
   // Use the custom hook for all logic and state
   const {
     cards,
@@ -302,6 +327,7 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
     addCard,
     addGeneratedCards,
     updateCard,
+    moveCard,
     deleteCard,
     openAddForm,
     closeAddForm,
@@ -310,6 +336,17 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
     handleSaveAndExit,
     extractImageUrl
   } = useCardEditor(deck, onSave, onCancel, onDraftSave)
+
+  const toggleCardFold = cardId => {
+    setFoldedCardIds(previousIds => {
+      const nextIds = new Set(previousIds)
+      if (nextIds.has(cardId)) nextIds.delete(cardId)
+      else nextIds.add(cardId)
+      return nextIds
+    })
+  }
+  const allCardsFolded = cards.length > 0 && cards.every(card => foldedCardIds.has(card.id))
+  const hasFoldedCards = cards.some(card => foldedCardIds.has(card.id))
 
   const suggestDeckField = async field => {
     let apiKey
@@ -396,6 +433,7 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
   const customStyles = {
     cardEditor: 'card-editor',
     header: 'card-editor__header',
+    headerActions: 'card-editor__header-actions',
     backButton: 'button button--icon button--quiet card-editor__back-button',
     headerContent: 'card-editor__header-content',
     nameInput: 'field card-editor__name-input',
@@ -415,6 +453,8 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
     cardsList: 'card-editor__cards-list',
     cardItem: 'card-editor__card',
     cardNumber: 'card-editor__card-number',
+    cardActions: 'card-editor__card-actions',
+    reorderCardBtn: 'button button--icon button--quiet card-editor__reorder-button',
     cardContent: 'card-editor__card-fields',
     cardSide: 'card-editor__card-side',
     cardSideLabel: 'card-editor__card-side-label',
@@ -436,14 +476,14 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
   const cardStatusFilters = [
     { id: 'all', label: 'All', state: null },
     { id: 'new', label: 'New', state: 'new' },
-    { id: 'weak', label: 'Weak', state: 'struggling' },
+    { id: 'weak', label: 'Weak', state: 'weak' },
     { id: 'learning', label: 'Learning', state: 'learning' },
     { id: 'mastered', label: 'Mastered', state: 'mastered' }
   ]
   const cardStatusCounts = cards.reduce((counts, card) => {
     const state = getCardState(card)
     counts.all += 1
-    counts[state === 'struggling' ? 'weak' : state] += 1
+    counts[state] += 1
     return counts
   }, { all: 0, new: 0, weak: 0, learning: 0, mastered: 0 })
   const visibleCards = cards
@@ -452,6 +492,46 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
       const filter = cardStatusFilters.find(({ id }) => id === cardStatusFilter)
       return !filter?.state || getCardState(card) === filter.state
     })
+  const pageCount = Math.max(1, Math.ceil(visibleCards.length / CARD_PAGE_SIZE))
+  const currentPage = Math.min(cardPage, pageCount - 1)
+  const pageCards = visibleCards.slice(currentPage * CARD_PAGE_SIZE, (currentPage + 1) * CARD_PAGE_SIZE)
+  useEffect(() => {
+    if (!shouldScrollToCardsRef.current) return
+
+    shouldScrollToCardsRef.current = false
+    cardsListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [currentPage])
+
+  const goToCardPage = page => {
+    shouldScrollToCardsRef.current = true
+    setCardPage(page)
+  }
+
+  const renderCardPagination = () => visibleCards.length > CARD_PAGE_SIZE && (
+    <nav className="card-editor__pagination" aria-label="Card pages">
+      <span>
+        Cards {currentPage * CARD_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * CARD_PAGE_SIZE, visibleCards.length)} of {visibleCards.length}
+      </span>
+      <div className="card-editor__pagination-controls">
+        <button
+          type="button"
+          className="button button--outline"
+          onClick={() => goToCardPage(currentPage - 1)}
+          disabled={currentPage === 0}
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          className="button button--outline"
+          onClick={() => goToCardPage(currentPage + 1)}
+          disabled={currentPage >= pageCount - 1}
+        >
+          Next
+        </button>
+      </div>
+    </nav>
+  )
 
   return (
     <div className={styles.cardEditor.cardEditor}>
@@ -476,6 +556,18 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
             <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
           </div>
         </div>
+        {onDelete && (
+          <div className={styles.cardEditor.headerActions}>
+            <button
+              type="button"
+              className="button button--outline"
+              onClick={onDelete}
+              aria-label={`Delete ${deck.name}`}
+            >
+              <FaTrash /> Delete deck
+            </button>
+          </div>
+        )}
       </div>
 
       {showDeckSettings && (
@@ -708,50 +800,116 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
         </Portal>
       )}
 
-      <div className="card-editor__filters" role="group" aria-label="Filter cards by status">
-        {cardStatusFilters.map(({ id, label }) => (
+      <div className="card-editor__list-toolbar">
+        <div className="card-editor__filters" role="group" aria-label="Filter cards by status">
+          {cardStatusFilters.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={cardStatusFilter === id}
+              onClick={() => {
+                setCardStatusFilter(id)
+                setCardPage(0)
+              }}
+              className={`card-status-filter${cardStatusFilter === id ? ' is-selected' : ''}`}
+            >
+              {label}
+              <span className={`card-status-filter__count${cardStatusFilter === id ? ' is-selected' : ''}`}>
+                {cardStatusCounts[id]}
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="card-editor__list-actions">
           <button
-            key={id}
             type="button"
-            aria-pressed={cardStatusFilter === id}
-            onClick={() => setCardStatusFilter(id)}
-            className={`card-status-filter${cardStatusFilter === id ? ' is-selected' : ''}`}
+            className="button button--outline card-editor__fold-button"
+            onClick={() => setFoldedCardIds(new Set(cards.map(card => card.id)))}
+            disabled={cards.length === 0 || allCardsFolded}
           >
-            {label}
-            <span className={`card-status-filter__count${cardStatusFilter === id ? ' is-selected' : ''}`}>
-              {cardStatusCounts[id]}
-            </span>
+            <FaChevronUp aria-hidden="true" /> Fold all
           </button>
-        ))}
+          <button
+            type="button"
+            className="button button--outline card-editor__fold-button"
+            onClick={() => setFoldedCardIds(new Set())}
+            disabled={!hasFoldedCards}
+          >
+            <FaChevronDown aria-hidden="true" /> Unfold all
+          </button>
+        </div>
       </div>
 
-      <div className={styles.cardEditor.cardsList}>
-        {visibleCards.map(({ card, actualIndex }) => {
+      {renderCardPagination()}
+
+      <div ref={cardsListRef} className={styles.cardEditor.cardsList}>
+        {pageCards.map(({ card, actualIndex }) => {
           const state = getCardState(card)
           const meta = STATE_META[state] || STATE_META.new
           const strength = getCardStrength(card)
           const improvement = getImprovement(card)
           const ratingCounts = getRatingCounts(card)
+          const isFolded = foldedCardIds.has(card.id)
           return (
             <div key={card.id} className={styles.cardEditor.cardItem}>
               <div className="card-editor__card-top">
                 <div className="card-editor__card-identifiers">
+                  <button
+                    type="button"
+                    className={styles.cardEditor.reorderCardBtn}
+                    onClick={() => toggleCardFold(card.id)}
+                    aria-expanded={!isFolded}
+                    aria-label={`${isFolded ? 'Unfold' : 'Fold'} card ${actualIndex + 1}`}
+                    title={isFolded ? 'Unfold card' : 'Fold card'}
+                  >
+                    {isFolded ? <FaChevronDown /> : <FaChevronUp />}
+                  </button>
                   <span className={styles.cardEditor.cardNumber}>Card {actualIndex + 1}</span>
                   <span className={`card-editor__status-pill ${meta.badge}`}>
                     <span className={`card-editor__status-dot ${meta.dot}`} />
                     {meta.label}
                   </span>
+                  {isFolded && (
+                    <MarkdownContent
+                      className="card-editor__folded-preview"
+                      title={card.front || 'Empty front'}
+                      content={card.front?.trim() || 'Empty front'}
+                    />
+                  )}
                 </div>
-                <button
-                  type="button"
-                  className={styles.cardEditor.deleteCardBtn}
-                  onClick={() => deleteCard(card.id)}
-                  aria-label={`Delete card ${actualIndex + 1}`}
-                  title="Delete card"
-                >
-                  <FaTrash />
-                </button>
+                <div className={styles.cardEditor.cardActions}>
+                  <button
+                    type="button"
+                    className={styles.cardEditor.reorderCardBtn}
+                    onClick={() => moveCard(card.id, -1)}
+                    disabled={actualIndex === 0}
+                    aria-label={`Move card ${actualIndex + 1} up`}
+                    title="Move up"
+                  >
+                    <FaArrowUp />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.cardEditor.reorderCardBtn}
+                    onClick={() => moveCard(card.id, 1)}
+                    disabled={actualIndex === cards.length - 1}
+                    aria-label={`Move card ${actualIndex + 1} down`}
+                    title="Move down"
+                  >
+                    <FaArrowDown />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.cardEditor.deleteCardBtn}
+                    onClick={() => deleteCard(card.id)}
+                    aria-label={`Delete card ${actualIndex + 1}`}
+                    title="Delete card"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
+              {!isFolded && <>
               <div className={styles.cardEditor.cardContent}>
                 <div className={styles.cardEditor.cardSide}>
                   <label className={styles.cardEditor.cardSideLabel}>Front</label>
@@ -829,6 +987,7 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
                 ))}
               </div>
               <p className="card-editor__last-reviewed">{formatLastReviewed(card)}</p>
+              </>}
             </div>
           )
         })}
@@ -838,6 +997,7 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave }) {
           </p>
         )}
       </div>
+      {renderCardPagination()}
 
   {/* Add card button moved to top; bottom button removed to reduce visual noise */}
 

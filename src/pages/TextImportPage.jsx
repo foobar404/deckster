@@ -1,4 +1,6 @@
 import '../css/import.css'
+import { CardImportPreview } from '../components/CardImportPreview'
+import { MarkdownContent } from '../components/MarkdownContent'
 import { useContext, useEffect, useRef, useState } from 'react'
 import { FaChevronDown, FaUpload } from 'react-icons/fa'
 import { AppContext } from '../context/AppContext'
@@ -194,14 +196,7 @@ export function ImportPage() {
         {preview?.length > 0 && (
           <section className="import-preview" aria-label="Card preview">
             <h2 className="import-preview__title">Preview ({preview.length} cards)</h2>
-            <div className="import-preview__list">
-              {preview.map((card, index) => (
-                <div key={`${card.id}-${index}`} className="import-preview__card">
-                  <p className="import-preview__front">{card.front}</p>
-                  <p className="import-preview__back">{card.back}</p>
-                </div>
-              ))}
-            </div>
+            <CardImportPreview cards={preview} />
           </section>
         )}
 

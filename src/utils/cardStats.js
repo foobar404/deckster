@@ -24,12 +24,12 @@ export const getCardState = (card) => {
       ? latestHistoryRating
       : null
   const hasReviewHistory = history.length > 0
-  const isStruggling = latestRating === null
-    ? (card?.lapseCount || 0) > 0 || card?.state === 'struggling'
+  const isWeak = latestRating === null
+    ? (card?.lapseCount || 0) > 0 || card?.state === 'weak' || card?.state === 'struggling'
     : latestRating < 2
 
   if (hasReviewHistory && getMasteryPoints(card) >= MASTERY_POINTS_REQUIRED) return 'mastered'
-  if (isStruggling) return 'struggling'
+  if (isWeak) return 'weak'
 
   const hasBeenReviewed = (card?.reviewCount || 0) > 0 ||
     hasReviewHistory ||
@@ -47,7 +47,7 @@ export const getCardState = (card) => {
 
 export const matchesStudyStatusFilters = (card, options = {}) => (
   (options.onlyNew && getCardState(card) === 'new') ||
-  (options.onlyMissed && getCardState(card) === 'struggling') ||
+  (options.onlyMissed && getCardState(card) === 'weak') ||
   (options.onlyLearning && getCardState(card) === 'learning') ||
   (options.onlyMastered && getCardState(card) === 'mastered')
 )
@@ -76,7 +76,7 @@ export const getRatingCounts = (card) => {
 
 export const STATE_META = {
   new: { label: 'New', dot: 'deck-status-new deck-status-dot', badge: 'deck-status-new deck-status-badge', bar: 'deck-status-new deck-status-bar' },
-  struggling: { label: 'Weak', dot: 'deck-status-struggling deck-status-dot', badge: 'deck-status-struggling deck-status-badge', bar: 'deck-status-struggling deck-status-bar' },
+  weak: { label: 'Weak', dot: 'deck-status-weak deck-status-dot', badge: 'deck-status-weak deck-status-badge', bar: 'deck-status-weak deck-status-bar' },
   learning: { label: 'Learning', dot: 'deck-status-learning deck-status-dot', badge: 'deck-status-learning deck-status-badge', bar: 'deck-status-learning deck-status-bar' },
   mastered: { label: 'Mastered', dot: 'deck-status-mastered deck-status-dot', badge: 'deck-status-mastered deck-status-badge', bar: 'deck-status-mastered deck-status-bar' }
 }
