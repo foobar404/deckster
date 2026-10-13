@@ -433,7 +433,6 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
   const customStyles = {
     cardEditor: 'card-editor',
     header: 'card-editor__header',
-    headerActions: 'card-editor__header-actions',
     backButton: 'button button--icon button--quiet card-editor__back-button',
     headerContent: 'card-editor__header-content',
     nameInput: 'field card-editor__name-input',
@@ -507,31 +506,67 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
     setCardPage(page)
   }
 
-  const renderCardPagination = () => visibleCards.length > CARD_PAGE_SIZE && (
-    <nav className="card-editor__pagination" aria-label="Card pages">
-      <span>
-        Cards {currentPage * CARD_PAGE_SIZE + 1}–{Math.min((currentPage + 1) * CARD_PAGE_SIZE, visibleCards.length)} of {visibleCards.length}
-      </span>
-      <div className="card-editor__pagination-controls">
-        <button
-          type="button"
-          className="button button--outline"
-          onClick={() => goToCardPage(currentPage - 1)}
-          disabled={currentPage === 0}
-        >
-          Previous
-        </button>
-        <button
-          type="button"
-          className="button button--outline"
-          onClick={() => goToCardPage(currentPage + 1)}
-          disabled={currentPage >= pageCount - 1}
-        >
-          Next
-        </button>
+  const renderCardPagination = (includeFoldActions = false) => {
+    if (!includeFoldActions && visibleCards.length <= CARD_PAGE_SIZE) return null
+
+    return (
+    <nav className="card-editor__pagination" aria-label="Card pages and display controls">
+      <div className="card-editor__pagination-summary">
+        {includeFoldActions && (
+          <div className="card-editor__list-actions">
+            <button
+              type="button"
+              className="button button--outline card-editor__fold-button"
+              onClick={() => setFoldedCardIds(new Set(cards.map(card => card.id)))}
+              disabled={cards.length === 0 || allCardsFolded}
+              aria-label="Fold all cards"
+              title="Fold all cards"
+            >
+              <FaChevronUp aria-hidden="true" />
+              <span className="card-editor__fold-button-label">Fold all</span>
+            </button>
+            <button
+              type="button"
+              className="button button--outline card-editor__fold-button"
+              onClick={() => setFoldedCardIds(new Set())}
+              disabled={!hasFoldedCards}
+              aria-label="Unfold all cards"
+              title="Unfold all cards"
+            >
+              <FaChevronDown aria-hidden="true" />
+              <span className="card-editor__fold-button-label">Unfold all</span>
+            </button>
+          </div>
+        )}
+        <span>
+          {visibleCards.length === 0
+            ? '0 cards'
+            : `Cards ${currentPage * CARD_PAGE_SIZE + 1}–${Math.min((currentPage + 1) * CARD_PAGE_SIZE, visibleCards.length)} of ${visibleCards.length}`}
+        </span>
       </div>
+      {visibleCards.length > CARD_PAGE_SIZE && (
+        <div className="card-editor__pagination-controls">
+          <button
+            type="button"
+            className="button button--outline"
+            onClick={() => goToCardPage(currentPage - 1)}
+            disabled={currentPage === 0}
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            className="button button--outline"
+            onClick={() => goToCardPage(currentPage + 1)}
+            disabled={currentPage >= pageCount - 1}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </nav>
-  )
+    )
+  }
 
   return (
     <div className={styles.cardEditor.cardEditor}>
@@ -556,18 +591,6 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
             <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
           </div>
         </div>
-        {onDelete && (
-          <div className={styles.cardEditor.headerActions}>
-            <button
-              type="button"
-              className="button button--outline"
-              onClick={onDelete}
-              aria-label={`Delete ${deck.name}`}
-            >
-              <FaTrash /> Delete deck
-            </button>
-          </div>
-        )}
       </div>
 
       {showDeckSettings && (
@@ -692,6 +715,16 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
           </fieldset>
               </div>
               <div className="card-editor__settings-footer">
+                {onDelete && (
+                  <button
+                    type="button"
+                    className="button button--danger"
+                    onClick={onDelete}
+                    aria-label={`Delete ${deck.name}`}
+                  >
+                    <FaTrash aria-hidden="true" /> Delete deck
+                  </button>
+                )}
                 <button type="button" className={styles.button.primary} onClick={() => setShowDeckSettings(false)}>
                   Done
                 </button>
@@ -706,15 +739,21 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
           type="button"
           className={styles.button.primary}
           onClick={openAddForm}
+          aria-label="Add new card"
+          title="Add new card"
         >
-          <FaPlus /> Add New Card
+          <FaPlus aria-hidden="true" />
+          <span className="card-editor__add-action-label">Add New Card</span>
         </button>
         <button
           type="button"
           className="button button--outline"
           onClick={() => setShowAiGenerator(true)}
+          aria-label="Add cards with AI"
+          title="Add with AI"
         >
-          <FaRobot aria-hidden="true" /> Add with AI
+          <FaRobot aria-hidden="true" />
+          <span className="card-editor__add-action-label">Add with AI</span>
         </button>
       </div>
 
@@ -820,27 +859,9 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
             </button>
           ))}
         </div>
-        <div className="card-editor__list-actions">
-          <button
-            type="button"
-            className="button button--outline card-editor__fold-button"
-            onClick={() => setFoldedCardIds(new Set(cards.map(card => card.id)))}
-            disabled={cards.length === 0 || allCardsFolded}
-          >
-            <FaChevronUp aria-hidden="true" /> Fold all
-          </button>
-          <button
-            type="button"
-            className="button button--outline card-editor__fold-button"
-            onClick={() => setFoldedCardIds(new Set())}
-            disabled={!hasFoldedCards}
-          >
-            <FaChevronDown aria-hidden="true" /> Unfold all
-          </button>
-        </div>
       </div>
 
-      {renderCardPagination()}
+      {renderCardPagination(true)}
 
       <div ref={cardsListRef} className={styles.cardEditor.cardsList}>
         {pageCards.map(({ card, actualIndex }) => {

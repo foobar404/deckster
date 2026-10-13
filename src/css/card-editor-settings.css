@@ -167,7 +167,9 @@ button.deck-color-swatch:hover::before {
 
 .card-editor__settings-footer {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--theme-border);

@@ -557,15 +557,21 @@ export function DecksPage() {
             type="button"
             className="button button--outline decks-page__action-button"
             onClick={() => setShowAiDeckGenerator(true)}
+            aria-label="Create AI Deck"
+            title="Create AI Deck"
           >
-            <FaMagic aria-hidden="true" /> Create AI Deck
+            <FaMagic aria-hidden="true" />
+            <span className="decks-page__action-label">Create AI Deck</span>
           </button>
           <button
             type="button"
             className={styles.decks.btnPrimary}
             onClick={() => setShowCreateForm(true)}
+            aria-label="New Deck"
+            title="New Deck"
           >
-            <FaPlus /> New Deck
+            <FaPlus aria-hidden="true" />
+            <span className="decks-page__action-label">New Deck</span>
           </button>
 
         </div>
@@ -602,21 +608,24 @@ export function DecksPage() {
           }}
           aria-label={`Sort decks: ${currentSortOption.description}. Click to change sort order.`}
           title={`Sort: ${currentSortOption.description}`}
-          className="button button--outline deck-toolbar-button"
+          className="button button--outline deck-toolbar-button deck-toolbar-button--sort"
         >
-          <FaSort />
-          {currentSortOption.label}
+          <FaSort aria-hidden="true" />
+          <span className="deck-toolbar-button__label">{currentSortOption.label}</span>
         </button>
         <button
           type="button"
           onClick={() => setShowTagFilter(open => !open)}
           aria-expanded={showTagFilter}
           aria-haspopup="true"
-          className="button button--outline deck-toolbar-button"
+          aria-label={`Filter by tag${selectedTag === 'all' ? '' : `: ${selectedTag}`}`}
+          title={`Filter by tag${selectedTag === 'all' ? '' : `: ${selectedTag}`}`}
+          className={`button button--outline deck-toolbar-button${selectedTag === 'all' ? '' : ' is-filtered'}`}
         >
-          <FaFilter />
-          {selectedTag === 'all' ? 'Filter by tag' : selectedTag}
-          <span className="deck-toolbar-button__count">{selectedTag === 'all' ? availableTags.length : 1}</span>
+          <FaFilter aria-hidden="true" />
+          <span className="deck-toolbar-button__label">
+            {selectedTag === 'all' ? 'Filter by tag' : selectedTag}
+          </span>
         </button>
         <div className="decks-page__collapse-actions">
           <button
@@ -627,10 +636,11 @@ export function DecksPage() {
               ...visibleDecks.map(deck => deck.id)
             ]))}
             disabled={visibleDecks.length === 0 || allVisibleDecksCollapsed}
+            aria-label="Fold all visible decks"
             title="Fold all visible decks"
           >
-            <FaChevronUp />
-            Fold all
+            <FaChevronUp aria-hidden="true" />
+            <span className="deck-toolbar-button__label">Fold all</span>
           </button>
           <button
             type="button"
@@ -642,10 +652,11 @@ export function DecksPage() {
               ))
             }}
             disabled={!hasCollapsedVisibleDecks}
+            aria-label="Unfold all visible decks"
             title="Unfold all visible decks"
           >
-            <FaChevronDown />
-            Unfold all
+            <FaChevronDown aria-hidden="true" />
+            <span className="deck-toolbar-button__label">Unfold all</span>
           </button>
         </div>
         {showTagFilter && (
