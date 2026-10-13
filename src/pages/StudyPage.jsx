@@ -5,7 +5,7 @@ import { useToast } from '../context/ToastContext'
 import { useStorage, getCardState as resolveCardState, matchesStudyStatusFilters } from '../utils'
 import { FlashCard } from '../components/FlashCard'
 import { useState, useEffect, useCallback, useContext, useRef } from 'react'
-import { FaBook, FaTrophy, FaExclamationTriangle, FaFlagCheckered } from 'react-icons/fa'
+import { FaTrophy, FaExclamationTriangle, FaFlagCheckered } from 'react-icons/fa'
 
 /**
  * Custom hook for StudyPage logic and state management
@@ -32,7 +32,7 @@ const useStudyPage = () => {
   const cramTurnRef = useRef(0)
   const finishedEarlyRef = useRef(false)
   const sessionTimeRecordedRef = useRef(false)
-  const previousStudyOptionsRef = useRef(studyOptions)
+  const previousStudyOptionsRef = useRef({ deckId: activeDeck?.id ?? null, options: studyOptions })
   const [dragState, setDragState] = useState({
     isFlipped: false,
     isDragging: false,
@@ -307,8 +307,11 @@ const useStudyPage = () => {
   useEffect(() => {
     const navRoot = location.state?.navRoot
     const resetFromNavigation = Boolean(navRoot && handledNavRootRef.current !== navRoot)
-    const optionsChanged = previousStudyOptionsRef.current !== studyOptions
-    previousStudyOptionsRef.current = studyOptions
+    const deckId = activeDeck?.id ?? null
+    const previousStudyOptions = previousStudyOptionsRef.current
+    const sameDeck = String(previousStudyOptions.deckId) === String(deckId)
+    const optionsChanged = sameDeck && previousStudyOptions.options !== studyOptions
+    previousStudyOptionsRef.current = { deckId, options: studyOptions }
 
     if (resetFromNavigation || optionsChanged) {
       if (resetFromNavigation) handledNavRootRef.current = navRoot
@@ -713,8 +716,6 @@ export function StudyPage() {
         <h1 className="study-page__title">Study</h1>
         <p className="study-page__description">Start a study session by selecting a deck from the Decks page.</p>
         <div className={styles.study.panel}>
-          <div className={styles.study.emptyIcon}><FaBook /></div>
-          <h2 className="study-empty-state__title">Choose a Deck</h2>
           {decks.length > 0 ? (
             <div className="study-deck-list">
               {decks.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })).map(deck => (

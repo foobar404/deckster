@@ -586,7 +586,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         alignItems: 'center',
         justifyContent: 'center'
     })
-    const getTextStyle = (hasImage) => ({
+    const getTextStyle = (hasImage, hasImageBackground = hasImage) => ({
         fontSize: textSizes[appearance.textSize] || textSizes.medium,
         textAlign: appearance.textAlign || 'center',
         order: appearance.imagePosition === 'bottom' || appearance.imagePosition === 'right' ? 0 : 1,
@@ -594,7 +594,10 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
         maxWidth: hasImage && isHorizontalImage ? '35%' : '100%',
         minWidth: 0,
         minHeight: 0,
-        color: cardTextColor
+        color: hasImageBackground ? '#ffffff' : cardTextColor,
+        backgroundColor: hasImageBackground ? 'rgb(15 23 42 / 82%)' : undefined,
+        borderRadius: hasImageBackground ? '0.5rem' : undefined,
+        padding: hasImageBackground ? '0.5rem 0.75rem' : undefined
     })
     const cardFaceStyle = {
         backgroundColor: '#ffffff',
@@ -666,7 +669,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
                     }}
                 >
-                    <div className={styles.flashcard.cardFront} style={cardFaceStyle}>
+                    <div className={`${styles.flashcard.cardFront}${frontImageUrl ? ' has-background-image' : ''}`} style={cardFaceStyle}>
                         {frontImageUrl && (
                             <>
                                 <div
@@ -699,12 +702,16 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                     </div>
                                 )}
                                 {frontText && frontText.trim() ? (
-                                    <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))} content={frontText} />
+                                    <MarkdownContent
+                                        className={`${styles.flashcard.cardText}${frontImageUrl ? ' is-on-image' : ''}`}
+                                        style={getTextStyle(Boolean(frontImageUrl))}
+                                        content={frontText}
+                                    />
                                 ) : null}
                             </div>
                         </div>
                     </div>
-                    <div className={styles.flashcard.cardBack} style={cardFaceStyle}>
+                    <div className={`${styles.flashcard.cardBack}${backImageUrl ? ' has-background-image' : ''}`} style={cardFaceStyle}>
                         {showBackContent && backImageUrl && (
                             <>
                                 <div
@@ -759,7 +766,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                     </span>
                                                 </div>
                                                 <div className="flashcard__text-scroll">
-                                                    <div className={`${styles.flashcard.cardText} is-full-width`} style={{ ...getTextStyle(false), whiteSpace: 'pre-wrap' }}>
+                                                    <div className={`${styles.flashcard.cardText} is-full-width${backImageUrl ? ' is-on-image' : ''}`} style={{ ...getTextStyle(false, Boolean(backImageUrl)), whiteSpace: 'pre-wrap' }}>
                                                         {renderComparedCharacters(answerComparison.entered, 'is-missed')}
                                                     </div>
                                                 </div>
@@ -768,7 +775,7 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                             <div className={styles.flashcard.sideSection}>
                                                 <div className={styles.flashcard.sideLabel}>Card answer:</div>
                                                 <div className="flashcard__text-scroll">
-                                                    <div className={`${styles.flashcard.cardText} is-full-width`} style={{ ...getTextStyle(false), whiteSpace: 'pre-wrap' }}>
+                                                    <div className={`${styles.flashcard.cardText} is-full-width${backImageUrl ? ' is-on-image' : ''}`} style={{ ...getTextStyle(false, Boolean(backImageUrl)), whiteSpace: 'pre-wrap' }}>
                                                         {renderComparedCharacters(answerComparison.expected, 'is-expected')}
                                                     </div>
                                                 </div>
@@ -795,7 +802,11 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                     </div>
                                                 )}
                                                 {frontText && frontText.trim() ? (
-                                                    <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(frontImageUrl))} content={frontText} />
+                                                    <MarkdownContent
+                                                        className={`${styles.flashcard.cardText}${backImageUrl ? ' is-on-image' : ''}`}
+                                                        style={getTextStyle(Boolean(frontImageUrl), Boolean(backImageUrl))}
+                                                        content={frontText}
+                                                    />
                                                 ) : null}
                                                 </div>
                                             </div>
@@ -820,7 +831,11 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                     </div>
                                                 )}
                                                 {backText && backText.trim() ? (
-                                                    <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))} content={backText} />
+                                                    <MarkdownContent
+                                                        className={`${styles.flashcard.cardText}${backImageUrl ? ' is-on-image' : ''}`}
+                                                        style={getTextStyle(Boolean(backImageUrl))}
+                                                        content={backText}
+                                                    />
                                                 ) : null}
                                                 </div>
                                             </div>
@@ -843,7 +858,11 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                 </div>
                                             )}
                                             {backText && backText.trim() ? (
-                                                <MarkdownContent className={styles.flashcard.cardText} style={getTextStyle(Boolean(backImageUrl))} content={backText} />
+                                                <MarkdownContent
+                                                    className={`${styles.flashcard.cardText}${backImageUrl ? ' is-on-image' : ''}`}
+                                                    style={getTextStyle(Boolean(backImageUrl))}
+                                                    content={backText}
+                                                />
                                             ) : null}
                                 </>
                             )}
