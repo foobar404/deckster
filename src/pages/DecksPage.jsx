@@ -553,27 +553,27 @@ export function DecksPage() {
         </div>
 
         <div className="decks-page__header-actions">
-          <button
-            type="button"
-            className="button button--outline decks-page__action-button"
-            onClick={() => setShowAiDeckGenerator(true)}
-            aria-label="Create AI Deck"
-            title="Create AI Deck"
-          >
-            <FaMagic aria-hidden="true" />
-            <span className="decks-page__action-label">Create AI Deck</span>
-          </button>
-          <button
-            type="button"
-            className={styles.decks.btnPrimary}
-            onClick={() => setShowCreateForm(true)}
-            aria-label="New Deck"
-            title="New Deck"
-          >
-            <FaPlus aria-hidden="true" />
-            <span className="decks-page__action-label">New Deck</span>
-          </button>
-
+          <div className="decks-page__create-actions">
+            <button
+              type="button"
+              className={styles.decks.btnPrimary}
+              onClick={() => setShowCreateForm(true)}
+              aria-label="New Deck"
+              title="New Deck"
+            >
+              <FaPlus aria-hidden="true" />
+              <span className="decks-page__action-label">New Deck</span>
+            </button>
+            <button
+              type="button"
+              className="button button--outline decks-page__ai-create-button"
+              onClick={() => setShowAiDeckGenerator(true)}
+              aria-label="Create AI Deck"
+              title="Create AI Deck"
+            >
+              <FaMagic aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </div>
 

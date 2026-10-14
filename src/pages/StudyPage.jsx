@@ -890,6 +890,7 @@ export function StudyPage() {
         {/* Constrain the card area so header + card + controls fit on one screen */}
         <div className={styles.study.cardWrapper}>
           <FlashCard
+            key={`${activeDeck.id}-${currentCard.id}-${currentCardIndex}`}
             card={{
               ...currentCard,
               front: currentCard.displayFront,

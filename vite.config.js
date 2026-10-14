@@ -44,13 +44,13 @@ export default defineConfig({
         start_url: `${appBase}#/decks`,
         icons: [
           {
-            src: `${appBase}new-icon.png`,
+            src: `${appBase}icon.png?v=3`,
             sizes: '1254x1254',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: `${appBase}new-icon.png`,
+            src: `${appBase}icon.png?v=3`,
             sizes: '1254x1254',
             type: 'image/png',
             purpose: 'maskable'

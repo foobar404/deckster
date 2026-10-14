@@ -8,7 +8,7 @@ import { DECK_COLOR_OPTIONS } from '../utils/deckColors';
 import { useToast } from '../context/ToastContext';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSpeech, useStorage, getCardStrength, getCardState, getImprovement, getRatingCounts, STATE_META, formatLastReviewed } from '../utils';
-import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaArrowUp, FaArrowDown, FaChevronDown, FaChevronUp, FaCog, FaTimes, FaRobot, FaMagic } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaArrowUp, FaArrowDown, FaChevronDown, FaChevronUp, FaCog, FaTimes, FaMagic } from 'react-icons/fa';
 
 const CARD_PAGE_SIZE = 50
 
@@ -735,26 +735,27 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
       )}
 
       <div className={styles.cardEditor.addCardSection}>
-        <button
-          type="button"
-          className={styles.button.primary}
-          onClick={openAddForm}
-          aria-label="Add new card"
-          title="Add new card"
-        >
-          <FaPlus aria-hidden="true" />
-          <span className="card-editor__add-action-label">Add New Card</span>
-        </button>
-        <button
-          type="button"
-          className="button button--outline"
-          onClick={() => setShowAiGenerator(true)}
-          aria-label="Add cards with AI"
-          title="Add with AI"
-        >
-          <FaRobot aria-hidden="true" />
-          <span className="card-editor__add-action-label">Add with AI</span>
-        </button>
+        <div className="card-editor__add-actions">
+          <button
+            type="button"
+            className={styles.button.primary}
+            onClick={openAddForm}
+            aria-label="Add new card"
+            title="Add new card"
+          >
+            <FaPlus aria-hidden="true" />
+            <span className="card-editor__add-action-label">New Card</span>
+          </button>
+          <button
+            type="button"
+            className="button button--outline card-editor__ai-add-button"
+            onClick={() => setShowAiGenerator(true)}
+            aria-label="Add cards with AI"
+            title="Add with AI"
+          >
+            <FaMagic aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {showAiGenerator && (
@@ -874,30 +875,30 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
           return (
             <div key={card.id} className={styles.cardEditor.cardItem}>
               <div className="card-editor__card-top">
-                <div className="card-editor__card-identifiers">
-                  <button
-                    type="button"
-                    className={styles.cardEditor.reorderCardBtn}
-                    onClick={() => toggleCardFold(card.id)}
-                    aria-expanded={!isFolded}
-                    aria-label={`${isFolded ? 'Unfold' : 'Fold'} card ${actualIndex + 1}`}
-                    title={isFolded ? 'Unfold card' : 'Fold card'}
-                  >
+              <button
+                type="button"
+                className="card-editor__card-identifiers card-editor__card-header-toggle"
+                onClick={() => toggleCardFold(card.id)}
+                aria-expanded={!isFolded}
+                aria-label={`${isFolded ? 'Unfold' : 'Fold'} card ${actualIndex + 1}`}
+                title={isFolded ? 'Unfold card' : 'Fold card'}
+              >
+                <span className="card-editor__fold-indicator" aria-hidden="true">
                     {isFolded ? <FaChevronDown /> : <FaChevronUp />}
-                  </button>
+                </span>
                   <span className={styles.cardEditor.cardNumber}>Card {actualIndex + 1}</span>
                   <span className={`card-editor__status-pill ${meta.badge}`}>
                     <span className={`card-editor__status-dot ${meta.dot}`} />
                     {meta.label}
                   </span>
-                  {isFolded && (
-                    <MarkdownContent
-                      className="card-editor__folded-preview"
-                      title={card.front || 'Empty front'}
-                      content={card.front?.trim() || 'Empty front'}
-                    />
-                  )}
-                </div>
+              </button>
+              {isFolded && (
+                <MarkdownContent
+                  className="card-editor__folded-preview"
+                  title={card.front || 'Empty front'}
+                  content={card.front?.trim() || 'Empty front'}
+                />
+              )}
                 <div className={styles.cardEditor.cardActions}>
                   <button
                     type="button"
