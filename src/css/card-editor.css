@@ -352,11 +352,27 @@ button.card-status-filter:hover::before {
   gap: 0.75rem;
 }
 
+.card-editor__card-top.is-folded {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem 0.75rem;
+}
+
 .card-editor__card-actions {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 0.25rem;
+}
+
+.card-editor__card-top.is-folded .card-editor__card-header-toggle {
+  grid-column: 1;
+  min-width: 0;
+}
+
+.card-editor__card-top.is-folded .card-editor__card-actions {
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .card-editor__card-identifiers {
@@ -410,6 +426,11 @@ button.card-editor__card-header-toggle:hover::before {
   font-size: 0.875rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card-editor__card-top.is-folded .card-editor__folded-preview {
+  grid-column: 1 / -1;
+  grid-row: 2;
 }
 
 .card-editor__folded-preview > * {

@@ -6,7 +6,7 @@ import { MarkdownContent } from './MarkdownContent'
 import { OPENROUTER_API_KEY_STORAGE_KEY } from '../utils/aiSettings';
 import { DECK_COLOR_OPTIONS } from '../utils/deckColors';
 import { useToast } from '../context/ToastContext';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useSpeech, useStorage, getCardStrength, getCardState, getImprovement, getRatingCounts, STATE_META, formatLastReviewed } from '../utils';
 import { FaPlus, FaTrash, FaEdit, FaImage, FaArrowLeft, FaArrowUp, FaArrowDown, FaChevronDown, FaChevronUp, FaCog, FaTimes, FaMagic } from 'react-icons/fa';
 
@@ -297,6 +297,167 @@ const useCardEditor = (deck, onSave, onCancel, onDraftSave) => {
   }
 }
 
+const CardItem = memo(function CardItem({
+  card,
+  actualIndex,
+  cardCount,
+  isFolded,
+  onToggleFold,
+  updateCard,
+  moveCard,
+  deleteCard,
+  extractImageUrl
+}) {
+  const state = getCardState(card)
+  const meta = STATE_META[state] || STATE_META.new
+  const strength = getCardStrength(card)
+  const improvement = getImprovement(card)
+  const ratingCounts = getRatingCounts(card)
+
+  return (
+    <div className="card-editor__card">
+      <div className={`card-editor__card-top${isFolded ? ' is-folded' : ''}`}>
+        <button
+          type="button"
+          className="card-editor__card-identifiers card-editor__card-header-toggle"
+          onClick={() => onToggleFold(card.id)}
+          aria-expanded={!isFolded}
+          aria-label={`${isFolded ? 'Unfold' : 'Fold'} card ${actualIndex + 1}`}
+          title={isFolded ? 'Unfold card' : 'Fold card'}
+        >
+          <span className="card-editor__fold-indicator" aria-hidden="true">
+            {isFolded ? <FaChevronDown /> : <FaChevronUp />}
+          </span>
+          <span className="card-editor__card-number">Card {actualIndex + 1}</span>
+          <span className={`card-editor__status-pill ${meta.badge}`}>
+            <span className={`card-editor__status-dot ${meta.dot}`} />
+            {meta.label}
+          </span>
+        </button>
+        {isFolded && (
+          <MarkdownContent
+            className="card-editor__folded-preview"
+            title={card.front || 'Empty front'}
+            content={card.front?.trim() || 'Empty front'}
+          />
+        )}
+        <div className="card-editor__card-actions">
+          <button
+            type="button"
+            className="button button--icon button--quiet card-editor__reorder-button"
+            onClick={() => moveCard(card.id, -1)}
+            disabled={actualIndex === 0}
+            aria-label={`Move card ${actualIndex + 1} up`}
+            title="Move up"
+          >
+            <FaArrowUp />
+          </button>
+          <button
+            type="button"
+            className="button button--icon button--quiet card-editor__reorder-button"
+            onClick={() => moveCard(card.id, 1)}
+            disabled={actualIndex === cardCount - 1}
+            aria-label={`Move card ${actualIndex + 1} down`}
+            title="Move down"
+          >
+            <FaArrowDown />
+          </button>
+          <button
+            type="button"
+            className="button button--icon button--quiet card-editor__delete-button"
+            onClick={() => deleteCard(card.id)}
+            aria-label={`Delete card ${actualIndex + 1}`}
+            title="Delete card"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      </div>
+      {!isFolded && (
+        <>
+          <div className="card-editor__card-fields">
+            <div className="card-editor__card-side">
+              <label className="card-editor__card-side-label">Front</label>
+              <textarea
+                value={card.front || ''}
+                onChange={event => updateCard(card.id, 'front', event.target.value)}
+                rows={3}
+                placeholder="Text and/or URLs (images, audio, video, etc.)"
+                className="field card-editor__card-side-textarea"
+              />
+              {extractImageUrl(card.front) && (
+                <div className="card-editor__image-preview">
+                  <img
+                    src={extractImageUrl(card.front)}
+                    alt="Preview"
+                    loading="lazy"
+                    decoding="async"
+                    className="card-editor__image-preview-image"
+                    onError={event => { event.target.style.display = 'none' }}
+                  />
+                  <div className="card-editor__image-preview-caption">
+                    <FaImage />
+                    <span>Image URL detected</span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="card-editor__card-side">
+              <label className="card-editor__card-side-label">Back</label>
+              <textarea
+                value={card.back || ''}
+                onChange={event => updateCard(card.id, 'back', event.target.value)}
+                rows={3}
+                placeholder="Text and/or URLs (images, audio, video, etc.)"
+                className="field card-editor__card-side-textarea"
+              />
+              {extractImageUrl(card.back) && (
+                <div className="card-editor__image-preview">
+                  <img
+                    src={extractImageUrl(card.back)}
+                    alt="Preview"
+                    loading="lazy"
+                    decoding="async"
+                    className="card-editor__image-preview-image"
+                    onError={event => { event.target.style.display = 'none' }}
+                  />
+                  <div className="card-editor__image-preview-caption">
+                    <FaImage />
+                    <span>Image URL detected</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="card-editor__strength">
+            <div className="card-editor__strength-labels">
+              <span>Memory strength</span>
+              <span>{strength}%{improvement > 0 ? ` (+${improvement})` : ''}</span>
+            </div>
+            <div className="card-editor__strength-track">
+              <div className={`card-editor__strength-fill ${meta.bar}`} style={{ width: `${strength}%` }} />
+            </div>
+          </div>
+          <div className="card-editor__rating-grid">
+            {[
+              { label: 'Again', color: 'again' },
+              { label: 'Hard', color: 'hard' },
+              { label: 'Good', color: 'good' },
+              { label: 'Easy', color: 'easy' }
+            ].map(({ label, color }, rating) => (
+              <div key={label} className="card-editor__rating">
+                <div className={`card-editor__rating-count is-${color}`}>{ratingCounts[rating]}</div>
+                <div className="card-editor__rating-label">{label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="card-editor__last-reviewed">{formatLastReviewed(card)}</p>
+        </>
+      )}
+    </div>
+  )
+})
+
 export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
   const { showError, showInfo } = useToast()
   const [showDeckSettings, setShowDeckSettings] = useState(false)
@@ -337,14 +498,14 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
     extractImageUrl
   } = useCardEditor(deck, onSave, onCancel, onDraftSave)
 
-  const toggleCardFold = cardId => {
+  const toggleCardFold = useCallback(cardId => {
     setFoldedCardIds(previousIds => {
       const nextIds = new Set(previousIds)
       if (nextIds.has(cardId)) nextIds.delete(cardId)
       else nextIds.add(cardId)
       return nextIds
     })
-  }
+  }, [])
   const allCardsFolded = cards.length > 0 && cards.every(card => foldedCardIds.has(card.id))
   const hasFoldedCards = cards.some(card => foldedCardIds.has(card.id))
 
@@ -865,154 +1026,20 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
       {renderCardPagination(true)}
 
       <div ref={cardsListRef} className={styles.cardEditor.cardsList}>
-        {pageCards.map(({ card, actualIndex }) => {
-          const state = getCardState(card)
-          const meta = STATE_META[state] || STATE_META.new
-          const strength = getCardStrength(card)
-          const improvement = getImprovement(card)
-          const ratingCounts = getRatingCounts(card)
-          const isFolded = foldedCardIds.has(card.id)
-          return (
-            <div key={card.id} className={styles.cardEditor.cardItem}>
-              <div className="card-editor__card-top">
-              <button
-                type="button"
-                className="card-editor__card-identifiers card-editor__card-header-toggle"
-                onClick={() => toggleCardFold(card.id)}
-                aria-expanded={!isFolded}
-                aria-label={`${isFolded ? 'Unfold' : 'Fold'} card ${actualIndex + 1}`}
-                title={isFolded ? 'Unfold card' : 'Fold card'}
-              >
-                <span className="card-editor__fold-indicator" aria-hidden="true">
-                    {isFolded ? <FaChevronDown /> : <FaChevronUp />}
-                </span>
-                  <span className={styles.cardEditor.cardNumber}>Card {actualIndex + 1}</span>
-                  <span className={`card-editor__status-pill ${meta.badge}`}>
-                    <span className={`card-editor__status-dot ${meta.dot}`} />
-                    {meta.label}
-                  </span>
-              </button>
-              {isFolded && (
-                <MarkdownContent
-                  className="card-editor__folded-preview"
-                  title={card.front || 'Empty front'}
-                  content={card.front?.trim() || 'Empty front'}
-                />
-              )}
-                <div className={styles.cardEditor.cardActions}>
-                  <button
-                    type="button"
-                    className={styles.cardEditor.reorderCardBtn}
-                    onClick={() => moveCard(card.id, -1)}
-                    disabled={actualIndex === 0}
-                    aria-label={`Move card ${actualIndex + 1} up`}
-                    title="Move up"
-                  >
-                    <FaArrowUp />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.cardEditor.reorderCardBtn}
-                    onClick={() => moveCard(card.id, 1)}
-                    disabled={actualIndex === cards.length - 1}
-                    aria-label={`Move card ${actualIndex + 1} down`}
-                    title="Move down"
-                  >
-                    <FaArrowDown />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.cardEditor.deleteCardBtn}
-                    onClick={() => deleteCard(card.id)}
-                    aria-label={`Delete card ${actualIndex + 1}`}
-                    title="Delete card"
-                  >
-                    <FaTrash />
-                  </button>
-                </div>
-              </div>
-              {!isFolded && <>
-              <div className={styles.cardEditor.cardContent}>
-                <div className={styles.cardEditor.cardSide}>
-                  <label className={styles.cardEditor.cardSideLabel}>Front</label>
-                  <textarea
-                    value={card.front || ''}
-                    onChange={(e) => updateCard(card.id, 'front', e.target.value)}
-                    rows={3}
-                    placeholder="Text and/or URLs (images, audio, video, etc.)"
-                    className={styles.cardEditor.cardSideTextarea}
-                  />
-                  {extractImageUrl(card.front) && (
-                    <div className={styles.cardEditor.imagePreview}>
-                      <img
-                        src={extractImageUrl(card.front)}
-                        alt="Preview"
-                        loading="lazy"
-                        decoding="async"
-                        className={styles.cardEditor.imagePreviewThumb}
-                        onError={(e) => e.target.style.display = 'none'}
-                      />
-                      <div className={styles.cardEditor.imagePreviewText}>
-                        <FaImage />
-                        <span>Image URL detected</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className={styles.cardEditor.cardSide}>
-                  <label className={styles.cardEditor.cardSideLabel}>Back</label>
-                  <textarea
-                    value={card.back || ''}
-                    onChange={(e) => updateCard(card.id, 'back', e.target.value)}
-                    rows={3}
-                    placeholder="Text and/or URLs (images, audio, video, etc.)"
-                    className={styles.cardEditor.cardSideTextarea}
-                  />
-                  {extractImageUrl(card.back) && (
-                    <div className={styles.cardEditor.imagePreview}>
-                      <img
-                        src={extractImageUrl(card.back)}
-                        alt="Preview"
-                        loading="lazy"
-                        decoding="async"
-                        className={styles.cardEditor.imagePreviewThumb}
-                        onError={(e) => e.target.style.display = 'none'}
-                      />
-                      <div className={styles.cardEditor.imagePreviewText}>
-                        <FaImage />
-                        <span>Image URL detected</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="card-editor__strength">
-                <div className="card-editor__strength-labels">
-                  <span>Memory strength</span>
-                  <span>{strength}%{improvement > 0 ? ` (+${improvement})` : ''}</span>
-                </div>
-                <div className="card-editor__strength-track">
-                  <div className={`card-editor__strength-fill ${meta.bar}`} style={{ width: `${strength}%` }} />
-                </div>
-              </div>
-              <div className="card-editor__rating-grid">
-                {[
-                  { label: 'Again', color: 'again' },
-                  { label: 'Hard', color: 'hard' },
-                  { label: 'Good', color: 'good' },
-                  { label: 'Easy', color: 'easy' }
-                ].map(({ label, color }, rating) => (
-                  <div key={label} className="card-editor__rating">
-                    <div className={`card-editor__rating-count is-${color}`}>{ratingCounts[rating]}</div>
-                    <div className="card-editor__rating-label">{label}</div>
-                  </div>
-                ))}
-              </div>
-              <p className="card-editor__last-reviewed">{formatLastReviewed(card)}</p>
-              </>}
-            </div>
-          )
-        })}
+        {pageCards.map(({ card, actualIndex }) => (
+          <CardItem
+            key={card.id}
+            card={card}
+            actualIndex={actualIndex}
+            cardCount={cards.length}
+            isFolded={foldedCardIds.has(card.id)}
+            onToggleFold={toggleCardFold}
+            updateCard={updateCard}
+            moveCard={moveCard}
+            deleteCard={deleteCard}
+            extractImageUrl={extractImageUrl}
+          />
+        ))}
         {cards.length > 0 && visibleCards.length === 0 && (
           <p className="card-editor__no-results">
             No {cardStatusFilter} cards in this deck.

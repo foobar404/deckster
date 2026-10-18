@@ -7,6 +7,23 @@ import { FlashCard } from '../components/FlashCard'
 import { useState, useEffect, useCallback, useContext, useRef } from 'react'
 import { FaTrophy, FaExclamationTriangle, FaFlagCheckered } from 'react-icons/fa'
 
+const getStudyCardImageUrls = card => {
+  if (!card) return []
+
+  const getEmbeddedImageUrl = text => typeof text === 'string'
+    ? text.match(/https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)(?:\?[^\s)]*)?/i)?.[0]
+    : null
+  const isBackToFront = card.studyDirection === 'back-to-front'
+  const frontImageUrl = card.displayFrontImage ||
+    (isBackToFront ? card.backImageUrl || card.imageUrl : card.frontImageUrl) ||
+    getEmbeddedImageUrl(card.displayFront ?? card.front)
+  const backImageUrl = card.displayBackImage ||
+    (isBackToFront ? card.frontImageUrl : card.backImageUrl || card.imageUrl) ||
+    getEmbeddedImageUrl(card.displayBack ?? card.back)
+
+  return [...new Set([frontImageUrl, backImageUrl].filter(Boolean))]
+}
+
 /**
  * Custom hook for StudyPage logic and state management
  * @returns {Object} All state and handlers needed by the StudyPage component
@@ -434,37 +451,28 @@ export function StudyPage() {
     saveStudyState,
     loadStudyState
   } = useStudyPage()
-  const preloadedImageRef = useRef(null)
+  const preloadedImagesRef = useRef([])
 
   useEffect(() => {
+    const currentCard = studyCards[currentCardIndex]
     const nextCard = studyCards[currentCardIndex + 1]
-    if (!nextCard) {
-      preloadedImageRef.current = null
-      return
+    const imagePriorities = new Map()
+    const addCardImages = (card, current) => {
+      getStudyCardImageUrls(card).forEach((url, index) => {
+        const priority = current && index === 0 ? 'high' : 'low'
+        if (imagePriorities.get(url) !== 'high') imagePriorities.set(url, priority)
+      })
     }
 
-    const nextFront = nextCard.displayFront ?? nextCard.front
-    const nextBack = nextCard.displayBack ?? nextCard.back
-    const getEmbeddedImageUrl = text => typeof text === 'string'
-      ? text.match(/https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)(?:\?[^\s]*)?/i)?.[0]
-      : null
-    const imageUrl = nextCard.displayFrontImage ||
-      nextCard.frontImageUrl ||
-      getEmbeddedImageUrl(nextFront) ||
-      nextCard.displayBackImage ||
-      nextCard.backImageUrl ||
-      nextCard.imageUrl ||
-      getEmbeddedImageUrl(nextBack)
-    if (!imageUrl) {
-      preloadedImageRef.current = null
-      return
-    }
-
-    const image = new Image()
-    image.decoding = 'async'
-    image.fetchPriority = 'low'
-    image.src = imageUrl
-    preloadedImageRef.current = image
+    addCardImages(currentCard, true)
+    addCardImages(nextCard, false)
+    preloadedImagesRef.current = [...imagePriorities].map(([url, fetchPriority]) => {
+      const image = new Image()
+      image.decoding = 'async'
+      image.fetchPriority = fetchPriority
+      image.src = url
+      return image
+    })
   }, [studyCards, currentCardIndex])
 
   const customStyles = {
