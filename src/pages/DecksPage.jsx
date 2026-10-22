@@ -14,13 +14,27 @@ const deckSortOptions = [
   { value: 'name-asc', label: 'A-Z', description: 'Name, A to Z' },
   { value: 'name-desc', label: 'Z-A', description: 'Name, Z to A' },
   { value: 'newest', label: 'New', description: 'Newest first' },
-  { value: 'oldest', label: 'Old', description: 'Oldest first' }
+  { value: 'oldest', label: 'Old', description: 'Oldest first' },
+  { value: 'recent', label: 'Recent', description: 'Recently studied first' }
 ]
 
 const getDeckCreationTime = deck => {
   const time = deck.createdAt ? new Date(deck.createdAt).getTime() : Number(deck.id)
   return Number.isFinite(time) ? time : 0
 }
+
+const getDeckLastReviewTime = deck => (deck.cards || []).reduce((latest, card) => {
+  const lastReviewed = card.lastReviewedAt || card.lastReviewed
+  if (!lastReviewed) return latest
+
+  const time = typeof lastReviewed === 'number'
+    ? lastReviewed
+    : typeof lastReviewed.toMillis === 'function'
+      ? lastReviewed.toMillis()
+      : new Date(lastReviewed).getTime()
+
+  return Number.isFinite(time) ? Math.max(latest, time) : latest
+}, 0)
 
 const formatDeckCreationDate = deck => {
   const timestamp = getDeckCreationTime(deck)
@@ -261,6 +275,10 @@ export function DecksPage() {
       if (sortMode === 'name-asc' || sortMode === 'name-desc') {
         const direction = sortMode === 'name-asc' ? 1 : -1
         return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }) * direction
+      }
+
+      if (sortMode === 'recent') {
+        return getDeckLastReviewTime(b) - getDeckLastReviewTime(a)
       }
 
       const direction = sortMode === 'newest' ? 1 : -1

@@ -749,10 +749,6 @@ export function FlashCard({ card, onReview, onDragStateChange, studyOptions = {}
                                                 style={memoryBarStyle}
                                             />
                                         </div>
-                                        <span className="flashcard__memory-last-result">
-                                            Recent: {memoryMeta.lastResultLabel}
-                                        </span>
-                                        <span className="flashcard__memory-reviews">{memoryMeta.reviews} reviews</span>
                                         <span className="flashcard__face-indicator flashcard__face-indicator--inline">Back</span>
                                     </div>
                                     <div className="flashcard__content-body" style={getContentLayoutStyle(Boolean(backImageUrl) && !studyOptions?.showBothSides && !showAnswerComparison)}>
