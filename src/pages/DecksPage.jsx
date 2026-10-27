@@ -8,7 +8,7 @@ import { Portal } from '../components/Portal'
 import { CardEditor } from '../components/CardEditor'
 import { AiCardGeneratorModal } from '../components/AiCardGeneratorModal'
 import { DeckStatusSummary } from '../components/DeckStatusSummary'
-import { FaPlus, FaEdit, FaBook, FaCog, FaMagic, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaSort, FaChevronDown, FaChevronUp } from 'react-icons/fa'
+import { FaPlus, FaEdit, FaBook, FaCog, FaMagic, FaRandom, FaExclamationTriangle, FaTimes, FaFilter, FaSort, FaChevronDown, FaChevronUp, FaTrash } from 'react-icons/fa'
 
 const deckSortOptions = [
   { value: 'name-asc', label: 'A-Z', description: 'Name, A to Z' },
@@ -785,6 +785,15 @@ export function DecksPage() {
 
               <div className={styles.decks.deckActions}>
                 <button
+                  type="button"
+                  className="button button--icon button--secondary deck-card__delete"
+                  onClick={() => deleteDeck(deck.id)}
+                  aria-label={`Delete ${deck.name}`}
+                  title={`Delete ${deck.name}`}
+                >
+                  <FaTrash aria-hidden="true" />
+                </button>
+                <button
                   className={styles.decks.btnSecondary}
                   onClick={() => setEditingDeck(deck)}
                 >
@@ -798,7 +807,6 @@ export function DecksPage() {
                   <FaBook />
                   {stats.total === 0 ? 'No Cards' : deckStudyOptions.mode === 'cram' ? 'Cram' : 'Study'}
                 </button>
-                {/* delete button is in the top-right of the card header */}
               </div>
               </>}
             </div>

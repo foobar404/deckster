@@ -222,6 +222,45 @@ button.import-deck-dropdown__option:hover::before {
   max-width: 24rem;
 }
 
+.ai-generator-image-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.ai-generator-image-options__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.875rem;
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.ai-generator-image-options__option:hover {
+  border-color: var(--theme-primary);
+}
+
+.ai-generator-image-options__option.is-selected {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 12%, var(--theme-surface));
+  box-shadow: var(--shadow-sm);
+}
+
+.ai-generator-image-options__option input {
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: var(--theme-primary);
+}
+
 .import-card-count {
   display: flex;
   align-items: center;

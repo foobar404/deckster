@@ -314,10 +314,6 @@ button.deck-card__study-button:hover::before {
   min-height: 2rem;
 }
 
-.deck-card__delete:hover:not(:disabled) {
-  color: #dc2626;
-}
-
 .deck-card__tags {
   display: flex;
   flex-wrap: wrap;
@@ -367,6 +363,16 @@ button.deck-card__study-button:hover::before {
 
 .deck-card__actions > .button {
   flex: 1 1 auto;
+}
+
+.deck-card__actions > .deck-card__delete {
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  align-self: center;
+  aspect-ratio: 1;
 }
 
 .decks-page__empty {

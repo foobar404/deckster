@@ -233,16 +233,24 @@ export const useSpeech = () => {
     }, [isSupported])
 
     /**
-     * Check if text contains a valid image URL
+     * Find a recognized direct image URL in text.
      */
     const extractImageUrl = useCallback((text) => {
         if (!text || typeof text !== 'string') return null
 
-        // Regex to match image URLs (expanded to include more formats)
-        const imageUrlRegex = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)(\?[^\s]*)?/i
-        const match = text.match(imageUrlRegex)
-
-        return match ? match[0] : null
+        const imageUrls = text.match(/https?:\/\/[^\s<>"'`]+/gi) || []
+        return imageUrls
+            .map(imageUrl => imageUrl.replace(/[.,;:!?)}\]]+$/, ''))
+            .find(imageUrl => {
+                try {
+                    const parsedUrl = new URL(imageUrl)
+                    return /\.(jpg|jpeg|png|gif|webp|svg|bmp|tiff|ico)$/i.test(parsedUrl.pathname) ||
+                        parsedUrl.hostname === 'images.unsplash.com' ||
+                        parsedUrl.hostname === 'images.pexels.com'
+                } catch {
+                    return false
+                }
+            }) || null
     }, [])
 
     /**

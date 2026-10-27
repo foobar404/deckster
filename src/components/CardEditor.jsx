@@ -737,20 +737,18 @@ export function CardEditor({ deck, onSave, onCancel, onDraftSave, onDelete }) {
             <FaArrowLeft />
           </button>
           <div className={styles.cardEditor.headerContent}>
-            <div className="card-editor__title-row">
-              <h1 className="card-editor__deck-name">{deckName}</h1>
-              <button
-                type="button"
-                className="button button--icon button--quiet card-editor__settings-trigger"
-                onClick={() => setShowDeckSettings(true)}
-                aria-label="Deck settings"
-                title="Deck settings"
-              >
-                <FaCog aria-hidden="true" />
-              </button>
-            </div>
+            <h1 className="card-editor__deck-name">{deckName}</h1>
             <p className={styles.cardEditor.headerDescription}>{cardCount} cards • Auto-saved</p>
           </div>
+          <button
+            type="button"
+            className="button button--icon button--quiet card-editor__settings-trigger"
+            onClick={() => setShowDeckSettings(true)}
+            aria-label="Deck settings"
+            title="Deck settings"
+          >
+            <FaCog aria-hidden="true" />
+          </button>
         </div>
       </div>
 
