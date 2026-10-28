@@ -62,6 +62,8 @@ const useDecksPage = () => {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newDeckName, setNewDeckName] = useState('')
   const [editingDeck, setEditingDeck] = useState(null)
+  const [editingTagDeckId, setEditingTagDeckId] = useState(null)
+  const [newDeckTag, setNewDeckTag] = useState('')
   const [showOptions, setShowOptions] = useState(false)
   const [optionsDeckId, setOptionsDeckId] = useState(null)
   const [selectedTag, setSelectedTag] = useState(() => {
@@ -83,6 +85,8 @@ const useDecksPage = () => {
   useLayoutEffect(() => {
     if (!location.state?.navRoot) return
     setEditingDeck(null)
+    setEditingTagDeckId(null)
+    setNewDeckTag('')
     setShowCreateForm(false)
     setShowOptions(false)
     setOptionsDeckId(null)
@@ -164,6 +168,20 @@ const useDecksPage = () => {
     })
   }
 
+  const addDeckTag = deck => {
+    const tag = newDeckTag.trim()
+    if (!tag) return
+
+    const tags = deck.tags || []
+    if (!tags.includes(tag)) updateDeck({ ...deck, tags: [...tags, tag] })
+    setNewDeckTag('')
+    setEditingTagDeckId(null)
+  }
+
+  const removeDeckTag = (deck, tag) => {
+    updateDeck({ ...deck, tags: (deck.tags || []).filter(existingTag => existingTag !== tag) })
+  }
+
   const handleDeckSelect = (deck) => {
     setActiveDeck(deck)
     navigate('/study')
@@ -185,6 +203,12 @@ const useDecksPage = () => {
     setNewDeckName,
     editingDeck,
     setEditingDeck,
+    editingTagDeckId,
+    setEditingTagDeckId,
+    newDeckTag,
+    setNewDeckTag,
+    addDeckTag,
+    removeDeckTag,
     selectedTag,
     setSelectedTag,
     showTagFilter,
@@ -236,6 +260,12 @@ export function DecksPage() {
     setNewDeckName,
     editingDeck,
     setEditingDeck,
+    editingTagDeckId,
+    setEditingTagDeckId,
+    newDeckTag,
+    setNewDeckTag,
+    addDeckTag,
+    removeDeckTag,
     selectedTag,
     setSelectedTag,
     showTagFilter,
@@ -696,7 +726,7 @@ export function DecksPage() {
                 {tag}
               </button>
             )) : (
-              <p className="deck-filter-menu__empty">No tags defined yet. Add tags in a deck’s Edit page.</p>
+              <p className="deck-filter-menu__empty">No tags yet. Add one from a deck card.</p>
             )}
           </div>
         )}
@@ -759,11 +789,66 @@ export function DecksPage() {
               </div>
 
               {!isCollapsed && <>
-              {(deck.tags || []).length > 0 && (
-                <div className="deck-card__tags">
-                  {deck.tags.map(tag => <span key={tag} className="deck-card__tag">{tag}</span>)}
-                </div>
-              )}
+              <div className="deck-card__tags" role="group" aria-label={`Tags for ${deck.name}`}>
+                {(deck.tags || []).map(tag => (
+                  <span key={tag} className="deck-card__tag">
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      className="deck-card__tag-remove"
+                      onClick={() => removeDeckTag(deck, tag)}
+                      aria-label={`Remove tag ${tag} from ${deck.name}`}
+                      title={`Remove ${tag}`}
+                    >
+                      <FaTimes aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+                {editingTagDeckId === deck.id ? (
+                  <form
+                    className="deck-card__tag-form"
+                    onSubmit={event => {
+                      event.preventDefault()
+                      addDeckTag(deck)
+                    }}
+                  >
+                    <input
+                      type="text"
+                      className="deck-card__tag-input"
+                      value={newDeckTag}
+                      onChange={event => setNewDeckTag(event.target.value)}
+                      aria-label={`New tag for ${deck.name}`}
+                      placeholder="New tag"
+                      autoFocus
+                    />
+                    <button type="submit" className="deck-card__tag-action" disabled={!newDeckTag.trim()}>
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      className="deck-card__tag-action deck-card__tag-cancel"
+                      onClick={() => {
+                        setEditingTagDeckId(null)
+                        setNewDeckTag('')
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    className="deck-card__add-tag"
+                    onClick={() => {
+                      setNewDeckTag('')
+                      setEditingTagDeckId(deck.id)
+                    }}
+                  >
+                    <FaPlus aria-hidden="true" />
+                    Add tag
+                  </button>
+                )}
+              </div>
 
                 <div className={styles.decks.deckStats}>
                 <DeckStatusSummary cards={deck.cards} />
@@ -794,7 +879,7 @@ export function DecksPage() {
                   <FaTrash aria-hidden="true" />
                 </button>
                 <button
-                  className={styles.decks.btnSecondary}
+                  className={`${styles.decks.btnSecondary} decks-page__action-button`}
                   onClick={() => setEditingDeck(deck)}
                 >
                   <FaEdit /> Edit
