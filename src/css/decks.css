@@ -375,6 +375,16 @@ button.deck-card__study-button:hover::before {
   color: var(--theme-text);
 }
 
+.deck-card__add-tag {
+  min-height: 0;
+}
+
+.deck-card__add-tag > svg {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+}
+
 .deck-card__tag-form {
   display: flex;
   min-width: 0;
