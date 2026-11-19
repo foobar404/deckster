@@ -2,7 +2,7 @@ import './css/themes.css'
 import './css/index.css'
 import './css/shared.css'
 import { StrictMode } from 'react'
-import { useContext } from 'react'
+import { useContext, useLayoutEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AppContext, AppProvider } from './context/AppContext'
 import { ToastProvider } from './context/ToastContext'
@@ -29,6 +29,13 @@ const useApp = () => {
 
 function AppContent() {
   const { isStudyPage, isStudyDeckSelection } = useApp()
+  const { pathname } = useLocation()
+
+  useLayoutEffect(() => {
+    document.querySelector('.app-main')?.scrollTo(0, 0)
+    document.querySelector('#root')?.scrollTo(0, 0)
+    window.scrollTo(0, 0)
+  }, [pathname])
 
   return (
     <div className="app-shell">

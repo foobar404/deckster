@@ -63,6 +63,36 @@
   gap: 1rem;
 }
 
+.decks-page__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+  margin: 0 auto 1rem;
+  color: var(--theme-text-soft);
+  font-size: 0.8125rem;
+}
+
+.decks-page__metric {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+}
+
+.decks-page__metric-label {
+  color: inherit;
+}
+
+.decks-page__metric-value {
+  color: var(--theme-text);
+  font-size: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
 .decks-page__create-actions {
   display: inline-flex;
   align-items: stretch;

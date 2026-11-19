@@ -50,6 +50,23 @@ const formatStudyTime = value => {
   return hours ? `${hours}h ${minutes}m` : `${Math.floor(seconds / 60)}m`
 }
 
+const getLocalDateKey = date => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getTimestamp = value => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const numericValue = Number(value)
+    return Number.isFinite(numericValue) ? numericValue : Date.parse(value) || 0
+  }
+  if (typeof value?.toMillis === 'function') return value.toMillis()
+  return 0
+}
+
 /**
  * Custom hook for DecksPage logic and state management
  * @returns {Object} All state and handlers needed by the DecksPage component
@@ -298,6 +315,23 @@ export function DecksPage() {
 
   const availableTags = [...new Set(decks.flatMap(deck => deck.tags || []))]
     .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
+  const todayDateKey = getLocalDateKey(new Date())
+  const todayMetrics = decks.reduce((metrics, deck) => {
+    metrics.studyTimeSeconds += Math.max(0, Number(deck.studyTimeByDay?.[todayDateKey]) || 0)
+    metrics.cardsReviewed += (deck.cards || []).reduce((count, card) => {
+      const reviewHistory = Array.isArray(card.reviewHistory) ? card.reviewHistory : []
+      if (reviewHistory.length > 0) {
+        return count + reviewHistory.filter(review => {
+          const reviewedAt = getTimestamp(review?.reviewedAt)
+          return reviewedAt > 0 && getLocalDateKey(new Date(reviewedAt)) === todayDateKey
+        }).length
+      }
+
+      const lastReviewedAt = getTimestamp(card.lastReviewedAt || card.lastReviewed)
+      return count + (lastReviewedAt > 0 && getLocalDateKey(new Date(lastReviewedAt)) === todayDateKey ? 1 : 0)
+    }, 0)
+    return metrics
+  }, { studyTimeSeconds: 0, cardsReviewed: 0 })
   const visibleDecks = decks
     .filter(deck => selectedTag === 'all' || (deck.tags || []).includes(selectedTag))
     .slice()
@@ -624,6 +658,19 @@ export function DecksPage() {
           </div>
         </div>
       </div>
+
+      {todayMetrics.studyTimeSeconds > 0 && (
+        <section className="decks-page__metrics" aria-label="Today's study metrics">
+          <div className="decks-page__metric surface-panel">
+            <span className="decks-page__metric-label">Study time today</span>
+            <strong className="decks-page__metric-value">{formatStudyTime(todayMetrics.studyTimeSeconds)}</strong>
+          </div>
+          <div className="decks-page__metric surface-panel">
+            <span className="decks-page__metric-label">Cards reviewed</span>
+            <strong className="decks-page__metric-value">{todayMetrics.cardsReviewed}</strong>
+          </div>
+        </section>
+      )}
 
       {showCreateForm && (
         <div className={styles.decks.createForm}>

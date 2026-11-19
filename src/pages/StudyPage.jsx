@@ -24,6 +24,14 @@ const getStudyCardImageUrls = card => {
   return [...new Set([frontImageUrl, backImageUrl].filter(Boolean))]
 }
 
+const getLocalDateKey = timestamp => {
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 /**
  * Custom hook for StudyPage logic and state management
  * @returns {Object} All state and handlers needed by the StudyPage component
@@ -144,15 +152,24 @@ const useStudyPage = () => {
     if (sessionTimeRecordedRef.current || !activeDeck) return
     sessionTimeRecordedRef.current = true
 
-    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - sessionStartedAt) / 1000))
+    const recordedAt = Date.now()
+    const elapsedSeconds = Math.max(0, Math.floor((recordedAt - sessionStartedAt) / 1000))
     if (elapsedSeconds === 0) return
+    const recordedDateKey = getLocalDateKey(recordedAt)
 
     setDecks(previousDecks => previousDecks.map(deck => (
       deck.id === activeDeck.id
         ? {
           ...deck,
           totalStudyTimeSeconds: Math.max(0, Number(deck.totalStudyTimeSeconds) || 0) + elapsedSeconds,
-          updatedAt: Date.now()
+          studyTimeByDay: {
+            ...(deck.studyTimeByDay || {}),
+            [recordedDateKey]: Math.max(
+              0,
+              Number(deck.studyTimeByDay?.[recordedDateKey]) || 0
+            ) + elapsedSeconds
+          },
+          updatedAt: recordedAt
         }
         : deck
     )))
